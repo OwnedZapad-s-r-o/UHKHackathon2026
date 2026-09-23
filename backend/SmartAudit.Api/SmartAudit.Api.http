@@ -1,4 +1,6 @@
 @host = http://localhost:5033
+# id objektu z GET /api/facilities
+@facilityId = 00000000-0000-0000-0000-000000000000
 
 ### Stav přípravy dat
 GET {{host}}/health
@@ -16,3 +18,23 @@ Authorization: Bearer {{demo.response.body.token}}
 
 ### Zdroje dat
 GET {{host}}/api/data-sources
+
+### Půdorys vybrané budovy pro 3D
+GET {{host}}/api/facilities/{{facilityId}}/footprint
+Authorization: Bearer {{demo.response.body.token}}
+
+### PDF audit objektu
+GET {{host}}/api/reports/facility/{{facilityId}}.pdf
+Authorization: Bearer {{demo.response.body.token}}
+
+### PDF přehled portfolia (okres Trutnov, jen se zjištěním)
+GET {{host}}/api/reports/portfolio.pdf?district=CZ0525&onlyIssues=true
+Authorization: Bearer {{demo.response.body.token}}
+
+### AI analýza — stav a poslední výsledek
+GET {{host}}/api/facilities/{{facilityId}}/ai-audit
+Authorization: Bearer {{demo.response.body.token}}
+
+### AI analýza — vygenerovat (bez klíče Azure OpenAI vrací 503)
+POST {{host}}/api/facilities/{{facilityId}}/ai-audit
+Authorization: Bearer {{demo.response.body.token}}

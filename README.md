@@ -26,6 +26,31 @@ Bez internetu se data načtou ze snapshotů v `seed/opendata/`, které se přepi
 
 Vlastní hesla a JWT tajemství nastavíte v souboru `.env`, vzor je v `.env.example`.
 
+## Funkce
+
+- **Mapa objektů kraje** — šedý podklad, piny podle stavu a druhu, filtr okresu a hledání. Po kliknutí na objekt
+  mapa přeletí k budově a ukáže ji ve 3D: okolní zástavba podle výšek z OpenStreetMap (dlaždice CARTO),
+  vybraná budova z půdorysu ČÚZK s odhadem výšky podle podlaží. Přepínač 2D / 3D je v ovládání mapy.
+- **Inspekční panel** — přehled, telemetrie (grafy), audit, karta budovy a řez budovou; lze zavřít.
+- **Portfolio a Anomálie** — tabulka a seznam zjištění seřazené podle odhadované ztráty.
+- **PDF reporty** — audit jednoho objektu (s grafy) a přehled portfolia; tlačítka v panelu a na obrazovkách
+  Portfolio, Anomálie a Reporty.
+- **AI analýza** — Azure OpenAI navrhne opatření s návratností a dopis správci; výsledek je i v PDF.
+
+### Zapnutí AI analýzy (Azure OpenAI)
+
+Do `.env` doplňte tři hodnoty z Azure (prostředek Azure OpenAI → *Keys and Endpoint*, název nasazení
+modelu z Azure AI Foundry → *Deployments*) a restartujte API:
+
+```bash
+AZURE_OPENAI_ENDPOINT=https://<nazev-zdroje>.openai.azure.com/
+AZURE_OPENAI_API_KEY=<klíč>
+AZURE_OPENAI_DEPLOYMENT=<název nasazení, např. gpt-4o>
+```
+
+Bez nich aplikace běží normálně a karta AI analýzy jen ukazuje, co doplnit. AI analýzu vidí kraj a správce
+budovy, veřejnost ne (obsahuje částky v Kč).
+
 ## Struktura repozitáře
 
 | Složka | Obsah |
