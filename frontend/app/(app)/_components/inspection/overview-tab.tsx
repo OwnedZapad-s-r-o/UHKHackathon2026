@@ -2,6 +2,7 @@ import { Activity } from "lucide-react";
 import { STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
 import { cn } from "@/lib/utils";
 import type { FacilityDetail } from "@/types/api";
+import { AiAuditSection } from "./ai-audit-section";
 import { StatTile } from "./panel-card";
 
 const CO2_LIMIT = 1500;
@@ -59,6 +60,8 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
           </div>
         )}
       </section>
+
+      <AiAuditSection facilityId={facility.id} />
 
       <ContextList facility={facility} />
     </>

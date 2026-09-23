@@ -1,6 +1,7 @@
 import { STATUS_META, formatNumber } from "@/lib/facility-meta";
 import { cn } from "@/lib/utils";
 import type { FacilityDetail } from "@/types/api";
+import { AiAuditSection } from "./ai-audit-section";
 import { PanelCard } from "./panel-card";
 
 const dateTime = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short", timeStyle: "short" });
@@ -46,6 +47,8 @@ export function AuditTab({ facility }: { facility: FacilityDetail }) {
           </ul>
         )}
       </PanelCard>
+
+      <AiAuditSection facilityId={facility.id} />
 
       <PanelCard title="Ukazatele za 7 dní">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
