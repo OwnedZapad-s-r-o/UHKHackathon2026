@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: smartaudit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartaudit}
+      POSTGRES_DB: smartaudit
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartaudit -d smartaudit"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=smartaudit;Username=smartaudit;Password=${POSTGRES_PASSWORD:-smartaudit}"
+      JwtSettings__Secret: ${JWT_SECRET:-change-me-please-this-is-only-a-local-demo-secret-0123456789}
+      OpenDataSettings__SnapshotPath: /seed/opendata
+    volumes:
+      - ./seed:/seed
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_INTERNAL_URL: http://api:8080
+    depends_on:
+      - api
+    environment:
+      API_INTERNAL_URL: http://api:8080
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
