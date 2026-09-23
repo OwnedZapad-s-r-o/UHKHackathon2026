@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Features.Facilities.GetFacilities;
 using SmartAudit.Api.Features.Facilities.GetFacilityDetail;
+using SmartAudit.Api.Features.Facilities.GetFootprint;
 using SmartAudit.Api.Features.Facilities.GetHeatmap;
 using SmartAudit.Api.Features.Facilities.GetSection;
 using SmartAudit.Api.Features.Facilities.GetTelemetry;
@@ -60,6 +61,17 @@ namespace SmartAudit.Api.Controllers
         public async Task<IActionResult> GetHeatmap(Guid id, [FromQuery] SensorMetric metric, CancellationToken ct)
         {
             var command = new GetHeatmapCommand(id, User.GetViewer(), metric);
+
+            var result = await _mediator.Send(command, ct);
+
+            return result.ToActionResult();
+        }
+
+        [HttpGet]
+        [Route("{id:guid}/footprint")]
+        public async Task<IActionResult> GetFootprint(Guid id, CancellationToken ct)
+        {
+            var command = new GetFootprintCommand(id, User.GetViewer());
 
             var result = await _mediator.Send(command, ct);
 

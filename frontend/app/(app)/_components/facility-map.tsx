@@ -6,8 +6,9 @@ import { Map, MapMarker, MarkerContent, MarkerTooltip, useMap } from "@/componen
 import { CATEGORY_META, STATUS_META, formatCzk } from "@/lib/facility-meta";
 import { withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
-import type { AuditStatus, FacilityCategory, FacilityListItem } from "@/types/api";
+import type { AuditStatus, FacilityCategory, FacilityListItem, Footprint } from "@/types/api";
 import { MapToolbar } from "./map-toolbar";
+import { SelectedBuilding3D } from "./selected-building-3d";
 
 // Šedý podklad vygenerovaný skriptem scripts/make-gray-style.mjs z výchozích stylů CARTO
 const GRAY_STYLES = {
@@ -18,21 +19,28 @@ const GRAY_STYLES = {
 // Výchozí výřez — celý Královéhradecký kraj
 const KHK_HOME = { center: [15.845, 50.352] as [number, number], zoom: 8.6 };
 
+// Pohled na vybranou budovu — přiblížení a náklon, aby byla vidět ve 3D
+const BUILDING_VIEW = { zoom: 17.2, pitch: 60, bearing: -20 };
+
 // Pořadí vykreslení — pozdější marker leží nahoře, problémové objekty nesmí zmizet pod zelenými
 const DRAW_ORDER: Record<AuditStatus, number> = { Nominal: 0, Warning: 1, Critical: 2 };
 
 type FacilityMapProps = {
   facilities: FacilityListItem[];
   selectedId: string | null;
+  footprint: Footprint | null;
 };
 
-export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
+export function FacilityMap({ facilities, selectedId, footprint }: FacilityMapProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const ordered = facilities.toSorted((a, b) => DRAW_ORDER[a.status] - DRAW_ORDER[b.status]);
   const selected = facilities.find((f) => f.id === selectedId) ?? null;
+
+  // Na budovu se přeletí jen při výslovném výběru (klik na pin, odkaz z portfolia) — ne při prvním načtení mapy kraje
+  const explicitlySelected = searchParams.get("objekt") === selectedId;
 
   function select(id: string) {
     // Výběr objektu na mapě vždy znovu otevře inspekční panel
@@ -44,7 +52,8 @@ export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
       {/* Prototyp je světlý — mapa drží světlý šedý styl i při tmavém systému */}
       <Map center={KHK_HOME.center} zoom={KHK_HOME.zoom} styles={GRAY_STYLES} theme="light">
         <MapToolbar home={KHK_HOME} />
-        {selected && <KeepSelectedInView longitude={selected.longitude} latitude={selected.latitude} />}
+        <SelectedBuilding3D footprint={footprint} />
+        {selected && explicitlySelected && <FlyToSelected facilityId={selected.id} longitude={selected.longitude} latitude={selected.latitude} />}
 
         {ordered.map((facility) => (
           <MapMarker key={facility.id} longitude={facility.longitude} latitude={facility.latitude} onClick={() => select(facility.id)}>
@@ -72,16 +81,15 @@ export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
   );
 }
 
-// Když se objekt vybere mimo mapu (portfolio, anomálie), posune se na něj výřez
-function KeepSelectedInView({ longitude, latitude }: { longitude: number; latitude: number }) {
+// Po výběru objektu mapa přeletí k budově a nakloní se, aby byla vidět ve 3D
+function FlyToSelected({ facilityId, longitude, latitude }: { facilityId: string; longitude: number; latitude: number }) {
   const { map, isLoaded } = useMap();
 
   useEffect(() => {
     if (!map || !isLoaded) return;
-    if (map.getBounds().contains([longitude, latitude])) return;
 
-    map.flyTo({ center: [longitude, latitude], zoom: Math.max(map.getZoom(), 11), duration: 900 });
-  }, [map, isLoaded, longitude, latitude]);
+    map.flyTo({ center: [longitude, latitude], ...BUILDING_VIEW, duration: 1600, essential: true });
+  }, [map, isLoaded, facilityId, longitude, latitude]);
 
   return null;
 }
@@ -141,6 +149,10 @@ function MapLegend({ facilities }: { facilities: FacilityListItem[] }) {
           );
         })}
       </ul>
+
+      <p className="mt-4 border-t border-slate-100 pt-3 text-[10.5px] leading-snug text-slate-500">
+        3D: okolní budovy podle výšek z OpenStreetMap, vybraná budova z půdorysu ČÚZK s odhadem výšky podle podlaží.
+      </p>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import type {
   DataSourcesResponse,
   FacilityDetail,
   FacilityListItem,
+  Footprint,
   Heatmap,
   SensorMetric,
   Session,
@@ -76,6 +77,10 @@ export function getTelemetry(id: string, metric: SensorMetric, options: { bucket
 
 export function getHeatmap(id: string, metric: SensorMetric) {
   return apiGet<Heatmap>(`/api/facilities/${id}/heatmap?metric=${metric}`);
+}
+
+export function getFootprint(id: string) {
+  return apiGet<Footprint>(`/api/facilities/${id}/footprint`);
 }
 
 export function getSection(id: string) {

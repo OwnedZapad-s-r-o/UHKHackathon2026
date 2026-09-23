@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { PanelRightOpen } from "lucide-react";
-import { getFacilities } from "@/lib/api";
+import { getFacilities, getFootprint } from "@/lib/api";
 import { readParam, withParams } from "@/lib/search-params";
 import type { FacilityListItem } from "@/types/api";
 import { FacilityMap } from "./_components/facility-map";
@@ -21,6 +21,9 @@ export default async function MapPage({ searchParams }: PageProps<"/">) {
   const selected = facilities.find((f) => f.id === readParam(params, "objekt")) ?? defaultSelection(facilities);
   const tab = parseTab(readParam(params, "panel"));
 
+  // Půdorys pro 3D budovu — bez něj mapa funguje dál, jen bez zvýrazněné budovy
+  const footprint = selected ? await getFootprint(selected.id).catch(() => null) : null;
+
   // Inspekční panel jde zavřít (?inspekce=0) — mapa se pak roztáhne na celou šířku
   const panelOpen = selected !== null && readParam(params, "inspekce") !== "0";
 
@@ -32,7 +35,7 @@ export default async function MapPage({ searchParams }: PageProps<"/">) {
         <section className="@container flex min-w-0 flex-1 flex-col border-r border-slate-200 bg-white">
           <MapFilterBar />
           <div className="relative min-h-0 flex-1">
-            <FacilityMap facilities={facilities} selectedId={selected?.id ?? null} />
+            <FacilityMap facilities={facilities} selectedId={selected?.id ?? null} footprint={footprint} />
 
             {facilities.length === 0 && (
               <p className="absolute top-1/3 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">

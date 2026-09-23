@@ -180,3 +180,9 @@ export type BuildingSection = {
   zones: { id: string; name: string; type: string; floor: number; wing: string; isHotspot: boolean; temperature: number | null; co2: number | null }[];
   updatedAt: string | null;
 };
+
+export type Footprint = {
+  type: "Feature";
+  geometry: { type: string; coordinates: unknown } | null;
+  properties: { facilityId: string; status: AuditStatus; heightMeters: number; floors: number; heightEstimated: boolean };
+};
