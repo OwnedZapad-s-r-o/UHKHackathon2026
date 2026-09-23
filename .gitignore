@@ -1,0 +1,27 @@
+# Soukromé podklady (pravidla soutěže, kontakty) — jen lokálně
+_private/
+
+# Nástroje editorů a agentů
+.claude/
+.vs/
+.vscode/
+.idea/
+
+# .NET
+backend/**/bin/
+backend/**/obj/
+*.user
+
+# Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+
+# Prostředí
+.env
+.env*.local
