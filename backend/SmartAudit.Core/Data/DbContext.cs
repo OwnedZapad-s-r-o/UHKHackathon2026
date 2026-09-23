@@ -25,6 +25,7 @@ namespace SmartAudit.Core.Data
         public DbSet<Sensor> Sensors { get; set; }
         public DbSet<SensorReading> SensorReadings { get; set; }
         public DbSet<WeatherObservation> WeatherObservations { get; set; }
+        public DbSet<AiAnalysis> AiAnalyses { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

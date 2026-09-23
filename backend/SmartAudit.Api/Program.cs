@@ -43,6 +43,10 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(AuditSettings.Sec
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 
+// AI analýza přes Azure OpenAI — bez klíče aplikace funguje, jen AI vrací „není nastavená“
+builder.Services.AddSingleton(builder.Configuration.GetSection(AzureOpenAiSettings.SectionName).Get<AzureOpenAiSettings>() ?? new AzureOpenAiSettings());
+builder.Services.AddScoped<IAiAuditService, AiAuditService>();
+
 // Externí zdroje dat
 builder.Services.AddHttpClient<IKhkOpenDataService, KhkOpenDataService>(c => c.Timeout = TimeSpan.FromSeconds(90));
 builder.Services.AddHttpClient<ICuzkBuildingService, CuzkBuildingService>(c => c.Timeout = TimeSpan.FromSeconds(30));
@@ -67,7 +71,7 @@ builder.Services.AddHostedService<SensorSimulationService>();
 // PDF reporty — QuestPDF Community licence (zdarma pro malé organizace), písmo Hradec a logo HK
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 ReportStyles.Initialize(builder.Environment.ContentRootPath);
-builder.Services.AddScoped<IReportAiSource, NoReportAiSource>();
+builder.Services.AddScoped<IReportAiSource, ReportAiSource>();
 
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 builder.Services.AddProblemDetails();

@@ -186,3 +186,27 @@ export type Footprint = {
   geometry: { type: string; coordinates: unknown } | null;
   properties: { facilityId: string; status: AuditStatus; heightMeters: number; floors: number; heightEstimated: boolean };
 };
+
+export type AiRecommendation = {
+  title: string;
+  detail: string;
+  cost: string;
+  saving: string;
+  payback: string;
+  heritageSafe: boolean;
+};
+
+export type AiAnalysis = {
+  id: string;
+  model: string;
+  summary: string;
+  rootCause: string;
+  recommendations: AiRecommendation[];
+  letterDraft: string | null;
+  createdAt: string;
+};
+
+export type AiAuditState = {
+  configured: boolean;
+  analysis: AiAnalysis | null;
+};

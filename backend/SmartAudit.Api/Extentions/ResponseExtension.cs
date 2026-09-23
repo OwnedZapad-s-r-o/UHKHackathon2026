@@ -16,6 +16,10 @@ namespace SmartAudit.Api.Extentions
                 {
                     StatusCode = StatusCodes.Status403Forbidden,
                 },
+                ResponseStatus.ServiceUnavailable => new ObjectResult(new { response.Message })
+                {
+                    StatusCode = StatusCodes.Status503ServiceUnavailable,
+                },
                 ResponseStatus.Error => new ObjectResult(new { response.Message })
                 {
                     StatusCode = StatusCodes.Status500InternalServerError,
