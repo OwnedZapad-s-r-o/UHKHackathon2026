@@ -9,6 +9,7 @@ using SmartAudit.Api.Middleware;
 using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Import;
+using SmartAudit.Api.Services.Reports;
 using SmartAudit.Api.Services.Simulation;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
@@ -62,6 +63,11 @@ builder.Services.AddScoped<ISensorProvisioningService, SensorProvisioningService
 builder.Services.AddScoped<ISensorDataSource, SimulatedSensorDataSource>();
 builder.Services.AddScoped<IFacilityAuditService, FacilityAuditService>();
 builder.Services.AddHostedService<SensorSimulationService>();
+
+// PDF reporty — QuestPDF Community licence (zdarma pro malé organizace), písmo Hradec a logo HK
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+ReportStyles.Initialize(builder.Environment.ContentRootPath);
+builder.Services.AddScoped<IReportAiSource, NoReportAiSource>();
 
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 builder.Services.AddProblemDetails();

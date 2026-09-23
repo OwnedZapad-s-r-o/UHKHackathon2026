@@ -1,0 +1,84 @@
+import type { Metadata } from "next";
+import { Building2, FileDown } from "lucide-react";
+import { getFacilities } from "@/lib/api";
+import { DISTRICTS } from "@/lib/facility-meta";
+import { TopBar } from "../_components/top-bar";
+import { FacilityReportPicker } from "./_components/facility-report-picker";
+
+export const metadata: Metadata = {
+  title: "Reporty · SmartAudit KHK",
+};
+
+export default async function ReportsPage() {
+  const facilities = await getFacilities();
+
+  const options = facilities
+    .toSorted((a, b) => a.districtName.localeCompare(b.districtName, "cs") || a.name.localeCompare(b.name, "cs"))
+    .map((f) => ({ id: f.id, label: `${f.code} · ${f.name}`, district: f.districtName }));
+
+  return (
+    <>
+      <TopBar title="Reporty" />
+
+      <main className="min-h-0 flex-1 overflow-y-auto p-6">
+        <h1 className="text-[32px] leading-tight font-bold tracking-tight">Reporty</h1>
+        <p className="mt-1.5 max-w-2xl text-sm text-slate-600">
+          PDF podklady z telemetrie a otevřených dat — audit jednoho objektu pro správce budovy a přehled portfolia pro investiční odbor.
+        </p>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="report-facility">
+            <div className="flex items-center gap-2.5">
+              <Building2 className="size-5 text-hk-blue" aria-hidden />
+              <h2 id="report-facility" className="text-lg font-bold tracking-tight">
+                Energetický audit objektu
+              </h2>
+            </div>
+            <p className="mt-2 text-[13px] text-slate-600">
+              Zjištění, teplota za 48 h, spotřeba po dnech, provozní heatmapa, řez budovou a kontext z otevřených dat (ČÚZK, obsazenost, HSOO, památky).
+            </p>
+            <FacilityReportPicker options={options} />
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="report-portfolio">
+            <div className="flex items-center gap-2.5">
+              <FileDown className="size-5 text-hk-blue" aria-hidden />
+              <h2 id="report-portfolio" className="text-lg font-bold tracking-tight">
+                Přehled portfolia
+              </h2>
+            </div>
+            <p className="mt-2 text-[13px] text-slate-600">
+              Souhrn kraje nebo okresu, odhad ztrát podle ORP a pořadí objektů podle závažnosti — podklad pro investiční odbor.
+            </p>
+
+            {/* Obyčejný GET formulář — funguje i bez JavaScriptu */}
+            <form action="/reporty/portfolio" className="mt-4 space-y-3">
+              <label className="block text-xs text-slate-500">
+                Okres
+                <select name="okres" className="mt-1 block h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-hk-navy">
+                  <option value="">Celý kraj</option>
+                  {DISTRICTS.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="zjisteni" value="1" className="size-4 accent-hk-blue" />
+                Jen objekty se zjištěním
+              </label>
+              <button
+                type="submit"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-hk-accent px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red"
+              >
+                <FileDown className="size-4" aria-hidden />
+                Stáhnout PDF portfolia
+              </button>
+            </form>
+          </section>
+        </div>
+      </main>
+    </>
+  );
+}

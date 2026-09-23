@@ -46,6 +46,16 @@ async function apiGet<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+// Soubor z API (PDF report) s tokenem ze session — prohlížeč token nemá, je v httpOnly cookie
+export async function apiGetFile(path: string): Promise<Response> {
+  const session = await getSession();
+
+  return fetch(`${API_URL}${path}`, {
+    headers: session ? { Authorization: `Bearer ${session.token}` } : undefined,
+    cache: "no-store",
+  });
+}
+
 export type FacilityFilter = {
   q?: string;
   district?: string;
