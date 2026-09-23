@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SmartAudit.Api/SmartAudit.Api.csproj" />
+  <Project Path="SmartAudit.Core/SmartAudit.Core.csproj" />
+</Solution>
