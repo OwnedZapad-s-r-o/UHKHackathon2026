@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.Operation.Buffer;
 using SmartAudit.Api.Extentions;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
@@ -20,6 +21,12 @@ namespace SmartAudit.Api.Features.Facilities.GetFootprint
     public class GetFootprintHandler : IRequestHandler<GetFootprintCommand, Response<GetFootprintDto>>
     {
         private const double FloorHeightMeters = 3.3;
+
+        // Obrys se zvětší o ~0,4 m: stejnou budovu kreslí i podkladová mapa (OSM má v ČR půdorysy z katastru)
+        // a barevná budova ji musí celou obalit, jinak se stěny překrývají a barva prosvítá jen místy
+        private const double OutlineBufferDegrees = 0.0000036;
+
+        private static readonly BufferParameters OutlineBuffer = new() { JoinStyle = JoinStyle.Mitre, QuadrantSegments = 1 };
 
         private readonly SmartAuditDbContext _dbContext;
 
@@ -50,7 +57,9 @@ namespace SmartAudit.Api.Features.Facilities.GetFootprint
 
             var properties = new FootprintPropertiesDto(request.FacilityId, facility.Status, facility.Floors * FloorHeightMeters, facility.Floors, true);
 
-            return Response.Success(new GetFootprintDto("Feature", facility.Footprint, properties));
+            var outline = facility.Footprint?.Buffer(OutlineBufferDegrees, OutlineBuffer);
+
+            return Response.Success(new GetFootprintDto("Feature", outline, properties));
         }
     }
 }
