@@ -24,6 +24,51 @@ namespace SmartAudit.Core.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.AiAnalysis", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LetterDraft")
+                        .HasMaxLength(6000)
+                        .HasColumnType("character varying(6000)");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RecommendationsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("RootCause")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacilityId", "CreatedAt");
+
+                    b.ToTable("AiAnalyses");
+                });
+
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.DataImport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -770,6 +815,17 @@ namespace SmartAudit.Core.Migrations
                     b.HasIndex("FacilityId");
 
                     b.ToTable("Zones");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.AiAnalysis", b =>
+                {
+                    b.HasOne("SmartAudit.Core.Data.Tables.Facility", "Facility")
+                        .WithMany()
+                        .HasForeignKey("FacilityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Facility");
                 });
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.DataImport", b =>

@@ -8,6 +8,9 @@ namespace SmartAudit.Core.Domain
         ValidationFailed,
 
         Forbidden,
+
+        // Závislá služba (např. AI) není nastavená nebo dostupná
+        ServiceUnavailable,
     }
 
     public class Response<T>
@@ -49,5 +52,8 @@ namespace SmartAudit.Core.Domain
 
         public static Response<T> Forbidden<T>(string? message = null, ResponseStatus status = ResponseStatus.Forbidden)
             => new(status, default, message);
+
+        public static Response<T> Unavailable<T>(string message)
+            => new(ResponseStatus.ServiceUnavailable, default, message);
     }
 }
