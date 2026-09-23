@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Features.Facilities.GetFacilities;
 using SmartAudit.Api.Features.Facilities.GetFacilityDetail;
@@ -67,11 +68,14 @@ namespace SmartAudit.Api.Controllers
             return result.ToActionResult();
         }
 
+        // Obrys pro 3D zvýraznění v mapě — veřejná data katastru, cache 2 dny (server i prohlížeč)
         [HttpGet]
         [Route("{id:guid}/footprint")]
+        [OutputCache(PolicyName = OpenDataController.FootprintCachePolicy)]
+        [ResponseCache(Duration = OpenDataController.FootprintCacheSeconds, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> GetFootprint(Guid id, CancellationToken ct)
         {
-            var command = new GetFootprintCommand(id, User.GetViewer());
+            var command = new GetFootprintCommand(id, Buffered: true);
 
             var result = await _mediator.Send(command, ct);
 

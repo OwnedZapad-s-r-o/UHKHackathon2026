@@ -3,8 +3,10 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using NetTopologySuite.IO.Converters;
 using Scalar.AspNetCore;
+using SmartAudit.Api.Controllers;
 using SmartAudit.Api.Middleware;
 using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
@@ -101,20 +103,62 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-builder.Services.AddOpenApi();
+
+// Otevřené API: CORS pro libovolný web, cache odpovědí na serveru (půdorys 2 dny, ostatní 5 minut)
+builder.Services.AddCors(options => options.AddPolicy(OpenDataController.CorsPolicy, policy => policy.AllowAnyOrigin().WithMethods("GET").AllowAnyHeader()));
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy(OpenDataController.ListCachePolicy, policy => policy.Expire(TimeSpan.FromSeconds(OpenDataController.ListCacheSeconds)));
+    options.AddPolicy(OpenDataController.FootprintCachePolicy, policy => policy.Expire(TimeSpan.FromSeconds(OpenDataController.FootprintCacheSeconds)));
+});
+
+// Dokumentace: otevřené API je veřejná vždy, interní API aplikace jen při vývoji
+builder.Services.AddOpenApi(OpenDataController.DocumentName, options =>
+{
+    // Jinak by dokument „v1“ převzal i všechny endpointy bez skupiny (interní API aplikace)
+    options.ShouldInclude = description => description.GroupName == OpenDataController.DocumentName;
+    options.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Info = new OpenApiInfo
+        {
+            Title = "SmartAudit KHK — otevřená data",
+            Version = "v1",
+            Description = "Objekty, které zřizuje Královéhradecký kraj: poloha, budova z ČÚZK, stav energetického auditu "
+                + "a měření ze senzorů (zatím simulovaná). Bez přihlášení a bez klíče, jen čtení (GET). "
+                + "Částky v Kč API neobsahuje.",
+            License = new OpenApiLicense { Name = "CC BY 4.0", Url = new Uri("https://creativecommons.org/licenses/by/4.0/deed.cs") },
+        };
+        // Relativní adresa — dokumentace funguje přes proxy Next.js i přímo na API
+        document.Servers = [new OpenApiServer { Url = "/" }];
+
+        return Task.CompletedTask;
+    });
+});
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddOpenApi("internal");
+
 builder.Services.AddDbContext<SmartAuditDbContext>(op => op.UseNpgsql(connectionString, o => o.UseNetTopologySuite()));
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
+app.MapOpenApi("/api/open/{documentName}/openapi.json");
+app.MapScalarApiReference("/api/open/docs", options =>
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+    options.WithTitle("SmartAudit KHK — otevřené API")
+        .WithOpenApiRoutePattern("/api/open/{documentName}/openapi.json")
+        .AddDocument(OpenDataController.DocumentName, "Otevřená data v1", isDefault: true);
+
+    if (app.Environment.IsDevelopment())
+        options.AddDocument("internal", "Interní API aplikace");
+});
 
 // HTTPS řeší reverzní proxy / Next.js, API v kontejneru běží jen na HTTP
+
+app.UseCors();
+app.UseOutputCache();
 
 app.UseAuthentication();
 app.UseAuthorization();
