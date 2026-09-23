@@ -1,0 +1,359 @@
+{
+ "Chodníky - nevidomí": {
+  "n": 278,
+  "geom": "linie",
+  "pole": [
+   "ID",
+   "USEK",
+   "HODNOCENI",
+   "PRIR_VOD_L",
+   "UMEL_VOD_L",
+   "DELKA_TRAS",
+   "UPDATE",
+   "USEKUC",
+   "USEKBEZ"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "USEK": "TERMINÁL HD",
+    "HODNOCENI": "1",
+    "PRIR_VOD_L": "0",
+    "UMEL_VOD_L": "1",
+    "DELKA_TRAS": "52",
+    "UPDATE": "1",
+    "USEKUC": "TERMINÁL HD",
+    "USEKBEZ": "TERMINAL HD"
+   },
+   {
+    "ID": "2",
+    "USEK": "od terminálu MHD před vchod hlavního nádraží ČD",
+    "HODNOCENI": "2",
+    "PRIR_VOD_L": "1",
+    "UMEL_VOD_L": "0",
+    "DELKA_TRAS": "167",
+    "UPDATE": "1",
+    "USEKUC": "OD TERMINÁLU MHD PŘED VCHOD HLAVNÍHO NÁDRAŽÍ ČD",
+    "USEKBEZ": "OD TERMINALU MHD PRED VCHOD HLAVNIHO NADRAZI CD"
+   }
+  ]
+ },
+ "Indukční smyčky": {
+  "n": 5,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "CPOP",
+   "NAZEV",
+   "POZN"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "CPOP": "774",
+    "NAZEV": "Bio Centrál",
+    "POZN": ""
+   },
+   {
+    "ID": "2",
+    "CPOP": "402",
+    "NAZEV": "Česká spořitelna",
+    "POZN": "přenosná IS"
+   }
+  ]
+ },
+ "Objekty - nevidomí": {
+  "n": 168,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "CPOP",
+   "INSTITUCE",
+   "MAJACEK",
+   "POZNAMKA",
+   "POZNAMKA1",
+   "FOTO",
+   "HODNOCENI",
+   "CISLO_MAP",
+   "NAFOC"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "CPOP": "1704",
+    "INSTITUCE": "Terminál MHD",
+    "MAJACEK": "1",
+    "POZNAMKA": "3 vstupy, 3 orientační hlasové majáčky",
+    "POZNAMKA1": "",
+    "FOTO": "",
+    "HODNOCENI": "1",
+    "CISLO_MAP": "1",
+    "NAFOC": "0"
+   },
+   {
+    "ID": "2",
+    "CPOP": "914",
+    "INSTITUCE": "Nádraží ČD",
+    "MAJACEK": "1",
+    "POZNAMKA": "-",
+    "POZNAMKA1": "",
+    "FOTO": "",
+    "HODNOCENI": "1",
+    "CISLO_MAP": "2",
+    "NAFOC": "1"
+   }
+  ]
+ },
+ "Objekty - vozíčky": {
+  "n": 148,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "CPOP",
+   "INSTITUCE",
+   "VSTUP",
+   "DO_80CM",
+   "NAD_80CM",
+   "VNITR_BEZB",
+   "SCHODY",
+   "WC_BEZBAR",
+   "BANBKOMAT",
+   "POZN",
+   "HODNOCENI",
+   "CISLO_MAP",
+   "NAFOC"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "CPOP": "637",
+    "INSTITUCE": "Lékárna",
+    "VSTUP": "1",
+    "DO_80CM": "1",
+    "NAD_80CM": "0",
+    "VNITR_BEZB": "1",
+    "SCHODY": "0",
+    "WC_BEZBAR": "0",
+    "BANBKOMAT": "0",
+    "POZN": "vstupní dveře rozdělené",
+    "HODNOCENI": "1",
+    "CISLO_MAP": "32",
+    "NAFOC": "1"
+   },
+   {
+    "ID": "2",
+    "CPOP": "854",
+    "INSTITUCE": "UniCredit Bank",
+    "VSTUP": "1",
+    "DO_80CM": "0",
+    "NAD_80CM": "1",
+    "VNITR_BEZB": "1",
+    "SCHODY": "0",
+    "WC_BEZBAR": "0",
+    "BANBKOMAT": "1",
+    "POZN": "",
+    "HODNOCENI": "1",
+    "CISLO_MAP": "96",
+    "NAFOC": "0"
+   }
+  ]
+ },
+ "Přechody - nevidomí": {
+  "n": 177,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "VIDITELNOS",
+   "HMATNE_PRV",
+   "SVETEL_SIG",
+   "AKUST_SIG",
+   "POZN",
+   "POZN2",
+   "FOTO1",
+   "FOTO2",
+   "FOTO3",
+   "HODNOCENI",
+   "NAFOC"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "VIDITELNOS": "0",
+    "HMATNE_PRV": "1",
+    "SVETEL_SIG": "0",
+    "AKUST_SIG": "0",
+    "POZN": "Signální a varovné pásy nejsou vizuálně kontrastní.",
+    "POZN2": "Směrem k nádraží monitorováno v areálu terminálu 7 přechodů(směr od hl. dveří budovy dálkové dopravy přes hl. dveře budovy městské dopravy až ke konci terminálu. Přechody na sebe navazují a jsou situované v ose).",
+    "FOTO1": "",
+    "FOTO2": "",
+    "FOTO3": "",
+    "HODNOCENI": "2",
+    "NAFOC": "0"
+   },
+   {
+    "ID": "2",
+    "VIDITELNOS": "1",
+    "HMATNE_PRV": "1",
+    "SVETEL_SIG": "0",
+    "AKUST_SIG": "0",
+    "POZN": "Signální a varovné pásy nejsou vizuálně kontrastní.",
+    "POZN2": "",
+    "FOTO1": "",
+    "FOTO2": "",
+    "FOTO3": "",
+    "HODNOCENI": "2",
+    "NAFOC": "0"
+   }
+  ]
+ },
+ "Přechody - vozíčky": {
+  "n": 141,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "PROBLEM",
+   "HODNOCENI",
+   "FOTO1",
+   "NAFOC"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "PROBLEM": "CHYBÍ VDZ",
+    "HODNOCENI": "2",
+    "FOTO1": "",
+    "NAFOC": "1"
+   },
+   {
+    "ID": "2",
+    "PROBLEM": "CHYBÍ VDZ",
+    "HODNOCENI": "2",
+    "FOTO1": "",
+    "NAFOC": "0"
+   }
+  ]
+ },
+ "Trasy": {
+  "n": 36,
+  "geom": "linie",
+  "pole": [
+   "ID",
+   "TYP"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "TYP": "HLAVNI"
+   },
+   {
+    "ID": "2",
+    "TYP": "HLAVNI"
+   }
+  ]
+ },
+ "Úseky - nevidomí": {
+  "n": 1,
+  "geom": "linie",
+  "pole": [
+   "ID",
+   "VIDITELNOS",
+   "HMATNE_PRV",
+   "SVETEL_SIG",
+   "AKUST_SIG",
+   "POZN",
+   "POZN1",
+   "FOTO1",
+   "FOTO2",
+   "FOTO3"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "VIDITELNOS": "0",
+    "HMATNE_PRV": "0",
+    "SVETEL_SIG": "0",
+    "AKUST_SIG": "0",
+    "POZN": "Neoznačené vjezdy signálními a varovnými pásy",
+    "POZN1": "Na tzv. „místech pro přecházení“ se zřizují signální pásy, ale o cca 0,5 m odsazené od pásu varovného. Odsazení znamená informaci, že se chodec nachází u „místa pro přecházení“",
+    "FOTO1": "",
+    "FOTO2": "",
+    "FOTO3": ""
+   }
+  ]
+ },
+ "Zastávky - nevidomí": {
+  "n": 55,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "ULICE",
+   "SMER",
+   "SIGNAL_PAS",
+   "VIZUAL_PRV",
+   "BEZBARIERO",
+   "POZN",
+   "POZN1",
+   "FOTO1",
+   "FOTO2",
+   "FOTO3",
+   "HODNOCENI"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "ULICE": "Nádražní",
+    "SMER": "všechny",
+    "SIGNAL_PAS": "1",
+    "VIZUAL_PRV": "1",
+    "BEZBARIERO": "1",
+    "POZN": "Terminál hromadné dopravy je řešen formou dvou dominantních budov. Jedna pro MHD a druhá pro meziměstskou dopravu. Zastávky jsou umístěny na šesti nástupních ostrůvcích a též na odbavovacích plochách přiléhajících k dané budově.",
+    "POZN1": "Pro městskou hromadnou dopravu je vyhrazeno 8 stání a meziměstskou dopravu 16 stání. Označníky zastávek jsou označeny informačními štítky v Braillově písmu. Popis terminálu lze nalézt na webových stránkách TyfloCentra HK - www.tyflocentrum-hk.cz.",
+    "FOTO1": "",
+    "FOTO2": "",
+    "FOTO3": "",
+    "HODNOCENI": "1"
+   },
+   {
+    "ID": "2",
+    "ULICE": "Riegrova",
+    "SMER": "všechny",
+    "SIGNAL_PAS": "1",
+    "VIZUAL_PRV": "0",
+    "BEZBARIERO": "2",
+    "POZN": "Terminál hromadné dopravy je řešen formou dvou dominantních budov. Jedna pro MHD a druhá pro meziměstskou dopravu. Zastávky jsou umístěny na šesti nástupních ostrůvcích a též na odbavovacích plochách přiléhajících k dané budově.",
+    "POZN1": "Pro městskou hromadnou dopravu je vyhrazeno 8 stání a meziměstskou dopravu 16 stání. Označníky zastávek jsou označeny informačními štítky v Braillově písmu. Popis terminálu lze nalézt na webových stránkách TyfloCentra HK - www.tyflocentrum-hk.cz.",
+    "FOTO1": "",
+    "FOTO2": "",
+    "FOTO3": "",
+    "HODNOCENI": "1"
+   }
+  ]
+ },
+ "Zastávky - vozíčky": {
+  "n": 12,
+  "geom": "bod",
+  "pole": [
+   "ID",
+   "ZASTAVKA",
+   "PROBLEM",
+   "HODNOCENI",
+   "NAFOC"
+  ],
+  "vzorek": [
+   {
+    "ID": "1",
+    "ZASTAVKA": "Heyrovského",
+    "PROBLEM": "Absence nást. ostrůvku  - velký sklon plošiny",
+    "HODNOCENI": "3",
+    "NAFOC": "1"
+   },
+   {
+    "ID": "2",
+    "ZASTAVKA": "Brněnská - zastávka Hotel Garni 4a",
+    "PROBLEM": "",
+    "HODNOCENI": "1",
+    "NAFOC": "1"
+   }
+  ]
+ }
+}

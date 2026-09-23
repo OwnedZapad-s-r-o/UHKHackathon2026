@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Školní kompas KHK — dojížďka, oborové pouště a what-if simulátor</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --bg:#0E1514;--panel:#161F1D;--line:#2A3733;--line2:#212C29;
+    --tx:#DEE6E1;--tx2:#A4B2AC;--tx3:#7A8B85;
+    --acc:#4FA79A;--gold:#C4A650;--warn:#D9784A;--map:#101817;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--tx);
+    font:14px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif;display:flex;overflow:hidden}
+  #map{flex:1;height:100%;background:var(--map)}
+  .leaflet-container{background:var(--map);font:inherit}
+  .leaflet-bar a{background:var(--panel);color:var(--tx);border-color:var(--line)}
+  #panel{width:410px;flex:none;height:100%;display:flex;flex-direction:column;
+    background:var(--panel);border-left:1px solid var(--line)}
+  @media(max-width:920px){body{flex-direction:column}#map{height:48%}#panel{width:100%;height:52%;border:0;border-top:1px solid var(--line)}}
+
+  .pad{padding:14px 16px}
+  .hr{border-top:1px solid var(--line)}
+  h1{font-size:1rem;margin:0;font-weight:600}
+  .sub{font-size:.75rem;color:var(--tx3);margin:2px 0 0}
+
+  /* režimy */
+  .tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+  .tabs button{flex:1;padding:9px 3px;background:transparent;border:0;border-bottom:2px solid transparent;
+    color:var(--tx3);font:inherit;font-size:.76rem;cursor:pointer}
+  .tabs button[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+  .tabs button:hover:not([aria-selected="true"]){color:var(--tx)}
+
+  #body{flex:1;overflow-y:auto;min-height:0}
+  select,input{width:100%;padding:7px 9px;background:var(--bg);color:var(--tx);
+    border:1px solid var(--line);border-radius:5px;font:inherit;font-size:.82rem}
+  label.fl{display:block;font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--tx3);margin:12px 0 5px}
+
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .kpi{background:var(--panel);padding:10px 13px}
+  .kpi b{display:block;font-size:1.25rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+  .kpi span{font-size:.68rem;color:var(--tx3);display:block;margin-top:1px;line-height:1.3}
+  .kpi.hl b{color:var(--gold)}
+  .kpi.bad b{color:var(--warn)}
+
+  .t1{font-size:.98rem;font-weight:600;margin:0 0 2px;line-height:1.3}
+  .t2{font-size:.74rem;color:var(--tx3);margin:0 0 11px}
+  table.rows{width:100%;border-collapse:collapse;font-size:.81rem}
+  .rows td{padding:5px 0;border-bottom:1px solid var(--line2);vertical-align:top}
+  .rows tr:last-child td{border-bottom:0}
+  .rows .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;width:52px;white-space:nowrap}
+  .rows .sm{font-size:.71rem;color:var(--tx3);display:block}
+  .bar{height:3px;background:var(--acc);border-radius:2px;margin-top:3px}
+  .bar.out{background:var(--warn)}
+  .note{font-size:.74rem;color:var(--tx3);line-height:1.5}
+  .warnbox{border-left:2px solid var(--warn);padding:8px 11px;font-size:.76rem;
+    color:var(--tx2);background:#3A241B55;margin:10px 0}
+  .okbox{border-left:2px solid var(--acc);padding:8px 11px;font-size:.78rem;
+    color:var(--tx2);background:#1D3B3755;margin:10px 0}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:.85em;background:#1D3B37;padding:1px 4px;border-radius:3px}
+  .empty{color:var(--tx3);font-size:.82rem;font-style:italic}
+  a{color:var(--acc)}
+  .legend{display:flex;flex-direction:column;gap:4px;margin-top:9px;font-size:.71rem;color:var(--tx2)}
+  .legend div{display:flex;align-items:center;gap:7px}
+  .sw{width:20px;height:9px;border-radius:2px;flex:none}
+
+  /* chat */
+  #chat{flex:none;border-top:1px solid var(--line);background:#121A19}
+  #log{max-height:190px;overflow-y:auto;padding:10px 14px 4px}
+  .msg{margin-bottom:9px;font-size:.82rem;line-height:1.5}
+  .msg.u{color:var(--tx3)}
+  .msg.u b{color:var(--tx2)}
+  .msg.a{color:var(--tx)}
+  .msg .tool{display:inline-block;font-family:ui-monospace,monospace;font-size:.7rem;
+    background:#1D3B37;color:var(--acc);padding:1px 6px;border-radius:3px;margin-bottom:3px}
+  .chatbar{display:flex;gap:7px;padding:9px 12px 11px}
+  .chatbar input{flex:1}
+  .chatbar button{padding:7px 11px;background:var(--acc);color:#08110F;border:0;
+    border-radius:5px;font:inherit;font-weight:600;font-size:.8rem;cursor:pointer}
+  .chatbar button.ghost{background:var(--line);color:var(--tx2);padding:7px 9px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 9px}
+  .chips button{background:transparent;border:1px solid var(--line);color:var(--tx3);
+    border-radius:11px;padding:3px 9px;font:inherit;font-size:.71rem;cursor:pointer}
+  .chips button:hover{border-color:var(--acc);color:var(--acc)}
+
+  #load{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:13px}
+  #load .track{width:250px;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+  #load .fill{height:100%;width:0;background:var(--acc);transition:width .3s}
+  .leaflet-tooltip{background:var(--panel);border:1px solid var(--line);color:var(--tx);
+    box-shadow:none;font-size:.77rem;padding:4px 7px}
+</style>
+</head>
+<body>
+
+<div id="load">
+  <div id="load-t" style="color:var(--tx2);font-size:.9rem">Načítám otevřená data…</div>
+  <div class="track"><div class="fill" id="load-f"></div></div>
+</div>
+
+<div id="map"></div>
+
+<aside id="panel">
+  <div class="pad" style="flex:none">
+    <h1>Školní kompas KHK</h1>
+    <p class="sub">Dojížďka · oborové pouště · gravitační model · what-if</p>
+  </div>
+  <div class="tabs" role="tablist">
+    <button id="t-toky"   role="tab" aria-selected="true">Toky</button>
+    <button id="t-obory"  role="tab" aria-selected="false">Obory</button>
+    <button id="t-model"  role="tab" aria-selected="false">Model</button>
+    <button id="t-whatif" role="tab" aria-selected="false">What-if</button>
+  </div>
+  <div id="body"></div>
+
+  <div id="chat">
+    <div id="log"></div>
+    <div class="chips" id="chips"></div>
+    <div class="chatbar">
+      <input id="q" placeholder="Zeptej se, např. kde se učí Rybářství…">
+      <button id="mic" class="ghost" title="Hlasový vstup">🎤</button>
+      <button id="send">Zeptat</button>
+    </div>
+  </div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   Školní kompas KHK — prototyp nad otevřenými daty Královéhradeckého kraje
+   Data se stahují živě z ArcGIS API; agregace probíhá na serveru.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const SVC='https://services6.arcgis.com/ogJAiK65nXL1mXAW/arcgis/rest/services';
+const API={
+  doj : SVC+'/Doj%C3%AD%C5%BE%C4%8Fka_do_st%C5%99edn%C3%ADch_%C5%A1kol/FeatureServer/0',
+  hran: SVC+'/Hranice_obc%C3%AD_v_Kr%C3%A1lov%C3%A9hradeck%C3%A9m_kraji/FeatureServer/0',
+  adm : SVC+'/Administrativn%C3%AD_%C4%8Dlen%C4%9Bn%C3%AD_obc%C3%AD/FeatureServer/0',
+  rada: SVC+'/Po%C4%8Det_%C5%BE%C3%A1k%C5%AF_dle_obor%C5%AF_st%C5%99edn%C3%ADch_%C5%A1kol_v_KHK/FeatureServer/4'
+};
+const ODKAZY={
+  'Dojížďka do středních škol':'https://www.datakhk.cz/datasets/c62b3bf8a0dd40b4b1d70bc419d5d6e4',
+  'Hranice obcí v KHK':'https://www.datakhk.cz/datasets/1901ac57194d4598bbf52242f87bbb5f',
+  'Administrativní členění obcí':'https://www.datakhk.cz/datasets/0445ecebd0624b588488700038715bf5',
+  'Počet žáků dle oborů SŠ':'https://www.datakhk.cz/datasets/0be317969b43455b93d08666cabda783'
+};
+const nf=new Intl.NumberFormat('cs-CZ');
+const n1=x=>x.toLocaleString('cs-CZ',{maximumFractionDigits:1});
+const $=id=>document.getElementById(id);
+
+/* ─────────── načítání ─────────── */
+async function jget(u){
+  const r=await fetch(u); if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(); if(j.error) throw new Error(j.error.message||'chyba API'); return j;
+}
+async function agg(api,groupBy,sumField='pocet_zaku'){
+  const st=encodeURIComponent(JSON.stringify([{statisticType:'sum',onStatisticField:sumField,outStatisticFieldName:'z'}]));
+  const out=[];
+  for(let off=0;;off+=2000){
+    const j=await jget(`${api}/query?where=1%3D1&groupByFieldsForStatistics=${encodeURIComponent(groupBy)}`+
+      `&outStatistics=${st}&returnGeometry=false&resultRecordCount=2000&resultOffset=${off}&f=json`);
+    const f=j.features||[]; out.push(...f.map(x=>x.attributes));
+    if(f.length<2000) break;
+  }
+  return out;
+}
+async function page(api,fields){
+  const out=[];
+  for(let off=0;;off+=2000){
+    const j=await jget(`${api}/query?where=1%3D1&outFields=${encodeURIComponent(fields)}`+
+      `&returnGeometry=false&resultRecordCount=2000&resultOffset=${off}&f=json`);
+    const f=j.features||[]; out.push(...f.map(x=>x.attributes));
+    if(f.length<2000) break;
+  }
+  return out;
+}
+const KROKY=['hranice obcí','toky dojížďky','školy','obce bydliště','obory','správní členění','časová řada','počítám model'];
+let krok=0;
+const tick=()=>{$('load-t').textContent='Načítám '+(KROKY[krok]||'…')+'…';
+  $('load-f').style.width=Math.round(++krok/KROKY.length*100)+'%';};
+
+/* ─────────── stav ─────────── */
+let D={}, M={};                 // data / model
+let map,obceLayer,arcLayer,skolyLayer;
+let tab='toky', selected=null, oborFilter='', oborDesert='', whatifIzo='', highlight=null;
+
+/* ─────────── start ─────────── */
+(async function(){
+ try{
+  tick(); const hran =await jget(`${API.hran}/query?where=1%3D1&outFields=nazev_obce,kod_obce&maxAllowableOffset=0.0008&f=geojson&resultRecordCount=1000`);
+  tick(); const toky =await agg(API.doj,'izo,kod_obce_bydliste_studenta');
+  tick(); const sk   =await agg(API.doj,'izo,nazev_skoly,x,y,nazev_obce,kod_obce,kod_orp,nazev_orp,zrizovatel');
+  tick(); const ob   =await agg(API.doj,'kod_obce_bydliste_studenta,nazev_obce_bydliste_studenta,nazev_okresu_bydliste_studenta');
+  tick(); const obory=await agg(API.doj,'izo,obor_nazev');
+  tick(); const adm  =await page(API.adm,'kod_obce,nazev_obce,kod_orp,nazev_orp,nazev_okresu');
+  tick(); const rada =await agg(API.rada,'obor_nazev,skolni_rok','pocet_zaku_celkem');
+  tick(); build(hran,toky,sk,ob,obory,adm,rada);
+  $('load').remove();
+ }catch(e){
+  $('load').innerHTML=`<div class="pad" style="max-width:520px"><h1>Data se nepodařilo načíst</h1>
+    <p class="note">${e.message}</p><p class="note">Otevři přes <code>http://</code>
+    (např. <code>python -m http.server 8080</code>), ne přes <code>file://</code>.</p></div>`;
+ }
+})();
+
+/* ─────────── příprava dat + model ─────────── */
+function build(hran,toky,skRaw,obRaw,oboryRaw,adm,rada){
+  // školy
+  const skoly=new Map();
+  const cislo=v=>{const n=typeof v==='string'?parseFloat(v):v; return Number.isFinite(n)?n:null;};
+  for(const s of skRaw){
+    let o=skoly.get(s.izo);
+    if(!o) skoly.set(s.izo,o={izo:s.izo,nazev:s.nazev_skoly,x:null,y:null,obec:s.nazev_obce,
+      kod_orp:s.kod_orp,orp:s.nazev_orp,zriz:s.zrizovatel,z:0,obory:new Set(),zdroje:[]});
+    o.z+=s.z||0;
+    // škola má víc řádků (různé obory); souřadnice bereme z prvního řádku, který je má
+    if(o.x==null){ const x=cislo(s.x), y=cislo(s.y); if(x!=null&&y!=null){o.x=x;o.y=y;} }
+  }
+  const bezSouradnic=[...skoly.values()].filter(s=>s.x==null);
+  if(bezSouradnic.length) console.warn('škol bez souřadnic:',bezSouradnic.map(s=>s.nazev));
+  for(const r of oboryRaw) if(r.obor_nazev) skoly.get(r.izo)?.obory.add(r.obor_nazev);
+
+  // obce
+  const obce=new Map();
+  for(const o of obRaw) obce.set(o.kod_obce_bydliste_studenta,{
+    kod:o.kod_obce_bydliste_studenta,nazev:o.nazev_obce_bydliste_studenta,
+    okres:o.nazev_okresu_bydliste_studenta,z:o.z||0,doma:0,ven:0,toky:[]});
+  const orpObce=new Map(); for(const a of adm) orpObce.set(a.kod_obce,a);
+
+  // centroidy z hranic
+  const cent=new Map(), nazevObce=new Map();
+  for(const f of hran.features){
+    const k=f.properties.kod_obce, g=f.geometry;
+    const rings=g.type==='Polygon'?g.coordinates:g.coordinates.flat();
+    const pts=rings.flat();
+    cent.set(k,[pts.reduce((a,p)=>a+p[0],0)/pts.length, pts.reduce((a,p)=>a+p[1],0)/pts.length]);
+    nazevObce.set(k,f.properties.nazev_obce);
+  }
+
+  // toky
+  for(const t of toky){
+    const s=skoly.get(t.izo), o=obce.get(t.kod_obce_bydliste_studenta); if(!s||!o) continue;
+    const z=t.z||0;
+    o.toky.push({izo:t.izo,z}); s.zdroje.push({kod:t.kod_obce_bydliste_studenta,z});
+    const d=orpObce.get(o.kod);
+    if(d&&d.kod_orp===s.kod_orp) o.doma+=z; else o.ven+=z;
+  }
+
+  // časová řada oborů
+  const trend=new Map();
+  for(const r of rada){ if(!r.obor_nazev) continue;
+    (trend.get(r.obor_nazev)||trend.set(r.obor_nazev,{}).get(r.obor_nazev))[r.skolni_rok]=r.z||0; }
+
+  D={skoly,obce,orpObce,cent,nazevObce,hran,trend,
+     celkem:[...obce.values()].reduce((a,b)=>a+b.z,0),
+     mimoKraj:[...obce.values()].filter(o=>!orpObce.has(o.kod)).reduce((a,b)=>a+b.z,0)};
+
+  fitModel();
+  oborDesert=[...vsechnyObory()][0]||'';
+  initMap(); setTab('toky'); renderChips();
+  say('a','Zeptej se na cokoliv nad daty. Volám <b>funkce nad reálnými čísly</b>, nic si nedomýšlím.');
+}
+
+const R=6371, rad=Math.PI/180;
+function hav(a,b){
+  const s=Math.sin((b[1]-a[1])*rad/2)**2+Math.cos(a[1]*rad)*Math.cos(b[1]*rad)*Math.sin((b[0]-a[0])*rad/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+const vsechnyObory=()=>{const s=new Set();for(const k of D.skoly.values())k.obory.forEach(o=>s.add(o));
+  return [...s].sort((a,b)=>a.localeCompare(b,'cs'));};
+
+/* ══ VLASTNÍ MODEL: vážená gravitační regrese, fit v prohlížeči ══ */
+function fitModel(){
+  const rows=[], tot=new Map();
+  for(const o of D.obce.values()){
+    if(!D.cent.has(o.kod)) continue;
+    let sum=0; for(const t of o.toky){const s=D.skoly.get(t.izo); if(s&&s.x!=null&&t.z>0) sum+=t.z;}
+    if(sum>0) tot.set(o.kod,sum);
+  }
+  for(const o of D.obce.values()){
+    if(!tot.has(o.kod)) continue;
+    for(const t of o.toky){
+      const s=D.skoly.get(t.izo); if(!s||s.x==null||t.z<=0) continue;
+      const d=Math.max(hav(D.cent.get(o.kod),[s.x,s.y]),0.5);
+      const same=D.orpObce.get(o.kod)?.kod_orp===s.kod_orp?1:0;
+      rows.push({kod:o.kod,izo:t.izo,z:t.z,d,M:s.z,same,share:t.z/tot.get(o.kod)});
+    }
+  }
+  // vážená metoda nejmenších čtverců přes normální rovnice (4 sloupce)
+  const P=4, A=Array.from({length:P},()=>new Array(P+1).fill(0));
+  for(const r of rows){
+    const x=[1,Math.log(r.M),Math.log(r.d),r.same], y=Math.log(r.share), w=r.z;
+    for(let i=0;i<P;i++){ for(let j=0;j<P;j++) A[i][j]+=w*x[i]*x[j]; A[i][P]+=w*x[i]*y; }
+  }
+  for(let i=0;i<P;i++){                                   // Gaussova eliminace
+    let p=i; for(let k=i+1;k<P;k++) if(Math.abs(A[k][i])>Math.abs(A[p][i])) p=k;
+    [A[i],A[p]]=[A[p],A[i]];
+    for(let k=i+1;k<P;k++){ const f=A[k][i]/A[i][i]; for(let j=i;j<=P;j++) A[k][j]-=f*A[i][j]; }
+  }
+  const b=new Array(P).fill(0);
+  for(let i=P-1;i>=0;i--){ let s=A[i][P]; for(let j=i+1;j<P;j++) s-=A[i][j]*b[j]; b[i]=s/A[i][i]; }
+
+  let sw=0,sy=0; for(const r of rows){ sw+=r.z; sy+=r.z*Math.log(r.share); }
+  const ym=sy/sw; let ssr=0,sst=0;
+  for(const r of rows){
+    const p=b[0]+b[1]*Math.log(r.M)+b[2]*Math.log(r.d)+b[3]*r.same;
+    r.pred=p; r.resid=Math.log(r.share)-p;
+    ssr+=r.z*r.resid**2; sst+=r.z*(Math.log(r.share)-ym)**2;
+  }
+  // průměrná dojezdová vzdálenost obce
+  const dist=new Map();
+  for(const r of rows){ const a=dist.get(r.kod)||[0,0]; a[0]+=r.d*r.z; a[1]+=r.z; dist.set(r.kod,a); }
+  M={beta:b,r2:1-ssr/sst,rows,
+     avgKm:new Map([...dist].map(([k,v])=>[k,v[0]/v[1]])),
+     krajKm:rows.reduce((a,r)=>a+r.d*r.z,0)/rows.reduce((a,r)=>a+r.z,0)};
+}
+const predikce=(Mz,d,same)=>Math.exp(M.beta[0]+M.beta[1]*Math.log(Mz)+M.beta[2]*Math.log(Math.max(d,0.5))+M.beta[3]*same);
+
+/* ── oborová poušť: vzdálenost obce k nejbližší škole s oborem ── */
+const desertCache=new Map();
+function desert(obor){
+  if(desertCache.has(obor)) return desertCache.get(obor);
+  const pts=[...D.skoly.values()].filter(s=>s.obory.has(obor)&&s.x!=null).map(s=>[s.x,s.y]);
+  const m=new Map();
+  if(pts.length) for(const [k,c] of D.cent) m.set(k,Math.min(...pts.map(p=>hav(c,p))));
+  desertCache.set(obor,m); return m;
+}
+
+/* ── what-if: zavřeme školu, přerozdělíme žáky ── */
+function whatif(izo){
+  const zav=D.skoly.get(izo); if(!zav) return null;
+  const zbyle=[...D.skoly.values()].filter(s=>s.izo!==izo&&s.x!=null);
+  const out=[]; let sPred=0,sPo=0,sZ=0;
+  for(const [kod,c] of D.cent){
+    const o=D.obce.get(kod); if(!o||!o.z) continue;
+    const zas=o.toky.find(t=>t.izo===izo); if(!zas) continue;
+    const pred=M.avgKm.get(kod); if(pred==null) continue;
+    // váhy podle modelu pro zbylé školy
+    const w=zbyle.map(s=>({s,w:predikce(s.z,hav(c,[s.x,s.y]),
+      D.orpObce.get(kod)?.kod_orp===s.kod_orp?1:0),d:hav(c,[s.x,s.y])}));
+    const sum=w.reduce((a,x)=>a+x.w,0); if(!sum) continue;
+    const novaKm=w.reduce((a,x)=>a+x.d*x.w/sum,0);           // kam by šli
+    const puvKm=hav(c,[zav.x,zav.y]);
+    const delta=(novaKm-puvKm)*zas.z/o.z;                    // dopad na průměr obce
+    out.push({kod,nazev:D.nazevObce.get(kod)||o.nazev,zasazeno:zas.z,delta,pred,po:pred+delta});
+    sPred+=pred*o.z; sPo+=(pred+delta)*o.z; sZ+=o.z;
+  }
+  out.sort((a,b)=>b.delta-a.delta);
+  return {skola:zav,obce:out,zaku:zav.z,
+          prumPred:sZ?sPred/sZ:0,prumPo:sZ?sPo/sZ:0,
+          zasazenoObci:out.length,zasazenoZaku:out.reduce((a,x)=>a+x.zasazeno,0)};
+}
+
+/* ══════════════════ MAPA ══════════════════ */
+function initMap(){
+  map=L.map('map',{attributionControl:false,minZoom:7}).setView([50.35,15.85],9);
+  obceLayer=L.geoJSON(D.hran,{style:f=>styl(f.properties.kod_obce),onEachFeature:(f,l)=>{
+    const k=f.properties.kod_obce;
+    l.bindTooltip(()=>tip(k),{sticky:true});
+    l.on('click',()=>{ if(tab==='obory'){select('obec',k);} else select('obec',k); });
+    l.on('mouseover',()=>l.setStyle({weight:1.6,color:'#DEE6E1'}));
+    l.on('mouseout',()=>l.setStyle(styl(k)));
+  }}).addTo(map);
+  arcLayer=L.layerGroup().addTo(map); skolyLayer=L.layerGroup().addTo(map);
+  drawSkoly();
+  let moved=false,fitting=false;
+  const fit=()=>{fitting=true;map.invalidateSize({animate:false});
+    if(!moved){const b=obceLayer.getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[10,10],animate:false});}
+    fitting=false;};
+  fit(); requestAnimationFrame(fit); setTimeout(fit,250);
+  map.on('zoomstart dragstart',()=>{if(!fitting)moved=true;});
+  if(window.ResizeObserver){let t;new ResizeObserver(()=>{clearTimeout(t);t=setTimeout(fit,120)}).observe($('map'));}
+  addEventListener('resize',fit);
+}
+
+const rampOdliv=p=>p==null?'#1A2422':
+  p<.4?'#2E6F5E':p<.6?'#5C8A4E':p<.8?'#A89246':p<.95?'#C4713F':'#B54A32';
+const rampKm=(d,max)=>{const t=Math.min(d/max,1);
+  return t<.2?'#2E6F5E':t<.4?'#5C8A4E':t<.6?'#A89246':t<.8?'#C4713F':'#B54A32';};
+
+function styl(kod){
+  const sel=selected?.typ==='obec'&&selected.id===kod;
+  const hi=highlight?.has(kod);
+  let fill='#1A2422', op=.25;
+  if(tab==='obory'&&oborDesert){
+    const d=desert(oborDesert).get(kod);
+    if(d!=null){ fill=rampKm(d,45); op=hi?.95:.75; }
+  }else if(tab==='whatif'&&M.wi){
+    const r=M.wi.obce.find(o=>o.kod===kod);
+    if(r){ fill=rampKm(r.delta,12); op=.9; }
+  }else{
+    const o=D.obce.get(kod);
+    if(o&&o.z){ fill=rampOdliv(o.ven/o.z); op=hi?.95:.72; }
+  }
+  return {fillColor:fill,fillOpacity:op,
+    color:sel?'#DEE6E1':(hi?'#C4A650':'#0E1514'),weight:sel?2.2:(hi?1.2:.5)};
+}
+function repaint(){ obceLayer.setStyle(f=>styl(f.properties.kod_obce)); }
+
+function skolyProMapu(){
+  let l=[...D.skoly.values()];
+  if(tab==='obory'&&oborDesert) l=l.filter(s=>s.obory.has(oborDesert));
+  else if(oborFilter) l=l.filter(s=>s.obory.has(oborFilter));
+  return l;
+}
+function drawSkoly(){
+  skolyLayer.clearLayers();
+  const l=skolyProMapu(), max=Math.max(...l.map(s=>s.z),1);
+  for(const s of l){
+    if(s.x==null||s.y==null) continue;
+    const sel=selected?.typ==='skola'&&selected.id===s.izo;
+    const zav=tab==='whatif'&&whatifIzo===s.izo;
+    L.circleMarker([s.y,s.x],{radius:3+Math.sqrt(s.z/max)*13,
+      fillColor:zav?'#D9784A':(sel?'#C4A650':'#4FA79A'),
+      color:zav?'#FFF':(sel?'#FFF':'#0E1514'),weight:sel||zav?2:1,fillOpacity:.85})
+     .bindTooltip(`<b>${s.nazev}</b><br>${nf.format(s.z)} žáků · ${s.obec}`)
+     .on('click',ev=>{L.DomEvent.stop(ev);
+        if(tab==='whatif'){ whatifIzo=s.izo; M.wi=whatif(s.izo); render(); repaint(); drawSkoly(); }
+        else select('skola',s.izo);})
+     .addTo(skolyLayer);
+  }
+}
+
+function oblouk(a,b,k=.22){
+  const [y1,x1]=a,[y2,x2]=b, mx=(x1+x2)/2,my=(y1+y2)/2, dx=x2-x1,dy=y2-y1;
+  const cx=mx-dy*k, cy=my+dx*k, p=[];
+  for(let i=0;i<=24;i++){const t=i/24,u=1-t;
+    p.push([u*u*y1+2*u*t*cy+t*t*y2, u*u*x1+2*u*t*cx+t*t*x2]);}
+  return p;
+}
+function drawArcs(){
+  arcLayer.clearLayers(); highlight=null;
+  if(!selected||tab==='obory'||tab==='whatif') return;
+  const P=[];
+  if(selected.typ==='obec'){
+    const o=D.obce.get(selected.id), c=D.cent.get(selected.id); if(!o||!c) return;
+    highlight=new Set();
+    for(const t of o.toky){ const s=D.skoly.get(t.izo);
+      if(!s||s.x==null||(oborFilter&&!s.obory.has(oborFilter))) continue;
+      P.push({a:[c[1],c[0]],b:[s.y,s.x],z:t.z}); }
+  }else{
+    const s=D.skoly.get(selected.id); if(!s||s.x==null) return;
+    highlight=new Set();
+    for(const zd of s.zdroje){ const c=D.cent.get(zd.kod); if(!c) continue;
+      highlight.add(zd.kod); P.push({a:[c[1],c[0]],b:[s.y,s.x],z:zd.z}); }
+  }
+  const max=Math.max(...P.map(p=>p.z),1);
+  for(const p of P) L.polyline(oblouk(p.a,p.b),{
+    color:selected.typ==='obec'?'#C4A650':'#4FA79A',
+    weight:.7+Math.sqrt(p.z/max)*5,opacity:.28+Math.min(p.z/max,1)*.55,lineCap:'round'}).addTo(arcLayer);
+  repaint();
+}
+function select(typ,id){ selected=typ?{typ,id}:null; drawArcs(); drawSkoly(); render(); repaint(); }
+
+function tip(kod){
+  const nm=D.nazevObce.get(kod)||kod;
+  if(tab==='obory'&&oborDesert){
+    const d=desert(oborDesert).get(kod);
+    return `<b>${nm}</b><br>${oborDesert}: <b>${d==null?'—':n1(d)+' km'}</b>`;
+  }
+  if(tab==='whatif'&&M.wi){
+    const r=M.wi.obce.find(o=>o.kod===kod);
+    return `<b>${nm}</b><br>${r?`dojížďka +${n1(r.delta)} km`:'nedotčeno'}`;
+  }
+  const o=D.obce.get(kod);
+  if(!o) return `<b>${nm}</b><br><span style="color:#7A8B85">odsud nejezdí nikdo</span>`;
+  return `<b>${nm}</b><br>${nf.format(o.z)} žáků · ${Math.round(o.ven/o.z*100)} % mimo ORP`;
+}
+
+/* ══════════════════ PANEL ══════════════════ */
+function setTab(t){
+  tab=t;
+  for(const k of ['toky','obory','model','whatif'])
+    $('t-'+k).setAttribute('aria-selected',String(k===t));
+  drawArcs(); drawSkoly(); render(); repaint();
+}
+['toky','obory','model','whatif'].forEach(k=>$('t-'+k).onclick=()=>setTab(k));
+
+function render(){
+  const b=$('body');
+  if(tab==='toky')   b.innerHTML=viewToky();
+  if(tab==='obory')  b.innerHTML=viewObory();
+  if(tab==='model')  b.innerHTML=viewModel();
+  if(tab==='whatif') b.innerHTML=viewWhatif();
+  wire();
+}
+function wire(){
+  const o=$('selObor'); if(o) o.onchange=e=>{oborDesert=e.target.value;drawSkoly();render();repaint();};
+  const f=$('filObor'); if(f) f.onchange=e=>{oborFilter=e.target.value;
+    if(selected?.typ==='skola'&&oborFilter&&!D.skoly.get(selected.id)?.obory.has(oborFilter)) selected=null;
+    drawSkoly();drawArcs();render();repaint();};
+  const w=$('selSkola'); if(w) w.onchange=e=>{whatifIzo=e.target.value;
+    M.wi=whatifIzo?whatif(whatifIzo):null; render();drawSkoly();repaint();};
+}
+
+const kpisHtml=()=>`<div class="kpis">
+  <div class="kpi"><b>${nf.format(D.celkem)}</b><span>žáků na SŠ v kraji</span></div>
+  <div class="kpi"><b>${D.skoly.size}</b><span>středních škol</span></div>
+  <div class="kpi hl"><b>${nf.format(D.mimoKraj)}</b><span>přijíždí z jiných krajů</span></div>
+  <div class="kpi"><b>${n1(M.krajKm)} km</b><span>průměrná dojížďka</span></div></div>`;
+
+function viewToky(){
+  const opts=['<option value="">Všechny obory</option>',
+    ...vsechnyObory().map(o=>`<option${o===oborFilter?' selected':''}>${o}</option>`)].join('');
+  let d='';
+  if(!selected) d=`<p class="empty">Klikni na obec — uvidíš, kam jezdí její děti.
+    Klikni na kroužek školy — uvidíš, odkud se rekrutují její žáci.</p>`;
+  else if(selected.typ==='obec') d=detailObec();
+  else d=detailSkola();
+  return kpisHtml()+`<div class="pad"><label class="fl" for="filObor">Filtr na obor</label>
+    <select id="filObor">${opts}</select></div><div class="hr"></div><div class="pad">${d}</div>`;
+}
+function detailObec(){
+  const o=D.obce.get(selected.id); if(!o) return `<p class="empty">Odsud nejezdí nikdo.</p>`;
+  const mimo=!D.orpObce.has(o.kod), orp=D.orpObce.get(o.kod)?.nazev_orp;
+  const cile=o.toky.map(t=>({s:D.skoly.get(t.izo),z:t.z}))
+    .filter(t=>t.s&&(!oborFilter||t.s.obory.has(oborFilter))).sort((a,b)=>b.z-a.z);
+  const max=cile[0]?.z||1, pct=Math.round(o.ven/o.z*100), km=M.avgKm.get(o.kod);
+  return `<p class="t1">${o.nazev}</p>
+   <p class="t2">okres ${o.okres}${orp?' · ORP '+orp:' · mimo kraj'}</p>
+   ${mimo?`<div class="warnbox">Obec leží mimo kraj — nemáme pro ni hranice, na mapě se nevykreslí.</div>`:''}
+   <div class="kpis" style="margin:0 -16px 12px">
+     <div class="kpi"><b>${nf.format(o.z)}</b><span>žáků odsud</span></div>
+     <div class="kpi ${pct>=60?'hl':''}"><b>${pct} %</b><span>mimo vlastní ORP</span></div>
+     ${km!=null?`<div class="kpi ${km>20?'bad':''}"><b>${n1(km)} km</b><span>průměrná dojížďka</span></div>
+     <div class="kpi"><b>${cile.length}</b><span>různých škol</span></div>`:''}
+   </div>
+   <p class="t2">Kam jezdí</p>
+   <table class="rows">${cile.slice(0,12).map(t=>`<tr><td>${t.s.nazev}<span class="sm">${t.s.obec}</span>
+     <div class="bar${t.s.kod_orp===D.orpObce.get(o.kod)?.kod_orp?'':' out'}"
+      style="width:${Math.max(4,t.z/max*100)}%"></div></td><td class="n">${nf.format(t.z)}</td></tr>`).join('')}</table>
+   ${cile.length>12?`<p class="note" style="margin-top:7px">…a dalších ${cile.length-12} škol</p>`:''}`;
+}
+function detailSkola(){
+  const s=D.skoly.get(selected.id);
+  const zd=s.zdroje.map(z=>({o:D.obce.get(z.kod),z:z.z,mimo:!D.orpObce.has(z.kod)}))
+    .filter(z=>z.o).sort((a,b)=>b.z-a.z);
+  const max=zd[0]?.z||1, mimo=zd.filter(z=>z.mimo).reduce((a,b)=>a+b.z,0);
+  return `<p class="t1">${s.nazev}</p>
+   <p class="t2">${s.obec} · ORP ${s.orp} · ${s.zriz}</p>
+   <div class="kpis" style="margin:0 -16px 12px">
+     <div class="kpi"><b>${nf.format(s.z)}</b><span>žáků celkem</span></div>
+     <div class="kpi ${mimo?'hl':''}"><b>${nf.format(mimo)}</b><span>z jiných krajů</span></div></div>
+   <p class="t2">Odkud jezdí (${zd.length} obcí)</p>
+   <table class="rows">${zd.slice(0,12).map(z=>`<tr><td>${z.o.nazev}
+     <span class="sm">okres ${z.o.okres}${z.mimo?' · mimo kraj':''}</span>
+     <div class="bar${z.mimo?' out':''}" style="width:${Math.max(4,z.z/max*100)}%"></div></td>
+     <td class="n">${nf.format(z.z)}</td></tr>`).join('')}</table>
+   ${s.obory.size?`<p class="t2" style="margin-top:12px">Obory (${s.obory.size})</p>
+     <p class="note">${[...s.obory].sort((a,b)=>a.localeCompare(b,'cs')).join(' · ')}</p>`:''}`;
+}
+
+function viewObory(){
+  const all=vsechnyObory();
+  const m=desert(oborDesert), ds=[...m.values()];
+  const skol=[...D.skoly.values()].filter(s=>s.obory.has(oborDesert));
+  const prum=ds.reduce((a,b)=>a+b,0)/(ds.length||1), mx=Math.max(...ds,0);
+  const nej=[...m].sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const sam=all.filter(o=>[...D.skoly.values()].filter(s=>s.obory.has(o)).length===1);
+  return `<div class="pad"><label class="fl" for="selObor">Obor</label>
+    <select id="selObor">${all.map(o=>`<option${o===oborDesert?' selected':''}>${o}</option>`).join('')}</select></div>
+   <div class="kpis">
+     <div class="kpi ${skol.length===1?'bad':''}"><b>${skol.length}</b><span>${skol.length===1?'jediná škola v kraji':'škol v kraji'}</span></div>
+     <div class="kpi ${prum>25?'bad':''}"><b>${n1(prum)} km</b><span>průměr přes 448 obcí</span></div>
+     <div class="kpi"><b>${n1(mx)} km</b><span>nejhorší obec</span></div>
+     <div class="kpi"><b>${sam.length}/${all.length}</b><span>oborů má jedinou školu</span></div></div>
+   <div class="hr"></div><div class="pad">
+   <p class="t2">Kde se učí</p>
+   <table class="rows">${skol.map(s=>`<tr><td>${s.nazev}<span class="sm">${s.obec}</span></td>
+     <td class="n">${nf.format(s.z)}</td></tr>`).join('')}</table>
+   <p class="t2" style="margin-top:13px">Nejhůř dostupné obce</p>
+   <table class="rows">${nej.map(([k,d])=>`<tr><td>${D.nazevObce.get(k)}</td>
+     <td class="n">${n1(d)} km</td></tr>`).join('')}</table>
+   <div class="legend">
+     <div><span class="sw" style="background:#2E6F5E"></span> blízko</div>
+     <div><span class="sw" style="background:#A89246"></span> střední vzdálenost</div>
+     <div><span class="sw" style="background:#B54A32"></span> daleko (nad 36 km)</div></div>
+   </div>`;
+}
+
+function viewModel(){
+  const b=M.beta;
+  const big=M.rows.filter(r=>r.z>=10).sort((a,b)=>b.resid-a.resid).slice(0,10);
+  return `<div class="pad">
+   <p class="t1">Gravitační model dojížďky</p>
+   <p class="t2">Vážená regrese nafitovaná v prohlížeči na ${nf.format(M.rows.length)} tocích</p>
+   <div class="okbox"><code>log(podíl) = ${b[0].toFixed(2)} + ${b[1].toFixed(2)}·log(velikost)
+     ${b[2].toFixed(2)}·log(km) + ${b[3].toFixed(2)}·stejné_ORP</code></div>
+   <div class="kpis" style="margin:0 -16px 12px">
+     <div class="kpi"><b>${M.r2.toFixed(3)}</b><span>vážené R²</span></div>
+     <div class="kpi hl"><b>${Math.exp(b[3]).toFixed(1)}×</b><span>efekt stejného ORP</span></div></div>
+   <p class="note">Při stejné vzdálenosti i velikosti školy jde do školy ve <b>vlastním ORP
+     ${Math.exp(b[3]).toFixed(1)}× víc dětí</b>. Správní hranice reálně tvarují vzdělávání.</p>
+   <p class="t2" style="margin-top:14px">Nečekaně silné vazby (toky ≥ 10 žáků)</p>
+   <table class="rows">${big.map(r=>`<tr><td>${D.nazevObce.get(r.kod)||r.kod}
+     <span class="sm">→ ${D.skoly.get(r.izo).nazev}</span>
+     <span class="sm">${r.z} žáků · ${n1(r.d)} km</span></td>
+     <td class="n">${Math.exp(r.resid).toFixed(1)}×</td></tr>`).join('')}</table>
+   <div class="warnbox">Opačná strana reziduí je nepoužitelná — vychází z ní samý Hradec
+     Králové, protože má 3 599 žáků a jeho <i>podíl</i> do jedné školy je mechanicky malý.
+     R² 0,29 znamená, že tohle není věštba, ale nástroj na hledání anomálií.</div></div>`;
+}
+
+function viewWhatif(){
+  const opts=['<option value="">— vyber školu —</option>',
+    ...[...D.skoly.values()].sort((a,b)=>b.z-a.z)
+      .map(s=>`<option value="${s.izo}"${s.izo===whatifIzo?' selected':''}>${s.nazev} (${s.z})</option>`)].join('');
+  let out=`<p class="empty">Vyber školu (nebo klikni na kroužek v mapě). Model přerozdělí
+    její žáky mezi zbylé školy a spočítá, o kolik se prodlouží dojížďka.</p>`;
+  if(M.wi){
+    const w=M.wi, d=w.prumPo-w.prumPred;
+    out=`<div class="kpis" style="margin:0 -16px 12px">
+      <div class="kpi"><b>${nf.format(w.zaku)}</b><span>žáků školy</span></div>
+      <div class="kpi"><b>${w.zasazenoObci}</b><span>zasažených obcí</span></div>
+      <div class="kpi bad"><b>+${n1(d)} km</b><span>průměrná dojížďka zasažených</span></div>
+      <div class="kpi"><b>${n1(w.prumPred)} → ${n1(w.prumPo)}</b><span>km průměrně</span></div></div>
+     <p class="t2">Nejvíc zasažené obce</p>
+     <table class="rows">${w.obce.slice(0,12).map(o=>`<tr><td>${o.nazev}
+       <span class="sm">${o.zasazeno} žáků · ${n1(o.pred)} → ${n1(o.po)} km</span>
+       <div class="bar out" style="width:${Math.max(4,o.delta/w.obce[0].delta*100)}%"></div></td>
+       <td class="n">+${n1(o.delta)}</td></tr>`).join('')}</table>
+     <div class="warnbox">Zjednodušení: model rozděluje žáky podle predikované přitažlivosti
+       zbylých škol, neřeší kapacity ani to, jestli jinde ten obor vůbec učí.
+       Je to odhad dopadu, ne plán.</div>`;
+  }
+  return `<div class="pad"><p class="t1">What-if: co když škola zanikne?</p>
+    <p class="t2">Přerozdělení podle gravitačního modelu</p>
+    <label class="fl" for="selSkola">Zavřít školu</label>
+    <select id="selSkola">${opts}</select>
+    <div style="margin-top:13px">${out}</div></div>`;
+}
+
+/* ══════════════════ AI VRSTVA ══════════════════
+   Model NEDOSTÁVÁ data v promptu. Dostane sadu funkcí a smí volat jen je;
+   výpočet proběhne lokálně nad otevřenými daty a modelu se vrátí jen čísla.
+   Bez klíče běží stejné funkce přes lokální rozpoznání záměru.            */
+
+const AZURE={endpoint:'',deployment:'',apiKey:'',apiVersion:'2024-10-21'};
+
+const FUNKCE={
+  toky_z_obce({obec}){
+    const o=najdiObec(obec); if(!o) return {chyba:`obec „${obec}" jsem nenašel`};
+    select('obec',o.kod); setTab('toky');
+    const c=D.cent.get(o.kod); if(c) map.setView([c[1],c[0]],10);
+    const top=o.toky.map(t=>({skola:D.skoly.get(t.izo)?.nazev,zaku:t.z}))
+      .sort((a,b)=>b.zaku-a.zaku).slice(0,5);
+    return {obec:o.nazev,zaku_celkem:o.z,podil_mimo_orp:Math.round(o.ven/o.z*100),
+            prumerna_km:M.avgKm.get(o.kod)?.toFixed(1),pocet_skol:o.toky.length,nejcastejsi:top};
+  },
+  spadovost_skoly({skola}){
+    const s=najdiSkolu(skola); if(!s) return {chyba:`školu „${skola}" jsem nenašel`};
+    select('skola',s.izo); setTab('toky'); if(s.x!=null) map.setView([s.y,s.x],11);
+    return {skola:s.nazev,obec:s.obec,zaku:s.z,pocet_obci:s.zdroje.length,
+      z_jinych_kraju:s.zdroje.filter(z=>!D.orpObce.has(z.kod)).reduce((a,b)=>a+b.z,0),
+      nejvetsi_zdroje:s.zdroje.map(z=>({obec:D.obce.get(z.kod)?.nazev,zaku:z.z}))
+        .sort((a,b)=>b.zaku-a.zaku).slice(0,5)};
+  },
+  kde_se_uci_obor({obor}){
+    const ob=najdiObor(obor); if(!ob) return {chyba:`obor „${obor}" jsem nenašel`};
+    oborDesert=ob; setTab('obory');
+    const m=desert(ob), ds=[...m.values()];
+    const skol=[...D.skoly.values()].filter(s=>s.obory.has(ob));
+    return {obor:ob,pocet_skol:skol.length,
+      skoly:skol.map(s=>({nazev:s.nazev,obec:s.obec,zaku:s.z})),
+      prumerna_vzdalenost_km:+(ds.reduce((a,b)=>a+b,0)/ds.length).toFixed(1),
+      nejhorsi_obec_km:+Math.max(...ds).toFixed(1),
+      jedina_v_kraji:skol.length===1};
+  },
+  nejblizsi_obor({obec,obor}){
+    const o=najdiObec(obec), ob=najdiObor(obor);
+    if(!o||!ob) return {chyba:'obec nebo obor jsem nenašel'};
+    const d=desert(ob).get(o.kod);
+    oborDesert=ob; setTab('obory'); select('obec',o.kod);
+    const skol=[...D.skoly.values()].filter(s=>s.obory.has(ob));
+    return {obec:o.nazev,obor:ob,vzdalenost_km:d==null?null:+d.toFixed(1),
+      nejblizsi_skola:skol.map(s=>({nazev:s.nazev,obec:s.obec,
+        km:+hav(D.cent.get(o.kod),[s.x,s.y]).toFixed(1)})).sort((a,b)=>a.km-b.km)[0]};
+  },
+  trend_oboru({obor}){
+    const ob=najdiObor(obor)||obor;
+    const t=D.trend.get(ob); if(!t) return {chyba:`pro obor „${ob}" nemám časovou řadu`};
+    const roky=Object.keys(t).sort(), a=t[roky[0]], b=t[roky[roky.length-1]];
+    return {obor:ob,roky:t,zmena_procent:a?Math.round((b-a)/a*100):null,
+      prvni_rok:roky[0],posledni_rok:roky[roky.length-1]};
+  },
+  simuluj_zruseni({skola}){
+    const s=najdiSkolu(skola); if(!s) return {chyba:`školu „${skola}" jsem nenašel`};
+    whatifIzo=s.izo; M.wi=whatif(s.izo); setTab('whatif'); drawSkoly(); repaint();
+    const w=M.wi;
+    return {skola:s.nazev,zaku:w.zaku,zasazenych_obci:w.zasazenoObci,
+      prumer_pred_km:+w.prumPred.toFixed(1),prumer_po_km:+w.prumPo.toFixed(1),
+      narust_km:+(w.prumPo-w.prumPred).toFixed(1),
+      nejvic_zasazene:w.obce.slice(0,3).map(o=>({obec:o.nazev,narust_km:+o.delta.toFixed(1)}))};
+  },
+  model_kraje(){
+    return {rovnice:`log(podíl) = ${M.beta.map(x=>x.toFixed(2)).join(' / ')}`,
+      efekt_stejneho_orp:+Math.exp(M.beta[3]).toFixed(2),r2:+M.r2.toFixed(3),
+      prumerna_dojizdka_km:+M.krajKm.toFixed(1),zaku_celkem:D.celkem,
+      skol:D.skoly.size,oboru:vsechnyObory().length};
+  }
+};
+
+const bezDiakritiky=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+  .replace(/[?!.,;:]+$/,'').trim();
+// „z obce Broumov" → „Broumov"; opakovaně, protože předložek může být víc za sebou
+function ocisti(s){
+  let r=(s||'').replace(/[?!.,;:]+$/,'').trim(), p;
+  const PRED=/^\s*(?:z|ze|do|v|ve|na|obor|obce|obec|skoly|skola|skole|gymnazium)\s+/i;
+  do{ p=r; r=r.replace(PRED,''); }while(r!==p);
+  return r.trim();
+}
+// čeština skloňuje: „Broumova" musí trefit „Broumov". Porovnáváme kmeny.
+function kmen(w){ return w.length>4?w.slice(0,Math.max(4,w.length-2)):w; }
+function sedi(nazev,dotaz){
+  const n=bezDiakritiky(nazev), q=bezDiakritiky(dotaz);
+  if(!q) return 0;
+  if(n===q) return 100;
+  if(n.startsWith(q)||q.startsWith(n)) return 80;
+  const slova=q.split(/[\s,]+/).filter(w=>w.length>2);
+  if(!slova.length) return 0;
+  const shod=slova.filter(w=>n.includes(w)||n.includes(kmen(w))).length;
+  return shod===slova.length?60+shod:0;
+}
+function nejlepsi(list,dotaz,klic){
+  const zkus=d=>{ let best=null,bs=0;
+    for(const it of list){ const s=sedi(klic?it[klic]:it,d); if(s>bs){bs=s;best=it;} }
+    return bs>=60?best:null; };
+  let d=ocisti(dotaz), r=zkus(d);
+  // uživatel může psát „odkud jezdí do Lepařovo gymnázium" — postupně odřízneme úvodní slova
+  for(let i=0;i<3&&!r;i++){ const p=d.split(/\s+/); if(p.length<2) break; d=p.slice(1).join(' '); r=zkus(ocisti(d)); }
+  return r;
+}
+function najdiObec(q){
+  const dom=[...D.obce.values()].filter(o=>D.orpObce.has(o.kod));
+  return nejlepsi(dom,q,'nazev')||nejlepsi([...D.obce.values()],q,'nazev');
+}
+function najdiSkolu(q){ return nejlepsi([...D.skoly.values()],q,'nazev'); }
+function najdiObor(q){ return nejlepsi(vsechnyObory(),q,null); }
+
+/* lokální rozpoznání záměru — funguje i bez klíče k Azure */
+function lokalniZamer(q){
+  const s=bezDiakritiky(q);
+  let m;
+  if((m=s.match(/(?:zrus|zavr|zanik)\w*\s+(.+)$/)))
+    return {name:'simuluj_zruseni',args:{skola:ocisti(m[1])}};
+  if((m=s.match(/(?:kde se(?: v kraji)? uci|kdo uci|kde uci)\s+(.+)$/)))
+    return {name:'kde_se_uci_obor',args:{obor:ocisti(m[1])}};
+  if((m=s.match(/jak daleko.*?\b(?:z|ze)\s+(.+?)\s+(?:na|obor|k oboru)\s+(.+)$/)))
+    return {name:'nejblizsi_obor',args:{obec:ocisti(m[1]),obor:ocisti(m[2])}};
+  if((m=s.match(/(?:trend|roste|mizi|ubyva|vyvoj)\s+(.+)$/)))
+    return {name:'trend_oboru',args:{obor:ocisti(m[1])}};
+  if((m=s.match(/(?:odkud|spadov\w*)\s+(.+)$/)))
+    return {name:'spadovost_skoly',args:{skola:ocisti(m[1])}};
+  if(/model|rovnic|\borp\b|prumern/.test(s)) return {name:'model_kraje',args:{}};
+  if((m=s.match(/(?:kam jezdi|kam chodi|obec)\s+(.+)$/)))
+    return {name:'toky_z_obce',args:{obec:ocisti(m[1])}};
+  const c=ocisti(s);
+  const o=najdiObec(c); if(o) return {name:'toky_z_obce',args:{obec:o.nazev}};
+  const sk=najdiSkolu(c); if(sk) return {name:'spadovost_skoly',args:{skola:sk.nazev}};
+  const ob=najdiObor(c); if(ob) return {name:'kde_se_uci_obor',args:{obor:ob}};
+  return null;
+}
+
+function formuluj(name,res){
+  if(res.chyba) return `To se mi nepovedlo: ${res.chyba}.`;
+  switch(name){
+    case 'toky_z_obce': return `Z obce <b>${res.obec}</b> jezdí na střední ${nf.format(res.zaku_celkem)} žáků
+      do ${res.pocet_skol} různých škol. <b>${res.podil_mimo_orp} %</b> z nich mimo vlastní ORP,
+      průměrně ${res.prumerna_km} km. Nejvíc jich jede na ${res.nejcastejsi[0]?.skola} (${res.nejcastejsi[0]?.zaku}).`;
+    case 'spadovost_skoly': return `<b>${res.skola}</b> (${res.obec}) má ${nf.format(res.zaku)} žáků
+      z ${res.pocet_obci} obcí${res.z_jinych_kraju?`, z toho ${res.z_jinych_kraju} z jiných krajů`:''}.
+      Nejvíc z ${res.nejvetsi_zdroje[0]?.obec} (${res.nejvetsi_zdroje[0]?.zaku}).`;
+    case 'kde_se_uci_obor': return `Obor <b>${res.obor}</b> se v kraji učí
+      ${res.jedina_v_kraji?'<b>jen na jediné škole</b>':`na ${res.pocet_skol} školách`}
+      — ${res.skoly.map(s=>s.obec).join(', ')}. Průměrná vzdálenost obce k nejbližší takové škole
+      je <b>${res.prumerna_vzdalenost_km} km</b>, nejhorší obec ${res.nejhorsi_obec_km} km.`;
+    case 'nejblizsi_obor': return `Z obce <b>${res.obec}</b> je nejbližší škola s oborem
+      ${res.obor} vzdálená <b>${res.vzdalenost_km} km</b> — ${res.nejblizsi_skola?.nazev}
+      (${res.nejblizsi_skola?.obec}).`;
+    case 'trend_oboru': {
+      const r=Object.entries(res.roky).map(([k,v])=>`${k}: ${v}`).join(' · ');
+      return `Obor <b>${res.obor}</b> ${res.zmena_procent>0?'vyrostl':'klesl'} o
+        <b>${res.zmena_procent>0?'+':''}${res.zmena_procent} %</b> mezi ${res.prvni_rok} a ${res.posledni_rok}.<br>
+        <span style="color:var(--tx3);font-size:.9em">${r}</span>`;
+    }
+    case 'simuluj_zruseni': return `Kdyby zanikla <b>${res.skola}</b> (${nf.format(res.zaku)} žáků),
+      dotklo by se to <b>${res.zasazenych_obci} obcí</b>. Průměrná dojížďka zasažených by stoupla
+      z ${res.prumer_pred_km} na <b>${res.prumer_po_km} km</b> (+${res.narust_km}).
+      Nejvíc by to odnesly: ${res.nejvic_zasazene.map(o=>`${o.obec} (+${o.narust_km} km)`).join(', ')}.`;
+    case 'model_kraje': return `Model nad ${nf.format(D.celkem)} žáky, ${res.skol} školami a ${res.oboru} obory.
+      Škola ve <b>vlastním ORP přitáhne ${res.efekt_stejneho_orp}× víc dětí</b> než stejně velká
+      a stejně daleká škola v cizím ORP. Vážené R² = ${res.r2}, průměrná dojížďka ${res.prumerna_dojizdka_km} km.`;
+  }
+  return JSON.stringify(res);
+}
+
+function say(kdo,html){
+  const d=document.createElement('div'); d.className='msg '+kdo; d.innerHTML=html;
+  $('log').appendChild(d); $('log').scrollTop=$('log').scrollHeight;
+}
+async function zeptej(q){
+  if(!q.trim()) return;
+  say('u','<b>Ty:</b> '+q);
+  const z=AZURE.apiKey?await azureZamer(q):lokalniZamer(q);
+  if(!z){ say('a','Tomu nerozumím. Zkus třeba „kde se učí Rybářství" nebo „co když zruší Gymnázium Broumov".'); return; }
+  const res=FUNKCE[z.name](z.args);
+  say('a',`<span class="tool">${z.name}(${Object.values(z.args).join(', ')})</span><br>`+formuluj(z.name,res));
+}
+/* s klíčem k Azure OpenAI: model vybírá funkci, data zůstávají lokálně */
+async function azureZamer(q){
+  const tools=Object.keys(FUNKCE).map(n=>({type:'function',function:{name:n,
+    parameters:{type:'object',properties:{obec:{type:'string'},skola:{type:'string'},obor:{type:'string'}}}}}));
+  const r=await fetch(`${AZURE.endpoint}/openai/deployments/${AZURE.deployment}/chat/completions?api-version=${AZURE.apiVersion}`,
+    {method:'POST',headers:{'Content-Type':'application/json','api-key':AZURE.apiKey},
+     body:JSON.stringify({messages:[
+       {role:'system',content:'Jsi asistent nad otevřenými daty o dojížďce do středních škol v Královéhradeckém kraji. Vždy zavolej vhodnou funkci. Nikdy si nevymýšlej čísla.'},
+       {role:'user',content:q}],tools,tool_choice:'auto'})});
+  const j=await r.json();
+  const c=j.choices?.[0]?.message?.tool_calls?.[0];
+  return c?{name:c.function.name,args:JSON.parse(c.function.arguments||'{}')}:null;
+}
+
+const PRIKLADY=['Kde se učí Rybářství?','Co když zruší Gymnázium Broumov?','Kam jezdí z obce Broumov?',
+  'Trend Obráběč kovů','Jak funguje model?'];
+function renderChips(){
+  $('chips').innerHTML=PRIKLADY.map(p=>`<button>${p}</button>`).join('');
+  [...$('chips').children].forEach(b=>b.onclick=()=>{$('q').value=b.textContent;zeptej(b.textContent);});
+}
+$('send').onclick=()=>{zeptej($('q').value);$('q').value='';};
+$('q').onkeydown=e=>{if(e.key==='Enter'){zeptej($('q').value);$('q').value='';}};
+$('mic').onclick=()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return say('a','Hlasový vstup tenhle prohlížeč neumí.');
+  const r=new SR(); r.lang='cs-CZ'; r.onresult=e=>{const t=e.results[0][0].transcript;$('q').value=t;zeptej(t);};
+  r.start(); say('a','<i>Poslouchám…</i>');
+};
+</script>
+</body>
+</html>
