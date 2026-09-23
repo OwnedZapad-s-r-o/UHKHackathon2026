@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, ExternalLink, X } from "lucide-react";
+import { ChevronRight, ExternalLink, FileDown, X } from "lucide-react";
 import { getFacilityDetail } from "@/lib/api";
 import { STATUS_META, formatMillionsCzk, formatNumber } from "@/lib/facility-meta";
 import { withParams, type RawSearchParams } from "@/lib/search-params";
@@ -34,12 +34,20 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
         Inspekční panel
         <ChevronRight className="size-3" aria-hidden />
         <span className="text-hk-navy">{facility.address.district}</span>
+        <a
+          href={`/reporty/objekt/${facility.id}`}
+          title="Stáhnout PDF audit objektu"
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[12px] font-bold text-hk-navy transition-colors hover:bg-slate-100"
+        >
+          <FileDown className="size-3.5" aria-hidden />
+          PDF
+        </a>
         <Link
           href={withParams("/", searchParams, { inspekce: "0" })}
           scroll={false}
           aria-label="Zavřít inspekční panel"
           title="Zavřít inspekční panel"
-          className="ml-auto flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-hk-navy"
+          className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-hk-navy"
         >
           <X className="size-4" />
         </Link>
