@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { getFacilities } from "@/lib/api";
 import { CATEGORY_META, STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
 import { readParam, withParams } from "@/lib/search-params";
@@ -55,17 +56,18 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
 
           <form action="/portfolio" className="ml-auto">
             {readParam(params, "zjisteni") && <input type="hidden" name="zjisteni" value="1" />}
-            <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-slate-400 focus-within:border-hk-navy">
-              <Search className="size-4" aria-hidden />
-              <span className="sr-only">Hledat objekt</span>
-              <input
+            <InputGroup className="h-10 w-72 border-slate-300 bg-white">
+              <InputGroupAddon>
+                <Search className="text-slate-400" aria-hidden />
+              </InputGroupAddon>
+              <InputGroupInput
                 name="q"
                 defaultValue={query}
                 autoFocus={readParam(params, "hledat") === "1"}
                 placeholder="Hledat objekt, ID, obec, ORP…"
-                className="w-56 bg-transparent text-sm text-black outline-none placeholder:text-slate-400"
+                aria-label="Hledat objekt"
               />
-            </label>
+            </InputGroup>
           </form>
         </div>
 

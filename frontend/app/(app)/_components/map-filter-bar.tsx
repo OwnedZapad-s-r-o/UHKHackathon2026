@@ -2,10 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { DISTRICTS } from "@/lib/facility-meta";
 import { withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
+import { DistrictSelect, WHOLE_REGION } from "./district-select";
 
 // Lišta nad mapou jako v prototypu: výběr okresu a hledání — obojí zapsané do URL.
 // Podle šířky mapové části (container query): široká → tlačítka okresů, úzká → rozbalovací výběr.
@@ -46,33 +48,22 @@ export function MapFilterBar() {
         ))}
       </div>
 
-      <label className="relative flex items-center @4xl:hidden">
-        <span className="sr-only">Okres</span>
-        <select
-          value={district ?? ""}
-          onChange={(e) => selectDistrict(e.target.value || null)}
-          className="h-8.5 appearance-none rounded-lg border border-slate-200 bg-white pr-8 pl-2.5 text-[13px] text-hk-navy hover:bg-slate-50"
-        >
-          <option value="">Celý kraj</option>
-          {DISTRICTS.map((d) => (
-            <option key={d.code} value={d.code}>
-              Okres {d.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-2.5 size-3.5 text-slate-500" aria-hidden />
-      </label>
+      <div className="@4xl:hidden">
+        <DistrictSelect value={district ?? WHOLE_REGION} onValueChange={(next) => selectDistrict(next === WHOLE_REGION ? null : next)} className="h-8.5 min-w-40" />
+      </div>
 
-      <label className="ml-auto flex h-8.5 min-w-0 shrink items-center gap-2 rounded-lg border border-slate-300 px-2.5 text-slate-400 focus-within:border-hk-navy">
-        <Search className="size-3.5 shrink-0" aria-hidden />
-        <span className="sr-only">Hledat objekt</span>
-        <input
+      <InputGroup className="ml-auto h-8.5 w-52 min-w-0 shrink border-slate-300 bg-white">
+        <InputGroupAddon>
+          <Search className="text-slate-400" aria-hidden />
+        </InputGroupAddon>
+        <InputGroupInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Hledat objekt…"
-          className="w-40 min-w-0 bg-transparent text-[13px] text-black outline-none placeholder:text-slate-400"
+          aria-label="Hledat objekt"
+          className="text-[13px]"
         />
-      </label>
+      </InputGroup>
     </div>
   );
 }
