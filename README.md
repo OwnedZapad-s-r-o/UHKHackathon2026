@@ -1,82 +1,107 @@
-# SmartAudit KHK
+# 🏢 SmartAudit KHK
 
-Energetický audit budov, které zřizuje Královéhradecký kraj: školy, domovy pro seniory,
-nemocnice a kulturní zařízení. Aplikace stojí na otevřených datech kraje (25 sad z Data KHK),
-ČÚZK a Open-Meteo. Telemetrie ze senzorů je zatím simulovaná.
+> **Energetický audit a inteligentní monitoring budov Královéhradeckého kraje.**  
+> Aplikace propojující 25+ sad otevřených dat (Data KHK), katastr nemovitostí (ČÚZK INSPIRE WFS), meteorologická data (Open-Meteo), AI analýzy (Azure OpenAI) a senzorovou telemetrii.
 
-## Spuštění
+---
+
+## 📸 Ukázky rozhraní (Screenshots)
+
+### 🗺️ Mapa objektů kraje a Inspekční panel
+Interaktivní mapa budov zřizovaných Královéhradeckým krajem (školy, domovy pro seniory, nemocnice, kulturní objekty) s barevným odlišením podle energetického stavu.
+
+![Mapa objektů kraje](docs/images/02-mapa-prehled.png)
+
+*Otevření inspekčního panelu objektu se živou telemetrií (teplota, CO₂, vlhkost) a grafy spotřeby:*
+![Inspekční panel s telemetrií](docs/images/03-inspekce-telemetrie.png)
+
+---
+
+### 🏢 Schematický řez budovou a Karta ČÚZK
+*Detailní schematický 2D/3D řez budovou zobrazující jednotlivá podlaží a zóny s barevnou alokací senzorů a detekcí tepelných úniků:*
+![Schematický řez budovou](docs/images/04-inspekce-rez.png)
+
+*Oficiální karta budovy s půdorysem a katastrálními daty přímo z ČÚZK INSPIRE WFS:*
+![Karta budovy ČÚZK](docs/images/05-inspekce-karta-cuzk.png)
+
+---
+
+### 🤖 AI Analýza & Doporučení opatření (Azure OpenAI)
+*Automatické vyhodnocení úsporných opatření s propočtem návratnosti v Kč a generováním podkladů pro správce:*
+![AI Analýza](docs/images/06-inspekce-ai-analyza.png)
+
+---
+
+### 📊 Portfolio a Anomálie
+*Přehledové portfolio budov kraje s možností filtrace podle okresů a typů zřízení:*
+![Portfolio objektů](docs/images/07-portfolio.png)
+
+*Seznam detekovaných anomálií a plýtvání energií seřazený dle výše finanční ztráty:*
+![Anomálie a energetické ztráty](docs/images/08-anomalie.png)
+
+---
+
+### 📄 PDF Reporty, Otevřené API & Zdroje Dat
+*Exporty kompletních energetických auditů do PDF:*
+![PDF Reporty](docs/images/09-reporty.png)
+
+*Veřejné otevřené API (Scalar / OpenAPI documentation, CORS, bez klíče):*
+![Otevřené API](docs/images/10-otevrena-data.png)
+
+*Katalog využitých 25+ sad otevřených dat Královéhradeckého kraje:*
+![Zdroje otevřených dat](docs/images/11-zdroje-dat.png)
+
+---
+
+## 🚀 Rychlé spuštění (Docker)
 
 ```bash
 docker compose up --build
 ```
 
-| Služba | Adresa |
-|---|---|
-| Web (Next.js) | http://localhost:3000 |
-| API (ASP.NET) | http://localhost:8080 |
-| Otevřené API — dokumentace | http://localhost:3000/api/open/docs/ (OpenAPI: `/api/open/v1/openapi.json`) |
-| Databáze (PostGIS) | localhost:5432, `smartaudit` / `smartaudit` |
+### Přístupné služby:
 
-Při prvním startu API samo stáhne otevřená data, sestaví portfolio objektů, dotáhne karty
-budov z ČÚZK a počasí z Open-Meteo a dopočítá 7 dní telemetrie. Trvá to zhruba minutu,
-stav je vidět na `GET /health`. Na přihlašovací stránce jsou tlačítka **Demo** pro tři role
-(kraj, správce budovy, veřejnost).
+| Služba | URL | Popis |
+|---|---|---|
+| **Web UI (Next.js)** | [http://localhost:3000](http://localhost:3000) | Uživatelské rozhraní aplikace |
+| **API Backend (ASP.NET)** | [http://localhost:8080](http://localhost:8080) | REST API backend |
+| **Otevřené API Docs** | [http://localhost:3000/api/open/docs/](http://localhost:3000/api/open/docs/) | Interaktivní OpenAPI (Scalar) |
+| **PostgreSQL / PostGIS** | `localhost:5432` | Databáze (`smartaudit` / `smartaudit`) |
 
-Bez internetu se data načtou ze snapshotů v `seed/opendata/`, které se přepisují po každém
-úspěšném stažení.
+> ℹ️ **První spuštění:** Při prvním startu API automaticky stáhne otevřená data, sestaví portfolio objektů, dotáhne katastrální karty z ČÚZK, počasí z Open-Meteo a dopočítá 7 dní telemetrie. Trvá to zhruba 1 minutu, stav je vidět na `GET /health`.
 
-Vlastní hesla a JWT tajemství nastavíte v souboru `.env`, vzor je v `.env.example`.
+Na přihlašovací stránce (`/login`) jsou tlačítka **Demo** pro tři role: **Kraj**, **Správce budovy** a **Veřejnost**.
 
-## Funkce
+Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlastní hesla a JWT tajemství lze nastavit v `.env` (vzor v `.env.example`).
 
-- **Mapa objektů kraje** — šedý podklad, piny podle stavu a druhu, filtr okresu a hledání. Po kliknutí na objekt
-  mapa přeletí k budově a ukáže ji ve 3D: okolní zástavba podle výšek z OpenStreetMap (dlaždice CARTO),
-  vybraná budova z půdorysu ČÚZK s odhadem výšky podle podlaží. Přepínač 2D / 3D je v ovládání mapy.
-- **Inspekční panel** — přehled, telemetrie (grafy), audit, karta budovy a řez budovou; lze zavřít.
-- **Portfolio a Anomálie** — tabulka a seznam zjištění seřazené podle odhadované ztráty.
-- **PDF reporty** — audit jednoho objektu (s grafy) a přehled portfolia; tlačítka v panelu a na obrazovkách
-  Portfolio, Anomálie a Reporty.
-- **AI analýza** — Azure OpenAI navrhne opatření s návratností a dopis správci; výsledek je i v PDF.
-- **Otevřené API** — `/api/open/v1`: objekty jako JSON, GeoJSON a CSV, detail, půdorys budovy z ČÚZK
-  a měření. Bez přihlášení a bez klíče, jen GET, CORS pro libovolný web, licence CC BY 4.0, bez částek v Kč.
-  Popis je na obrazovce **Otevřené API** v aplikaci a v interaktivní dokumentaci (Scalar).
+---
 
-### Cache
+## ✨ Hlavní Funkce
 
-Půdorys budovy se mění jen s katastrem, proto se drží 2 dny: API ho cachuje na serveru (output cache)
-a posílá `Cache-Control: public, max-age=172800`, Next.js si ho uloží do data cache. Mapa tak při dalším
-kliknutí na stejný objekt nový dotaz nevyšle. Ostatní odpovědi otevřeného API se cachují 5 minut.
+- **🗺️ Mapa objektů kraje:** Šedý podklad (mapcn), piny podle stavu a druhu budovy, filtry okresů a vyhledávání. Po kliknutí mapa přeletí k budově a ukáže ji ve 3D (zástavba OSM CARTO, budova ČÚZK s odhadem výšky podle podlaží).
+- **📋 Inspekční panel:** Přehled, telemetrie (živé grafy), auditní zjištění, karta budovy ČÚZK a unikátní schematický řez budovou podle zón.
+- **⚡ Portfolio a Anomálie:** Přehledná tabulka a seznam zjištění seřazený podle odhadované roční finanční ztráty v Kč.
+- **📄 PDF reporty:** Audit jednoho objektu (s grafy) i souhrnný přehled celého portfolia kraje.
+- **🤖 AI analýza (Azure OpenAI):** Navrhne konkrétní opatření s vyčíslenou návratností a dopis správci. Výsledek se propisuje i do PDF auditního protokolu.
+- **🌐 Otevřené API (`/api/open/v1`):** JSON, GeoJSON a CSV exporty pro vývojáře bez nutnosti přihlášení a API klíčů (licence CC BY 4.0).
 
-### Zapnutí AI analýzy (Azure OpenAI)
+---
 
-Do `.env` doplňte tři hodnoty z Azure (prostředek Azure OpenAI → *Keys and Endpoint*, název nasazení
-modelu z Azure AI Foundry → *Deployments*) a restartujte API:
+## ⚙️ Zapnutí AI analýzy (Azure OpenAI)
 
-```bash
+Do `.env` doplňte přístupové údaje z Azure OpenAI a restartujte API:
+
+```env
 AZURE_OPENAI_ENDPOINT=https://<nazev-zdroje>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<klíč>
 AZURE_OPENAI_DEPLOYMENT=<název nasazení, např. gpt-4o>
 ```
 
-Bez nich aplikace běží normálně a karta AI analýzy jen ukazuje, co doplnit. AI analýzu vidí kraj a správce
-budovy, veřejnost ne (obsahuje částky v Kč).
+Bez nich aplikace běží normálně a karta AI analýzy informuje, jaké proměnné doplnit.
 
-## Struktura repozitáře
+---
 
-| Složka | Obsah |
-|---|---|
-| `backend/` | ASP.NET API (`SmartAudit.Api`) a doménová vrstva s EF Core (`SmartAudit.Core`) |
-| `frontend/` | Next.js aplikace |
-| `seed/opendata/` | Snapshoty otevřených dat pro start bez internetu |
-| `docs/` | Katalog funkcí SmartAuditu (`SMARTAUDIT_FUNKCE.md`) |
-| `research/kontext/` | Rešerše všech 165 sad Data KHK, minulých ročníků a nápadů, včetně skriptů, které ji vytvořily |
-| `research/katalog/` | Manifest a schémata datových sad (skripty v TypeScriptu) |
-| `research/analyza/` | Průzkumné analýzy v Pythonu |
-| `research/prototypy/` | Dřívější HTML prototypy nad otevřenými daty |
-
-Skripty v `research/` se spouštějí z kořene repozitáře, např. `python research/kontext/probe.py "Nemocnice"`.
-
-## Architektura
+## 🏗️ Architektura a Struktura Repozitáře
 
 ```
 web (Next.js :3000) ──/api/*──► api (ASP.NET net10 :8080) ──► db (PostgreSQL + PostGIS)
@@ -84,14 +109,17 @@ web (Next.js :3000) ──/api/*──► api (ASP.NET net10 :8080) ──► db
                                   └─ SensorSimulationService  senzory → historie + živá data → audit
 ```
 
-- `backend/SmartAudit.Core` — entity, EF konfigurace, migrace, doménové výpočty
-  (`SensorSimulator`, `FacilityStatusEvaluator`, `ZoneLayout`, `SchoolCalendar`).
-- `backend/SmartAudit.Api` — vertical slices (`Features/<Oblast>/<Akce>`), controllery, služby
-  pro import (`Services/Import`), simulaci (`Services/Simulation`) a audit (`Services/Audit`).
-- `frontend` — Next.js App Router, shadcn/ui, mapa z [mapcn](https://mapcn.dev) se šedým
-  podkladem (`npm run map:gray` ho znovu vygeneruje do `public/map-styles/`).
+| Složka | Obsah |
+|---|---|
+| `backend/` | ASP.NET Core API (`SmartAudit.Api`) a doménová logika s EF Core (`SmartAudit.Core`) |
+| `frontend/` | Next.js App Router (TypeScript, Tailwind CSS, shadcn/ui, MapLibre GL) |
+| `seed/opendata/` | Snapshoty otevřených dat pro offline start |
+| `docs/` | Dokumentace (`SMARTAUDIT_FUNKCE.md`) a obrázky (`docs/images/`) |
+| `research/` | Rešerše 165 sad Data KHK, analýzy v Pythonu a datové manifesty |
 
-## Lokální vývoj bez Dockeru
+---
+
+## 💻 Lokální vývoj bez Dockeru
 
 ```bash
 docker compose up -d db
@@ -101,18 +129,14 @@ npm --prefix frontend run dev
 
 Frontend čeká API na `http://localhost:5033` (proměnná `API_INTERNAL_URL`).
 
-Nová migrace:
+Nová migrace databáze:
 
 ```bash
 dotnet ef migrations add <Nazev> --project backend/SmartAudit.Core --startup-project backend/SmartAudit.Api
 ```
 
-## Simulace telemetrie
+---
 
-Senzory zatím nejsou reálné. `SensorSimulator` je deterministický model: stejný objekt dává po
-restartu stejná data. Vstupy bere z reálných dat, konkrétně z venkovní teploty (Open-Meteo),
-stáří a plochy budovy (ČÚZK), počtu žáků (Data KHK) a kalendáře svátků. Zhruba 30 % objektů
-dostane profil s problémem: víkendové přetápění, špatné větrání, nefunkční noční útlum nebo
-příliš brzký ranní náběh. Audit (`FacilityStatusEvaluator`) pak tyto problémy hledá čitelnými
-pravidly jen z naměřených dat. Reálný zdroj (IQRF/MQTT) se připojí implementací
-`ISensorDataSource`.
+## 📡 Simulace telemetrie
+
+Senzory jsou generovány deterministickým modelem `SensorSimulator`. Vstupy bere z reálné venkovní teploty (Open-Meteo), stáří a plochy budovy (ČÚZK), počtu žáků/klientů (Data KHK) a kalendáře svátků. Zhruba 30 % objektů má simulační profil s problémem (víkendové přetápění, špatné větrání, nefunkční noční útlum). Audit (`FacilityStatusEvaluator`) tyto problémy detekuje pravidly nad naměřenými daty.

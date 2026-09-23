@@ -20,6 +20,7 @@ namespace SmartAudit.Api.Controllers
     [AllowAnonymous]
     [EnableCors(CorsPolicy)]
     [ApiExplorerSettings(GroupName = DocumentName)]
+    [Tags("Otevřená data")]
     public class OpenDataController : ControllerBase
     {
         public const string DocumentName = "v1";
