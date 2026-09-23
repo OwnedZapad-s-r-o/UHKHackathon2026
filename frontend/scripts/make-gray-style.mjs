@@ -72,6 +72,24 @@ function grayDeep(node) {
   return node;
 }
 
+function buildingExtrusion(theme) {
+  return {
+    id: "building-3d",
+    type: "fill-extrusion",
+    source: "carto",
+    "source-layer": "building",
+    minzoom: 14.5,
+    filter: ["!=", ["get", "hide_3d"], true],
+    paint: {
+      "fill-extrusion-color": theme === "light" ? "rgba(214, 214, 214, 1)" : "rgba(64, 64, 64, 1)",
+      // Budova bez údaje o výšce dostane 6 m (dvě podlaží)
+      "fill-extrusion-height": ["coalesce", ["get", "render_height"], 6],
+      "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+      "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 14.5, 0, 15.5, 0.85],
+    },
+  };
+}
+
 async function buildGrayStyle(theme, url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Styl ${url} nešel stáhnout: ${response.status}`);
@@ -84,6 +102,10 @@ async function buildGrayStyle(theme, url) {
     ...(layer.paint && { paint: grayDeep(layer.paint) }),
     ...(layer.layout && { layout: grayDeep(layer.layout) }),
   }));
+
+  // 3D budovy — dlaždice CARTO nesou výšku z OSM (render_height); vrstva se objeví při přiblížení
+  const buildingTop = style.layers.findIndex((layer) => layer.id === "building-top");
+  style.layers.splice(buildingTop + 1, 0, buildingExtrusion(theme));
 
   await writeFile(new URL(`gray-${theme}.json`, OUTPUT_DIR), JSON.stringify(style));
   console.log(`✔ public/map-styles/gray-${theme}.json (${style.layers.length} vrstev)`);
