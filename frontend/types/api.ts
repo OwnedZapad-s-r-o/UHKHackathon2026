@@ -1,3 +1,5 @@
+import type { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
+
 // Tvary odpovědí ASP.NET API (SmartAudit.Api) — enumy chodí jako řetězce
 
 export type AuditStatus = "Nominal" | "Warning" | "Critical";
@@ -29,6 +31,11 @@ export type FacilityListItem = {
   annualLossCzk: number | null;
   heritageStatus: HeritageStatus;
 };
+
+// Hranice okresů z GET /api/map/regions?type=Okres (GeoJSON, zjednodušené)
+export type RegionFeature = Feature<Polygon | MultiPolygon, { code: string; name: string; regionType: string }>;
+
+export type RegionCollection = FeatureCollection<Polygon | MultiPolygon, RegionFeature["properties"]>;
 
 export type Session = {
   token: string;

@@ -10,6 +10,7 @@ import {
   MarkerTooltip,
   useMap,
 } from "@/components/ui/map";
+import { ISSUE_SHARE_COLORS, ISSUE_SHARE_LABELS, type DistrictStats } from "@/lib/district-shading";
 import { CATEGORY_META, STATUS_META, formatCzk } from "@/lib/facility-meta";
 import { withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ import type {
   FacilityCategory,
   FacilityListItem,
 } from "@/types/api";
+import { DistrictLayer } from "./district-layer";
 import { MapToolbar } from "./map-toolbar";
 import { SelectedBuilding3D } from "./selected-building-3d";
 
@@ -43,9 +45,16 @@ const DRAW_ORDER: Record<AuditStatus, number> = {
 type FacilityMapProps = {
   facilities: FacilityListItem[];
   selectedId: string | null;
+  selectedDistrict: string | null;
+  districtStats: Record<string, DistrictStats>;
 };
 
-export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
+export function FacilityMap({
+  facilities,
+  selectedId,
+  selectedDistrict,
+  districtStats,
+}: FacilityMapProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -62,6 +71,13 @@ export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
     router.push(withParams(pathname, searchParams, { objekt: id }), {
       scroll: false,
     });
+  }
+
+  function selectDistrict(code: string) {
+    router.push(
+      withParams(pathname, searchParams, { okres: code, objekt: null, panel: null }),
+      { scroll: false },
+    );
   }
 
   function deselect() {
@@ -81,6 +97,13 @@ export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
         theme="light"
       >
         <MapToolbar home={KHK_HOME} />
+        <DistrictLayer
+          stats={districtStats}
+          selectedCode={selectedDistrict}
+          facilitySelected={selected !== null}
+          home={KHK_HOME}
+          onSelect={selectDistrict}
+        />
         <SelectedBuilding3D
           facilityId={selected?.id ?? null}
           status={selected?.status ?? "Nominal"}
@@ -285,6 +308,17 @@ function MapLegend({ facilities }: { facilities: FacilityListItem[] }) {
           </li>
         ))}
       </ul>
+
+      <p className="mt-4 text-xs font-bold">Okresy — podíl se zjištěním</p>
+      <div className="mt-2 flex gap-0.5" aria-hidden>
+        {ISSUE_SHARE_COLORS.map((color) => (
+          <span key={color} className="h-2.5 flex-1 rounded-[3px] border border-slate-200" style={{ background: color }} />
+        ))}
+      </div>
+      <p className="mt-1 flex justify-between text-[10.5px] text-slate-500">
+        <span>{ISSUE_SHARE_LABELS[0]}</span>
+        <span>{ISSUE_SHARE_LABELS.at(-1)}</span>
+      </p>
 
       <p className="mt-4 text-xs font-bold">Druh objektu</p>
       <ul className="mt-2 space-y-1.5 text-xs text-slate-700">

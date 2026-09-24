@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { MousePointerClick } from "lucide-react";
 import { getFacilities } from "@/lib/api";
+import { districtStats } from "@/lib/district-shading";
 import { readParam } from "@/lib/search-params";
 import { FacilityMap } from "./_components/facility-map";
 import { InspectionPanel, PANEL_TABS, type PanelTab } from "./_components/inspection/inspection-panel";
@@ -10,11 +11,16 @@ import { TopBar } from "./_components/top-bar";
 export default async function MapPage({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
 
-  const facilities = await getFacilities({
+  const filter = {
     q: readParam(params, "q"),
     district: readParam(params, "okres"),
     onlyIssues: readParam(params, "zjisteni") === "1",
-  });
+  };
+  const filtered = Boolean(filter.q || filter.district || filter.onlyIssues);
+
+  // Barvy okresů se počítají z celého kraje — s aktivním filtrem je potřeba i nefiltrovaný seznam
+  const [facilities, allFacilities] = await Promise.all([getFacilities(filter), filtered ? getFacilities() : null]);
+  const stats = districtStats(allFacilities ?? facilities);
 
   // Na startu není vybraný žádný objekt — výběr vzniká jen kliknutím (nebo odkazem s ?objekt=)
   const selected = facilities.find((f) => f.id === readParam(params, "objekt")) ?? null;
@@ -28,7 +34,7 @@ export default async function MapPage({ searchParams }: PageProps<"/">) {
         <section className="@container flex min-w-0 flex-1 flex-col border-r border-slate-200 bg-white">
           <MapFilterBar />
           <div className="relative min-h-0 flex-1">
-            <FacilityMap facilities={facilities} selectedId={selected?.id ?? null} />
+            <FacilityMap facilities={facilities} selectedId={selected?.id ?? null} selectedDistrict={filter.district ?? null} districtStats={stats} />
 
             {facilities.length === 0 && (
               <p className="absolute top-1/3 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
