@@ -118,9 +118,15 @@ web (Next.js :3000) ──/api/*──► api (ASP.NET net10 :8080) ──► db
 ## 💻 Lokální vývoj bez Dockeru
 
 ```bash
-docker compose up -d db
+docker compose up -d db mqtt
 dotnet run --project backend/SmartAudit.Api --launch-profile http
 npm --prefix frontend run dev
+```
+
+Testy backendu (výpočet ztráty, přihlašovací údaje gatewaye, parser IQRF):
+
+```bash
+dotnet test backend/SmartAudit.slnx
 ```
 
 Frontend čeká API na `http://localhost:5033` (proměnná `API_INTERNAL_URL`).
@@ -138,6 +144,11 @@ dotnet ef migrations add <Nazev> --project backend/SmartAudit.Core --startup-pro
 Senzory jsou generovány deterministickým modelem `SensorSimulator`. Vstupy bere z reálné venkovní teploty (Open-Meteo), stáří a plochy budovy (ČÚZK), počtu žáků/klientů (Data KHK) a kalendáře svátků. Zhruba 30 % objektů má simulační profil s problémem (víkendové přetápění, špatné větrání, nefunkční noční útlum). Audit (`FacilityStatusEvaluator`) tyto problémy detekuje pravidly nad naměřenými daty.
 
 Jakmile místnost měří skutečné čidlo IQRF, simulace pro ni skončí a audit počítá se skutečnými hodnotami — viz [docs/SENZORY_IQRF.md](docs/SENZORY_IQRF.md).
+
+**Odhad ztráty v Kč** vychází z naměřené teploty, ne ze simulačního profilu: za každou hodinu přetápění mimo provoz
+(víkend nebo noc bez útlumu) se sečte tepelná ztráta budovy × (naměřená teplota − útlum 18 °C, u domovů a nemocnic 20 °C).
+Tepelná ztráta budovy = podlahová plocha × měrná ztráta podle roku výstavby (ČÚZK). Týden se přepočte na topnou sezónu
+(33 týdnů) a cenu tepla 2,20 Kč/kWh (`AuditSettings`). Ukáže-li skutečné čidlo útlum, ztráta klesne na nulu (test v `SmartAudit.Tests`).
 
 **Výkon a škálování:**
 - Tabulka měření `SensorReadings` je rozdělená na **měsíční oddíly** (PostgreSQL partitioning) s indexem BRIN nad časem. Dotazy na posledních 7 dní čtou jen poslední oddíly a staré měsíce jde odpojit a archivovat bez mazání řádek po řádku.

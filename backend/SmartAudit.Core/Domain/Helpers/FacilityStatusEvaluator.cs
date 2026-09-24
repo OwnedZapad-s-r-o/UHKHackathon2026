@@ -19,7 +19,10 @@ namespace SmartAudit.Core.Domain.Helpers
         double? FreeDayMeanTemperature,
         double? NightMeanTemperature,
         double WeeklyEnergyKwh,
-        bool HeatingAnomaly);
+        bool HeatingAnomaly,
+        // Která zjištění vytápění audit našel — podle nich se z naměřených hodin počítá ztráta (HeatingLossEstimator)
+        bool FreeDayOverheating,
+        bool NightSetbackMissing);
 
     // Vysvětlitelná pravidla nad hodinovými průměry posledních 7 dní — žádné ML (F39, F24)
     public static class FacilityStatusEvaluator
@@ -42,13 +45,14 @@ namespace SmartAudit.Core.Domain.Helpers
 
             double? freeDayMean = freeDayTemperatures.Count > 0 ? freeDayTemperatures.Average() : null;
             var overheatLimit = category == FacilityCategory.Social ? 23.5 : 21.5;
+            var freeDayOverheating = freeDayMean > overheatLimit && category != FacilityCategory.Health;
 
-            if (freeDayMean > overheatLimit && category != FacilityCategory.Health)
+            if (freeDayOverheating)
             {
                 var freeDayLabel = category == FacilityCategory.Culture ? "v zavíracím dni" : "o víkendu";
                 findings.Add(new AuditFinding(
                     "Přetápění mimo provoz",
-                    $"Objekt držel {freeDayLabel} průměrně {Format(freeDayMean.Value)} °C, přestože měl být v útlumu na 18 °C. Pravděpodobně chybný týdenní program ekvitermní regulace.",
+                    $"Objekt držel {freeDayLabel} průměrně {Format(freeDayMean!.Value)} °C, přestože měl být v útlumu na 18 °C. Pravděpodobně chybný týdenní program ekvitermní regulace.",
                     "Vytápění",
                     AuditStatus.Critical));
             }
@@ -64,8 +68,9 @@ namespace SmartAudit.Core.Domain.Helpers
             double? nightMean = nightTemperatures.Count > 0 ? nightTemperatures.Average() : null;
             var nightHeating = nightPower.Count > 0 && nightPower.Average() > 2 * basePower && nightPower.Average() - basePower > 5;
             var nightLimit = category is FacilityCategory.Social or FacilityCategory.Health ? 21.5 : 20.5;
+            var nightSetbackMissing = nightHeating && nightMean >= nightLimit && category != FacilityCategory.Culture;
 
-            if (nightHeating && nightMean >= nightLimit && category != FacilityCategory.Culture)
+            if (nightSetbackMissing)
             {
                 findings.Add(new AuditFinding(
                     "Nefunguje noční útlum",
@@ -134,7 +139,9 @@ namespace SmartAudit.Core.Domain.Helpers
                 freeDayMean,
                 nightMean,
                 power.Sum(p => p.Value.Value),
-                findings.Any(f => f.Tag is "Vytápění" or "Regulace"));
+                findings.Any(f => f.Tag is "Vytápění" or "Regulace"),
+                freeDayOverheating,
+                nightSetbackMissing);
         }
 
         private static double? Average(IEnumerable<HourlyValue> values)

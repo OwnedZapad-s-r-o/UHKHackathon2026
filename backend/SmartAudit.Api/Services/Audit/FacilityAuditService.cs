@@ -84,7 +84,7 @@ namespace SmartAudit.Api.Services.Audit
                 var zoneNames = facility.Zones.ToDictionary(z => z.Id, z => z.Name);
                 var evaluation = FacilityStatusEvaluator.Evaluate(facility.Category, values, zoneNames, _settings.Co2LimitPpm);
 
-                var (annualLoss, savingPercent) = evaluation.HeatingAnomaly ? EstimateLoss(facility) : (0m, 0.0);
+                var (annualLoss, savingPercent) = EstimateLoss(facility, values, evaluation);
 
                 var assessment = facility.Assessment;
                 if (assessment == null)
@@ -115,35 +115,25 @@ namespace SmartAudit.Api.Services.Audit
             return byFacility.Count;
         }
 
-        // Ztráta = spotřeba se zjištěným nastavením − spotřeba se správným nastavením,
-        // obojí v typickém týdnu topné sezóny, × počet týdnů sezóny × cena tepla
-        private (decimal AnnualLoss, double SavingPercent) EstimateLoss(Facility facility)
+        // Ztráta z naměřené vnitřní teploty posledních 7 dní (skutečná čidla i simulovaná tam, kde čidlo zatím není):
+        // hodiny přetápění mimo provoz × tepelná ztráta budovy (plocha a stáří z ČÚZK) → kWh za týden
+        // × počet týdnů topné sezóny × cena tepla. Když skutečné čidlo ukáže útlum, ztráta klesne na nulu.
+        private (decimal AnnualLoss, double SavingPercent) EstimateLoss(Facility facility, IReadOnlyList<HourlyValue> values, AuditEvaluation evaluation)
         {
-            if (facility.SimulationProfile == SimulationProfile.Nominal)
+            var floors = facility.Building?.EstimatedFloors ?? BuildingEstimator.EstimateFloors(facility.Building?.BuiltUpArea, facility.Category);
+            var floorArea = BuildingEstimator.FloorArea(facility.Building?.BuiltUpArea, floors, facility.Category);
+            var heatLoss = floorArea * BuildingEstimator.SpecificHeatLoss(facility.Building?.EnergyCategory ?? EnergyCategory.Unknown);
+
+            var loss = HeatingLossEstimator.Estimate(facility.Category, values, heatLoss, evaluation.FreeDayOverheating, evaluation.NightSetbackMissing);
+            if (loss.WeeklyExcessKwh <= 0)
                 return (0m, 0);
 
-            var floors = facility.Building?.EstimatedFloors ?? BuildingEstimator.EstimateFloors(null, facility.Category);
-            var spec = new SensorSimulationSpec(
-                SensorMetric.Power,
-                facility.Category,
-                facility.SimulationProfile,
-                null,
-                StableHash.Of(facility.SourceKey),
-                BuildingEstimator.FloorArea(facility.Building?.BuiltUpArea, floors, facility.Category),
-                BuildingEstimator.SpecificHeatLoss(facility.Building?.EnergyCategory ?? EnergyCategory.Unknown));
+            // Zaokrouhleno na stovky Kč — víc přesnosti odhad nemá
+            var annualLoss = Math.Round((decimal)loss.WeeklyExcessKwh * _settings.HeatingSeasonWeeks * _settings.HeatPriceCzkPerKwh / 100) * 100;
 
-            // Pevný „typický“ týden (pondělí–neděle) mimo prázdniny, aby výsledek nezávisel na aktuálním počasí
-            var weekStart = SchoolCalendar.LocalMidnightUtc(new DateOnly(2026, 11, 9));
-            var weekEnd = weekStart.AddDays(7);
-            double Outdoor(DateTimeOffset t) => _settings.HeatingSeasonMeanOutdoor + 3 * Math.Sin((SchoolCalendar.ToLocal(t).Hour - 9) / 24.0 * 2 * Math.PI);
-
-            var actual = SensorSimulator.TotalEnergy(spec, weekStart, weekEnd, Outdoor);
-            var nominal = SensorSimulator.TotalEnergy(spec with { Profile = SimulationProfile.Nominal }, weekStart, weekEnd, Outdoor);
-            var excess = Math.Max(0, actual - nominal);
-
-            // Zaokrouhleno na stovky Kč — víc přesnosti model nemá
-            var annualLoss = Math.Round((decimal)excess * _settings.HeatingSeasonWeeks * _settings.HeatPriceCzkPerKwh / 100) * 100;
-            var savingPercent = actual > 0 ? Math.Round(excess / actual * 100, 1) : 0;
+            // Podíl na spotřebě průměrného týdne topné sezóny (vnitřek 20 °C, venku průměr sezóny)
+            var seasonWeekKwh = heatLoss * (20 - _settings.HeatingSeasonMeanOutdoor) * 168 / 1000.0;
+            var savingPercent = seasonWeekKwh > 0 ? Math.Min(60, Math.Round(loss.WeeklyExcessKwh / seasonWeekKwh * 100, 1)) : 0;
 
             return (annualLoss, savingPercent);
         }
