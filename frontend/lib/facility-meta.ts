@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Cross, GraduationCap, HeartHandshake, Landmark, Wind, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Check, HandHeart, Hospital, Landmark, School, Wind, type LucideIcon } from "lucide-react";
 import type { AuditStatus, FacilityCategory } from "@/types/api";
 
 // Stavové barvy z prototypu (= Tailwind 500 / 800 / 50 / 200) — vždy spolu s ikonou a popiskem
@@ -24,9 +24,9 @@ export const STATUS_META: Record<AuditStatus, { label: string; icon: LucideIcon;
 };
 
 export const CATEGORY_META: Record<FacilityCategory, { label: string; icon: LucideIcon }> = {
-  School: { label: "Školy", icon: GraduationCap },
-  Social: { label: "Sociální služby", icon: HeartHandshake },
-  Health: { label: "Zdravotnictví", icon: Cross },
+  School: { label: "Školy", icon: School },
+  Social: { label: "Sociální služby", icon: HandHeart },
+  Health: { label: "Zdravotnictví", icon: Hospital },
   Culture: { label: "Kultura", icon: Landmark },
 };
 
