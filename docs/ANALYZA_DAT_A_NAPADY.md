@@ -73,7 +73,7 @@ doprava, ambulance, turistické POI a sady o firmách.
 | # | Nápad | Kritéria | Čas |
 |---|---|---|---|
 | 1 | **Živé demo s IQRF čidlem na stole:** dýchnutí na CO₂ čidlo, graf vyskočí, audit místnosti zčervená do 30 s. Rozhraní už je hotové (obrazovka Senzory). | a, c | 0,5 h nácvik |
-| 2 | **„Jak se dýchá ve třídě“ pro rodiče a žáky:** veřejná stránka školy se semaforem CO₂ po učebnách a QR kód na dveře třídy s živým čidlem. | a, d | 1 h |
+| 2 | ✅ **Hotovo** — **„Jak se dýchá ve třídě“ pro rodiče a žáky:** veřejná karta objektu (`/objekty/{kód}`) se semaforem CO₂ po místnostech, přehled `/objekty` a QR kód na dveře třídy. | a, d | — |
 | 3 | **Upozornění správci:** e-mail nebo Microsoft Teams (webhook) při překročení CO₂ nebo přetápění o víkendu. Hodí se k partnerovi Microsoft. | c | 1 h |
 | 4 | **Kulturní budovy kraje do portfolia** (muzea, divadla, knihovny, KD se zřizovatelem kraj) | b, c | 1 h |
 | 5 | **Provoz 24/7:** ZZS a pohotovosti bez falešných nočních anomálií, základny ZZS v portfoliu | b, c | 1 h |
@@ -85,7 +85,7 @@ doprava, ambulance, turistické POI a sady o firmách.
 | 11 | **Otevřená sada pro Data KHK:** hodinové agregace kvality vzduchu ve školách s metadaty DCAT-AP-CZ. Kritérium c výslovně zmiňuje publikaci na portálu. | c | 1 h |
 | 12 | **Kontrola nasazení v Azure:** deploy aplikace do Azure Container Apps a veřejná URL pro porotu | c | 1 h |
 
-**Doporučené pořadí na soutěžní den:** 1 → 2 → 6 → 7 → 3. Nejdřív čidlo a veřejný pohled
+**Doporučené pořadí na soutěžní den:** 1 → 6 → 7 → 3 (nápad 2 je hotový). Nejdřív čidlo a veřejný pohled
 (unikátnost a veřejnost), pak odborná věrohodnost (denostupně) a hodnota pro kraj
 (pořadí investic). Až potom rozšiřování sad.
 
