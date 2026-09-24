@@ -3,7 +3,8 @@ using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Services.Simulation
 {
-    // Po importu založí senzory, dopočítá historii a pak průběžně přidává „živá“ měření a přepočítává audit
+    // Po importu založí senzory, dopočítá historii a pak průběžně přidává „živá“ měření a přepočítává audit:
+    // nový krok simulace (každých 15 min) = přepočet celého kraje, nová měření ze skutečných čidel = jen dotčené budovy.
     public class SensorSimulationService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -36,7 +37,8 @@ namespace SmartAudit.Api.Services.Simulation
             }
 
             var lastWeatherRefresh = DateTimeOffset.UtcNow;
-            var firstRun = true;
+            var step = TimeSpan.FromMinutes(_settings.StepMinutes);
+            var lastStep = DateTimeOffset.MinValue;
 
             while (!ct.IsCancellationRequested)
             {
@@ -52,15 +54,25 @@ namespace SmartAudit.Api.Services.Simulation
                         lastWeatherRefresh = now;
                     }
 
-                    await provider.GetRequiredService<ISensorProvisioningService>().ProvisionAsync(now.AddDays(-_settings.BackfillDays), ct);
+                    var audit = provider.GetRequiredService<IFacilityAuditService>();
 
-                    var written = await provider.GetRequiredService<ISensorDataSource>().SyncAsync(now, ct);
+                    // Simulace má smysl jen na hranici kroku — mezi tím by jen znovu četla databázi a nic nezapsala
+                    var currentStep = new DateTimeOffset(now.UtcTicks - now.UtcTicks % step.Ticks, TimeSpan.Zero);
+                    if (currentStep != lastStep)
+                    {
+                        await provider.GetRequiredService<ISensorProvisioningService>().ProvisionAsync(now.AddDays(-_settings.BackfillDays), ct);
+                        await provider.GetRequiredService<ISensorDataSource>().SyncAsync(now, ct);
 
-                    // Přepočet i po nových měřeních ze skutečných čidel (IQRF), ne jen po simulaci
-                    if (written > 0 || firstRun || _auditTrigger.TryConsume())
-                        await provider.GetRequiredService<IFacilityAuditService>().EvaluateAllAsync(now, ct);
-
-                    firstRun = false;
+                        // Nový krok přinesl měření všem budovám — přepočet celého kraje (a čekající budovy tím jsou vyřízené)
+                        _auditTrigger.DrainFacilities();
+                        await audit.EvaluateAsync(null, now, ct);
+                        lastStep = currentStep;
+                    }
+                    else
+                    {
+                        // Mezi kroky jen budovy, pro které přišla skutečná měření nebo se změnila čidla
+                        await audit.EvaluateAsync(_auditTrigger.DrainFacilities(), now, ct);
+                    }
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {

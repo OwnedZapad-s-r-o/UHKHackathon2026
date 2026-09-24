@@ -10,7 +10,8 @@ namespace SmartAudit.Api.Services.Audit
 {
     public interface IFacilityAuditService
     {
-        Task<int> EvaluateAllAsync(DateTimeOffset now, CancellationToken ct);
+        // facilityIds = null → celý kraj (nový krok simulace), jinak jen vyjmenované budovy (nová měření z čidel)
+        Task<int> EvaluateAsync(IReadOnlyCollection<Guid>? facilityIds, DateTimeOffset now, CancellationToken ct);
     }
 
     public class FacilityAuditService : IFacilityAuditService
@@ -35,24 +36,40 @@ namespace SmartAudit.Api.Services.Audit
             public double Value { get; set; }
         }
 
-        public async Task<int> EvaluateAllAsync(DateTimeOffset now, CancellationToken ct)
+        public async Task<int> EvaluateAsync(IReadOnlyCollection<Guid>? facilityIds, DateTimeOffset now, CancellationToken ct)
         {
-            var from = now.AddDays(-7);
+            if (facilityIds is { Count: 0 })
+                return 0;
 
-            var rows = await _dbContext.Database.SqlQuery<HourlyRow>($"""
-                SELECT s."FacilityId", s."ZoneId", s."Metric", date_trunc('hour', r."Timestamp") AS "Hour", avg(r."Value") AS "Value"
-                FROM "SensorReadings" r
-                JOIN "Sensors" s ON s."Id" = r."SensorId"
-                WHERE r."Timestamp" >= {from}
-                GROUP BY s."FacilityId", s."ZoneId", s."Metric", date_trunc('hour', r."Timestamp")
-                """).ToListAsync(ct);
+            var from = now.AddDays(-7);
+            var ids = facilityIds?.ToArray();
+
+            // Hodinové průměry posledních 7 dní; oddíly tabulky podle měsíce zajistí, že se čtou jen poslední měsíce,
+            // a pro jednotlivé budovy se měření vyberou přes senzory těch budov (index SensorId + Timestamp)
+            var rows = await (ids == null
+                ? _dbContext.Database.SqlQuery<HourlyRow>($"""
+                    SELECT s."FacilityId", s."ZoneId", s."Metric", date_trunc('hour', r."Timestamp") AS "Hour", avg(r."Value") AS "Value"
+                    FROM "SensorReadings" r
+                    JOIN "Sensors" s ON s."Id" = r."SensorId"
+                    WHERE r."Timestamp" >= {from}
+                    GROUP BY s."FacilityId", s."ZoneId", s."Metric", date_trunc('hour', r."Timestamp")
+                    """)
+                : _dbContext.Database.SqlQuery<HourlyRow>($"""
+                    SELECT s."FacilityId", s."ZoneId", s."Metric", date_trunc('hour', r."Timestamp") AS "Hour", avg(r."Value") AS "Value"
+                    FROM "Sensors" s
+                    JOIN "SensorReadings" r ON r."SensorId" = s."Id" AND r."Timestamp" >= {from}
+                    WHERE s."FacilityId" = ANY({ids})
+                    GROUP BY s."FacilityId", s."ZoneId", s."Metric", date_trunc('hour', r."Timestamp")
+                    """)).ToListAsync(ct);
 
             var byFacility = rows.GroupBy(r => r.FacilityId).ToDictionary(g => g.Key, g => g.ToList());
 
             var facilities = await _dbContext.Facilities
+                .Where(f => ids == null || ids.Contains(f.Id))
                 .Include(f => f.Assessment)
                 .Include(f => f.Building)
                 .Include(f => f.Zones)
+                .AsSplitQuery()
                 .ToListAsync(ct);
 
             foreach (var facility in facilities)

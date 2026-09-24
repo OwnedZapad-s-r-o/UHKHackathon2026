@@ -67,7 +67,7 @@ namespace SmartAudit.Api.Features.Sensors.AssignChannel
 
             await _dbContext.SaveChangesAsync(ct);
 
-            _auditTrigger.Request();
+            _auditTrigger.RequestFacility(facility.Id);
 
             return Response.Success(new AssignChannelDto(sensor.Id));
         }

@@ -57,7 +57,10 @@ namespace SmartAudit.Api.Services.Simulation
                 })
                 .ToListAsync(ct);
 
+            // Poslední měření každého senzoru jen v okně dopočtu — starší oddíly tabulky se vůbec nečtou
+            // (senzor bez měření v okně by stejně začal od backfillStart)
             var lastReadings = await _dbContext.SensorReadings
+                .Where(r => r.Timestamp >= backfillStart)
                 .GroupBy(r => r.SensorId)
                 .Select(g => new { SensorId = g.Key, Last = g.Max(r => r.Timestamp) })
                 .ToDictionaryAsync(x => x.SensorId, x => x.Last, ct);

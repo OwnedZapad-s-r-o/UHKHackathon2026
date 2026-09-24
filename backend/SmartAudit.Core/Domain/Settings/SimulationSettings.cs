@@ -12,7 +12,8 @@ namespace SmartAudit.Core.Domain.Settings
         // Krok měření v minutách (historie i živá data)
         public int StepMinutes { get; set; } = 15;
 
-        // Jak často služba kontroluje, jestli má dopočítat nový krok
-        public int LiveCheckSeconds { get; set; } = 30;
+        // Jak často služba kontroluje nový krok simulace a budovy s novými měřeními z čidel
+        // (kontrola bez práce je levná — nový krok se pozná z hodin, přepočet jen dotčených budov)
+        public int LiveCheckSeconds { get; set; } = 10;
     }
 }
