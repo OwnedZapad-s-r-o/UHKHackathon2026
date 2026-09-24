@@ -665,11 +665,25 @@ namespace SmartAudit.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("InstalledAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("LastValue")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Metric")
                         .IsRequired()
@@ -679,16 +693,121 @@ namespace SmartAudit.Core.Migrations
                     b.Property<int>("Seed")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Simulated");
+
                     b.Property<Guid?>("ZoneId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeviceId");
 
                     b.HasIndex("FacilityId");
 
                     b.HasIndex("ZoneId");
 
                     b.ToTable("Sensors");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorChannel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChannelKey")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("IqrfType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("LastValue")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Metric")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("NodeAddress")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SensorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SensorId");
+
+                    b.HasIndex("DeviceId", "ChannelKey")
+                        .IsUnique();
+
+                    b.ToTable("SensorChannels");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GatewayId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.PrimitiveCollection<int[]>("NodeAddresses")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
+
+                    b.Property<int>("PollSeconds")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacilityId");
+
+                    b.HasIndex("GatewayId")
+                        .IsUnique();
+
+                    b.ToTable("SensorDevices");
                 });
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorReading", b =>
@@ -895,6 +1014,11 @@ namespace SmartAudit.Core.Migrations
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.Sensor", b =>
                 {
+                    b.HasOne("SmartAudit.Core.Data.Tables.SensorDevice", "Device")
+                        .WithMany("Sensors")
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("SmartAudit.Core.Data.Tables.Facility", "Facility")
                         .WithMany("Sensors")
                         .HasForeignKey("FacilityId")
@@ -906,9 +1030,40 @@ namespace SmartAudit.Core.Migrations
                         .HasForeignKey("ZoneId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.Navigation("Device");
+
                     b.Navigation("Facility");
 
                     b.Navigation("Zone");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorChannel", b =>
+                {
+                    b.HasOne("SmartAudit.Core.Data.Tables.SensorDevice", "Device")
+                        .WithMany("Channels")
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SmartAudit.Core.Data.Tables.Sensor", "Sensor")
+                        .WithMany()
+                        .HasForeignKey("SensorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Device");
+
+                    b.Navigation("Sensor");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorDevice", b =>
+                {
+                    b.HasOne("SmartAudit.Core.Data.Tables.Facility", "Facility")
+                        .WithMany()
+                        .HasForeignKey("FacilityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Facility");
                 });
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorReading", b =>
@@ -962,6 +1117,13 @@ namespace SmartAudit.Core.Migrations
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.Organization", b =>
                 {
                     b.Navigation("Facilities");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.SensorDevice", b =>
+                {
+                    b.Navigation("Channels");
+
+                    b.Navigation("Sensors");
                 });
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.Zone", b =>

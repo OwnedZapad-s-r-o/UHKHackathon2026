@@ -24,6 +24,8 @@ namespace SmartAudit.Core.Data
         public DbSet<Zone> Zones { get; set; }
         public DbSet<Sensor> Sensors { get; set; }
         public DbSet<SensorReading> SensorReadings { get; set; }
+        public DbSet<SensorDevice> SensorDevices { get; set; }
+        public DbSet<SensorChannel> SensorChannels { get; set; }
         public DbSet<WeatherObservation> WeatherObservations { get; set; }
         public DbSet<AiAnalysis> AiAnalyses { get; set; }
 
