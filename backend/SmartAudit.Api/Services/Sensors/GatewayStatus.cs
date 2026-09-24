@@ -13,7 +13,9 @@ namespace SmartAudit.Api.Services.Sensors
 
         public static BrokerDto Broker(IIqrfGatewayState state, IqrfSettings settings)
         {
-            return new BrokerDto(state.BrokerConnected, state.BrokerError, settings.PublicHost, settings.PublicPort, settings.ResponseTopicFilter, settings.RequestTopicTemplate);
+            var caAvailable = !string.IsNullOrEmpty(settings.CaCertificatePath) && File.Exists(settings.CaCertificatePath);
+
+            return new BrokerDto(state.BrokerConnected, state.BrokerError, settings.PublicHost, settings.PublicPort, settings.PublicTls, caAvailable, settings.ResponseTopicFilter, settings.RequestTopicTemplate);
         }
     }
 }

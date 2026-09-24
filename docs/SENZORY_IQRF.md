@@ -312,7 +312,7 @@ Když celá aplikace SmartAudit KHK běží na centrálním serveru kraje (např
                                          ▼
 +-----------------------------------------------------------------------------------+
 | KROK 2: V administraci školní Gateway (IQRF Gateway Webapp)                       |
-| Nastavení MQTT klienta směrem na krajský server: smartaudit.datakhk.cz:1883       |
+| Nastavení MQTT klienta směrem na krajský server: ssl://smartaudit.datakhk.cz:8883 |
 +-----------------------------------------------------------------------------------+
                                          │
                                          ▼
@@ -348,23 +348,27 @@ V bráně školy v souboru `/etc/iqrfgd2/iqrf__MqttMessaging.json` (nebo ve webo
 {
   "component": "iqrf::MqttMessaging",
   "instance": "SmartAuditKHK",
-  "BrokerAddr": "tcp://smartaudit.datakhk.cz:1883",
+  "BrokerAddr": "ssl://smartaudit.datakhk.cz:8883",
   "ClientId": "skola-gymnazium-bozeny-nemcove-gw01",
+  "User": "skola-gymnazium-bozeny-nemcove-gw01",
+  "Password": "<heslo z detailu gatewaye v aplikaci>",
   "TopicRequest": "gateway/skola-gymnazium-bozeny-nemcove-gw01/iqrf/requests",
   "TopicResponse": "gateway/skola-gymnazium-bozeny-nemcove-gw01/iqrf/responses",
   "Qos": 1,
   "Persistence": 1,
-  "EnabledSSL": false,
+  "EnabledSSL": true,
+  "TrustStore": "/etc/iqrf-gateway-daemon/certs/smartaudit-ca.crt",
+  "EnableServerCertAuth": true,
   "acceptAsyncMsg": true
 }
 ```
 *Poznámka:* `ClientId` a část topicu `gateway/{id}/iqrf` tvoří unikátní identifikátor brány (např. `skola-gymnazium-bozeny-nemcove-gw01`).
+Jméno a heslo gatewaye i certifikát CA brokeru (`smartaudit-ca.crt`) ukáže aplikace na detailu gatewaye — broker pustí jen gateway,
+kterou správce předtím v aplikaci připojil (krok 3 proto v praxi proběhne před krokem 2).
 
 ### Krok 3: Registrace brány ve webové aplikaci SmartAudit KHK
 1. Pověřený správce školy nebo energetik kraje se přihlásí do aplikace na krajském serveru a otevře sekci **Senzory** (`/senzory`).
-2. Pokud brána již začala odesílat zprávy na krajský broker, aplikace ji sama detekuje v sekci:
-   > **Našli jsme gateway, která ještě není připojená:** `skola-gymnazium-bozeny-nemcove-gw01`
-3. Správce klikne na **Připojit**:
+2. Správce vyplní formulář **Zadejte gateway do aplikace** (krok 1 průvodce):
    * **Objekt:** vybere ze seznamu budov svou školu (např. `Gymnázium Boženy Němcové, Hradec Králové`).
    * **Název:** např. `Brána hlavní budova - 2. patro`.
    * **Id gatewaye:** předvyplněno `skola-gymnazium-bozeny-nemcove-gw01`.
@@ -406,12 +410,14 @@ Zde je přesné a jasné vysvětlení:
 * Aby uživatel nemusel na svém počítači instalovat Python, pip a knihovnu `paho-mqtt`.
 * Jednoduchým příkazem v Dockeru lze spustit celý ekosystém včetně simulovaného hardwaru:
   ```bash
-  # Spuštění lokálního emulátoru v Pythonu:
-  python tools/iqrf-emulator/emulator.py --gateway demo-gw
+  # Spuštění lokálního emulátoru v Pythonu (heslo gatewaye je na jejím detailu v aplikaci):
+  python tools/iqrf-emulator/emulator.py --gateway ucebna-1 --password <heslo gatewaye>
+  # Šifrovaně přes síť, s ověřením certifikátu brokeru:
+  python tools/iqrf-emulator/emulator.py --host <IP> --port 8883 --tls --cafile smartaudit-ca.crt --gateway ucebna-1 --password <heslo>
   ```
-  Nebo v Docker kontejneru:
+  Nebo v Docker kontejneru (gateway `ucebna-1` musí být v aplikaci připojená):
   ```bash
-  docker compose run --rm emulator python tools/iqrf-emulator/emulator.py --host mqtt --gateway ucebna-1
+  docker compose --profile emulator up emulator
   ```
 
 ### 3. Skripty pro analýzu a přípravu otevřených dat (`research/`)
@@ -426,14 +432,19 @@ V repozitáři jsou další Python skripty ve složkách `research/analyza/` a `
 
 ---
 
-## 8. Bezpečnost pro ostrý provoz Královéhradeckého kraje
+## 8. Bezpečnost MQTT
 
-V demo/hackathonové konfiguraci v souboru `mqtt/mosquitto.conf` je z důvodu rychlého vyzkoušení povolen anonymní přístup na portu 1883 bez šifrování.
-
-Pro nasazení do ostrého provozu v budovách kraje:
-1. **Šifrování TLS (Port 8883 / MQTTS):** Komunikace mezi školní bránou a krajským serverem musí probíhat přes TLS s platným certifikátem (Let's Encrypt nebo krajská CA).
-2. **Autentizace jménem a heslem:** V konfiguraci brány a v nastavení API (`IqrfSettings__Username` a `IqrfSettings__Password`) se nastaví přihlašovací údaje. Každá škola nebo obvod může mít vlastní MQTT účet s ACL pravidly omezujícími přístup pouze na její topicy `gateway/<jeji-id>/#`.
-3. **HTTP Webhook Fallback:** Pro zabezpečené sítě, kde je blokován odchozí MQTT port, aplikace nabízí zabezpečený REST endpoint chráněný JWT tokenem role Kraj/Správce:
+Broker (`mqtt/`) nepouští nikoho bez jména a hesla a každá gateway smí jen na své topicy:
+1. **Účet pro každou gateway (Dynamic Security):** jakmile správce gateway připojí v aplikaci, backend jí na brokeru založí účet
+   a roli s právy jen na `gateway/<její-id>/iqrf/requests` (odběr) a `gateway/<její-id>/iqrf/responses` (zápis).
+   Cizí gateway ani nikdo v síti školy tak nepřečte telemetrii jiné budovy a nepodvrhne měření. Odpojená gateway o účet přijde.
+2. **Heslo gatewaye se neukládá:** je to HMAC-SHA256 tajemství `MQTT_DEVICE_SECRET` a id gatewaye — broker ho zná,
+   aplikace ho kdykoli znovu ukáže jen kraji a správci té budovy.
+3. **TLS na portu 8883:** broker si při prvním startu vytvoří vlastní certifikační autoritu a certifikát serveru
+   (adresy z `IQRF_BROKER_PUBLIC_HOST`). Gateway ověřuje server certifikátem `smartaudit-ca.crt`, který jde stáhnout v aplikaci.
+   Pro ostrý provoz lze certifikát nahradit krajským (svazek `mqtt_certs`) a zapnout vzájemné ověření certifikátem (`require_certificate`).
+4. **Nešifrovaný port 1883** je jen pro backend uvnitř sítě Dockeru a nástroje na serveru (`127.0.0.1`), ne pro síť školy.
+5. **HTTP Webhook Fallback:** Pro zabezpečené sítě, kde je blokován odchozí MQTT port, aplikace nabízí zabezpečený REST endpoint chráněný JWT tokenem role Kraj/Správce:
    ```http
    POST /api/sensors/iqrf/{gatewayId}/messages
    Authorization: Bearer <jwt-token>

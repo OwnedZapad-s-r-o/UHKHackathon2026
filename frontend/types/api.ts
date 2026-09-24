@@ -245,6 +245,9 @@ export type Broker = {
   error: string | null;
   publicHost: string | null;
   publicPort: number;
+  // Gatewaye se připojují šifrovaně (TLS); certifikát CA brokeru jde stáhnout
+  publicTls: boolean;
+  caAvailable: boolean;
   responseTopicFilter: string;
   requestTopicTemplate: string;
 };
@@ -295,6 +298,8 @@ export type GatewayDetail = {
   lastSeenAt: string | null;
   facility: { id: string; code: string; name: string };
   broker: Broker;
+  // Přihlášení gatewaye k brokeru (jméno = id gatewaye); null = broker bez účtů
+  credentials: { username: string; password: string } | null;
   channels: GatewayChannel[];
   zones: { id: string; name: string; floor: number }[];
   messages: { timestamp: string; direction: "Request" | "Response"; messageType: string; payload: string }[];

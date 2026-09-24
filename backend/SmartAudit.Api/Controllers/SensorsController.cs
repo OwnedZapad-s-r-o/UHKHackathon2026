@@ -6,6 +6,7 @@ using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Features.Sensors.AssignChannel;
 using SmartAudit.Api.Features.Sensors.CreateGateway;
 using SmartAudit.Api.Features.Sensors.DeleteGateway;
+using SmartAudit.Api.Features.Sensors.GetBrokerCertificate;
 using SmartAudit.Api.Features.Sensors.GetGateway;
 using SmartAudit.Api.Features.Sensors.GetGateways;
 using SmartAudit.Api.Features.Sensors.PostGatewayMessage;
@@ -33,6 +34,17 @@ namespace SmartAudit.Api.Controllers
             var result = await _mediator.Send(new GetGatewaysCommand(User.GetViewer()), ct);
 
             return result.ToActionResult();
+        }
+
+        [HttpGet]
+        [Route("broker/ca.crt")]
+        public async Task<IActionResult> BrokerCertificate(CancellationToken ct)
+        {
+            var result = await _mediator.Send(new GetBrokerCertificateCommand(), ct);
+
+            return result.IsSuccess && result.Data != null
+                ? File(result.Data.Content, "application/x-x509-ca-cert", result.Data.FileName)
+                : result.ToActionResult();
         }
 
         [HttpGet]

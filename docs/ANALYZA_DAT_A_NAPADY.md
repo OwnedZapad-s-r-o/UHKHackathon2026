@@ -95,5 +95,5 @@ doprava, ambulance, turistické POI a sady o firmách.
   Aplikace to rozlišuje odznakem **živě**.
 - **Odhad ztráty v Kč** zatím stojí na simulačním profilu, ne na měření. Odpověď na dotaz:
   „Po připojení čidel se počítá z naměřených hodin přetápění.“ To je nápad č. 6.
-- **Bezpečnost MQTT:** broker je anonymní, určený jen pro uzavřenou síť. Pro provoz jsou
-  připravené přihlašovací údaje a TLS (`docs/SENZORY_IQRF.md`).
+- **Bezpečnost MQTT:** broker nepouští anonymy — každá gateway má vlastní účet s právy jen na své topicy
+  a přes síť se připojuje šifrovaně (TLS, port 8883). Podrobnosti v `docs/SENZORY_IQRF.md`, kapitola 8.

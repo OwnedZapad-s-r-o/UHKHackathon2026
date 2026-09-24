@@ -110,6 +110,17 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
         </>
       )}
 
+      {/* Po připojení se návod schová, ale heslo a certifikát musí jít najít znovu (výměna gatewaye, nová instalace) */}
+      {gateway.channels.length > 0 && (
+        <details className="group rounded-2xl border border-slate-200 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 text-[13.5px] font-bold select-none [&::-webkit-details-marker]:hidden">
+            Nastavení gatewaye — adresa brokeru, jméno a heslo
+            <ChevronDown className="size-4 text-slate-400 transition-transform group-open:rotate-180" aria-hidden />
+          </summary>
+          <div className="border-t border-slate-100 p-5">{guide}</div>
+        </details>
+      )}
+
       <MessageLog messages={gateway.messages} />
     </div>
   );
