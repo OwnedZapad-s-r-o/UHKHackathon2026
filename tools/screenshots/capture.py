@@ -64,6 +64,7 @@ def main():
     parser.add_argument("--api", default="http://localhost:8080")
     parser.add_argument("--facility", default="SKO-5205-01", help="kód objektu pro 3D a veřejnou kartu")
     parser.add_argument("--out", default=str(ROOT / "frontend" / "public" / "landing"))
+    parser.add_argument("--only", nargs="*", help="jen vybrané snímky, např. --only mapa-okresy pdf")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -84,6 +85,8 @@ def main():
         page.wait_for_url("**/mapa")
 
         def shot(path, name, wait=2500):
+            if args.only and name not in args.only:
+                return
             page.goto(args.web + path)
             page.wait_for_load_state("load")
             page.mouse.move(1430, 890)
@@ -107,7 +110,8 @@ def main():
 
         browser.close()
 
-    pdf_sheet(api(args.api, f"/api/reports/facility/{critical['id']}.pdf", token, raw=True), out, "pdf")
+    if not args.only or "pdf" in args.only:
+        pdf_sheet(api(args.api, f"/api/reports/facility/{critical['id']}.pdf", token, raw=True), out, "pdf")
 
 
 if __name__ == "__main__":

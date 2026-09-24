@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Map, MapMarker, MarkerContent, MarkerLabel, MarkerTooltip, useMap } from "@/components/ui/map";
 import type { DistrictStats } from "@/lib/district-shading";
 import { withParams } from "@/lib/search-params";
 import type { AuditStatus, FacilityListItem } from "@/types/api";
 import { DistrictLayer } from "./district-layer";
+import { FacilityDots } from "./facility-dots";
 import { FacilityPin, FacilityTooltipContent, SelectedLabel, TOOLTIP_CLASS } from "./facility-pin";
 import { MapClickRouter } from "./map-click-router";
 import { MapLegend } from "./map-legend";
@@ -32,6 +33,9 @@ const DRAW_ORDER: Record<AuditStatus, number> = {
   Critical: 2,
 };
 
+// Od tohoto přiblížení se místo teček ukážou špendlíky i bez výběru okresu (uživatel si přiblížil sám)
+const PIN_ZOOM = 10.5;
+
 // Tooltip vpravo od hlavy špendlíku (anchor bottom → hlava je ~18 px nad bodem), aby nezakryl budovu
 const TOOLTIP_OFFSET: [number, number] = [18, -18];
 
@@ -50,6 +54,11 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
   // Vybraný objekt se kreslí poslední, aby ho nepřekryly okolní špendlíky
   const ordered = facilities.toSorted((a, b) => Number(a.id === selectedId) - Number(b.id === selectedId) || DRAW_ORDER[a.status] - DRAW_ORDER[b.status]);
   const selected = facilities.find((f) => f.id === selectedId) ?? null;
+  const [zoomedIn, setZoomedIn] = useState(false);
+
+  // Dvě úrovně: celý kraj = štítky okresů a tečky, vybraný okres (nebo objekt, nebo přiblížení) = špendlíky.
+  // Seznam objektů je při vybraném okresu už filtrovaný, takže se ukážou jen špendlíky toho okresu.
+  const showPins = selectedDistrict !== null || selected !== null || zoomedIn;
 
   function navigate(changes: Record<string, string | null>) {
     router.push(withParams(pathname, searchParams, changes), { scroll: false });
@@ -65,8 +74,12 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
           selectedCode={selectedDistrict}
           facilitySelected={selected !== null}
           home={KHK_HOME}
+          showLabels={!showPins}
+          onSelect={(code) => navigate({ okres: code, objekt: null, panel: null })}
           onClear={() => navigate({ okres: null })}
         />
+        <FacilityDots facilities={facilities} visible={!showPins} />
+        <ZoomThreshold threshold={PIN_ZOOM} onChange={setZoomedIn} />
         <SelectedBuilding3D facilityId={selected?.id ?? null} status={selected?.status ?? "Nominal"} />
         <FlyToSelected facilityId={selected?.id ?? null} longitude={selected?.longitude} latitude={selected?.latitude} />
         <MapClickRouter
@@ -77,7 +90,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
           onDeselectFacility={() => navigate({ objekt: null, panel: null })}
         />
 
-        {ordered.map((facility) => {
+        {showPins && ordered.map((facility) => {
           const isSelected = facility.id === selectedId;
 
           return (
@@ -110,6 +123,32 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
       <MapLegend facilities={facilities} />
     </div>
   );
+}
+
+// Hlásí jen překročení prahu přiblížení — ne každý krok zoomu, jinak by se mapa překreslovala při každém pohybu kolečkem
+function ZoomThreshold({ threshold, onChange }: { threshold: number; onChange: (above: boolean) => void }) {
+  const { map, isLoaded } = useMap();
+
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    let above = map.getZoom() >= threshold;
+    onChange(above);
+
+    function handleZoom() {
+      const next = map!.getZoom() >= threshold;
+      if (next === above) return;
+      above = next;
+      onChange(next);
+    }
+
+    map.on("zoom", handleZoom);
+    return () => {
+      map.off("zoom", handleZoom);
+    };
+  }, [map, isLoaded, threshold, onChange]);
+
+  return null;
 }
 
 // Po výběru objektu mapa přeletí k budově a nakloní se, aby byla vidět ve 3D;

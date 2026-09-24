@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Feature, FeatureCollection, Polygon, Position } from "geojson";
 import type { ExpressionSpecification, LngLatBoundsLike } from "maplibre-gl";
 import { X } from "lucide-react";
-import { MapGeoJSON, useMap, type MapGeoJSONEvent } from "@/components/ui/map";
+import { MapGeoJSON, MapMarker, MarkerContent, useMap, type MapGeoJSONEvent } from "@/components/ui/map";
 import { issueShareColor, type DistrictStats } from "@/lib/district-shading";
 import { formatCzk } from "@/lib/facility-meta";
 import type { RegionCollection, RegionFeature } from "@/types/api";
@@ -59,6 +59,9 @@ type DistrictLayerProps = {
   // Při vybraném objektu se kamera neřídí okresem (letí k budově)
   facilitySelected: boolean;
   home: { center: [number, number]; zoom: number };
+  // Pohled na celý kraj: uprostřed každého okresu štítek se souhrnem, klik ho vybere
+  showLabels: boolean;
+  onSelect: (code: string) => void;
   onClear: () => void;
 };
 
@@ -66,7 +69,7 @@ type Hover = { stats: DistrictStats; x: number; y: number };
 
 // Okresy barevně podle podílu objektů se zjištěním. Vybraný okres: zbytek mapy zešedne maskou
 // a okres má červený obrys se září; vlevo nahoře štítek se souhrnem a návratem na celý kraj.
-export function DistrictLayer({ stats, selectedCode, facilitySelected, home, onClear }: DistrictLayerProps) {
+export function DistrictLayer({ stats, selectedCode, facilitySelected, home, showLabels, onSelect, onClear }: DistrictLayerProps) {
   const { map, isLoaded } = useMap();
   const [districts, setDistricts] = useState<RegionCollection | null>(null);
   const [hover, setHover] = useState<Hover | null>(null);
@@ -160,9 +163,48 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, onC
       <MapGeoJSON id="district-glow" data={outline} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={false} linePaint={glowPaint} />
       <MapGeoJSON id="district-outline" data={outline} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={false} linePaint={outlinePaint} />
 
-      {hover && (!selectedCode || hover.stats.code === selectedCode) && <DistrictTooltip hover={hover} selected={hover.stats.code === selectedCode} />}
+      {showLabels &&
+        districts.features.map((feature) => {
+          const entry = stats[feature.properties.code];
+          if (!entry) return null;
+          const [longitude, latitude] = labelPoint(feature);
+
+          return (
+            <MapMarker key={feature.properties.code} longitude={longitude} latitude={latitude} onClick={() => onSelect(entry.code)}>
+              <MarkerContent>
+                <DistrictLabel stats={entry} />
+              </MarkerContent>
+            </MapMarker>
+          );
+        })}
+
+      {hover && !showLabels && (!selectedCode || hover.stats.code === selectedCode) && <DistrictTooltip hover={hover} selected={hover.stats.code === selectedCode} />}
       {selectedStats && <SelectedDistrictChip stats={selectedStats} onClear={onClear} />}
     </>
+  );
+}
+
+// Štítek okresu v pohledu na kraj — název, počet objektů a kolik z nich má zjištění
+function DistrictLabel({ stats }: { stats: DistrictStats }) {
+  return (
+    <span className="flex cursor-pointer flex-col items-center rounded-xl border border-slate-200 bg-white/95 px-3 py-1.5 text-center text-hk-navy shadow-[0_8px_20px_rgba(11,25,44,0.16)] transition-transform hover:-translate-y-0.5 hover:border-hk-red/50">
+      <span className="text-[12.5px] font-bold whitespace-nowrap">{stats.name}</span>
+      <span className="mt-0.5 flex items-center gap-2 text-[10.5px] whitespace-nowrap text-slate-500">
+        {stats.total} objektů
+        {stats.critical > 0 && (
+          <span className="inline-flex items-center gap-1 font-bold text-red-700">
+            <span className="size-1.5 rounded-full bg-red-500" aria-hidden />
+            {stats.critical}
+          </span>
+        )}
+        {stats.warning > 0 && (
+          <span className="inline-flex items-center gap-1 font-bold text-amber-700">
+            <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+            {stats.warning}
+          </span>
+        )}
+      </span>
+    </span>
   );
 }
 
@@ -229,6 +271,29 @@ function matchByCode<T extends string | number>(stats: Record<string, DistrictSt
 
 function outerRings(feature: RegionFeature): Position[][] {
   return feature.geometry.type === "Polygon" ? [feature.geometry.coordinates[0]] : feature.geometry.coordinates.map((polygon) => polygon[0]);
+}
+
+// Místo pro štítek: těžiště největšího kruhu okresu (vzorec plochy mnohoúhelníku)
+function labelPoint(feature: RegionFeature): Position {
+  const rings = outerRings(feature);
+  let best: { area: number; point: Position } = { area: 0, point: rings[0][0] };
+
+  for (const ring of rings) {
+    let area = 0;
+    let x = 0;
+    let y = 0;
+
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const cross = ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+      area += cross;
+      x += (ring[j][0] + ring[i][0]) * cross;
+      y += (ring[j][1] + ring[i][1]) * cross;
+    }
+
+    if (Math.abs(area) > Math.abs(best.area)) best = { area, point: [x / (3 * area), y / (3 * area)] };
+  }
+
+  return best.point;
 }
 
 // Obdélník kolem kraje s dírou ve tvaru vybraného okresu — další kruhy polygonu jsou díry
