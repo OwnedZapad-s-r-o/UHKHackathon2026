@@ -39,6 +39,10 @@ namespace SmartAudit.Core.Migrations
                     b.Property<Guid>("FacilityId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("InputFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("LetterDraft")
                         .HasMaxLength(6000)
                         .HasColumnType("character varying(6000)");

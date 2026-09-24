@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -7,11 +8,13 @@ using Microsoft.OpenApi;
 using NetTopologySuite.IO.Converters;
 using Scalar.AspNetCore;
 using SmartAudit.Api.Controllers;
+using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Middleware;
 using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Import;
 using SmartAudit.Api.Services.Reports;
+using SmartAudit.Api.Services.Security;
 using SmartAudit.Api.Services.Sensors;
 using SmartAudit.Api.Services.Simulation;
 using SmartAudit.Core.Common;
@@ -73,7 +76,8 @@ builder.Services.AddSingleton<IAuditTrigger, AuditTrigger>();
 builder.Services.AddHostedService<SensorSimulationService>();
 
 // Skutečná čidla — IQRF Gateway Daemon přes MQTT broker (služba mqtt v docker-compose)
-builder.Services.AddSingleton(builder.Configuration.GetSection(IqrfSettings.SectionName).Get<IqrfSettings>() ?? new IqrfSettings());
+var iqrfSettings = builder.Configuration.GetSection(IqrfSettings.SectionName).Get<IqrfSettings>() ?? new IqrfSettings();
+builder.Services.AddSingleton(iqrfSettings);
 builder.Services.AddSingleton<IIqrfGatewayState, IqrfGatewayState>();
 builder.Services.AddScoped<ISensorIngestService, SensorIngestService>();
 builder.Services.AddHostedService<IqrfGatewayService>();
@@ -112,6 +116,32 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+// Mimo Development žádná ukázková tajemství (JWT, MQTT, databáze) — raději nenastartovat
+SecretsGuard.EnsureProductionSecrets(builder.Environment, jwtSettings, iqrfSettings, connectionString);
+
+// AI analýza volá placený model — omezení počtu na uživatele (a mezipaměť výsledku v handleru) chrání rozpočet Azure OpenAI
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(AiAuditController.RateLimitPolicy, context =>
+    {
+        var partition = context.User.TryGetUserId(out var userId) ? $"user:{userId}" : $"ip:{context.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = AiAuditController.RateLimitRequests,
+            Window = AiAuditController.RateLimitWindow,
+            QueueLimit = 0,
+        });
+    });
+    options.OnRejected = async (context, ct) =>
+    {
+        var minutes = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter) ? (int)Math.Ceiling(retryAfter.TotalMinutes) : (int)AiAuditController.RateLimitWindow.TotalMinutes;
+        context.HttpContext.Response.Headers.RetryAfter = (minutes * 60).ToString();
+        await context.HttpContext.Response.WriteAsJsonAsync(new { Message = $"AI analýzu lze spustit nejvýš {AiAuditController.RateLimitRequests}× za {AiAuditController.RateLimitWindow.TotalMinutes:0} minut. Zkuste to znovu za {minutes} min." }, ct);
+    };
+});
 
 // Otevřené API: CORS pro libovolný web, cache odpovědí na serveru (půdorys 2 dny, ostatní 5 minut)
 builder.Services.AddCors(options => options.AddPolicy(OpenDataController.CorsPolicy, policy => policy.AllowAnyOrigin().WithMethods("GET").AllowAnyHeader()));
@@ -172,6 +202,7 @@ app.UseOutputCache();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

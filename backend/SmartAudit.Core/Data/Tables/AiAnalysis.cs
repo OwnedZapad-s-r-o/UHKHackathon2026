@@ -12,6 +12,9 @@ namespace SmartAudit.Core.Data.Tables
         public string RecommendationsJson { get; private set; } = "[]";
         public string? LetterDraft { get; private set; }
 
+        // Otisk vstupu (stav, zjištění a ztráta z auditu) — stejný otisk = stejná odpověď modelu, nevolat ho znovu
+        public string? InputFingerprint { get; private set; }
+
 
         // Cizí klíče
         public Guid FacilityId { get; private set; }
@@ -27,7 +30,7 @@ namespace SmartAudit.Core.Data.Tables
 
         private AiAnalysis() { }
 
-        public AiAnalysis(Guid facilityId, string model, string summary, string rootCause, string recommendationsJson, string? letterDraft, Guid? createdByUserId)
+        public AiAnalysis(Guid facilityId, string model, string summary, string rootCause, string recommendationsJson, string? letterDraft, Guid? createdByUserId, string? inputFingerprint = null)
         {
             if (string.IsNullOrWhiteSpace(model))
                 throw new ArgumentException("Model AI analýzy nesmí být prázdný.", nameof(model));
@@ -42,6 +45,7 @@ namespace SmartAudit.Core.Data.Tables
             RecommendationsJson = string.IsNullOrWhiteSpace(recommendationsJson) ? "[]" : recommendationsJson;
             LetterDraft = letterDraft;
             CreatedByUserId = createdByUserId;
+            InputFingerprint = inputFingerprint;
             CreatedAt = DateTimeOffset.UtcNow;
         }
     }
