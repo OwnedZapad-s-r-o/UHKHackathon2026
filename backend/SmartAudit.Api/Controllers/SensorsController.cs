@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Features.Sensors.AssignChannel;
+using SmartAudit.Api.Features.Sensors.CreateDemoNetwork;
 using SmartAudit.Api.Features.Sensors.CreateGateway;
+using SmartAudit.Api.Features.Sensors.CreateVirtualGateway;
 using SmartAudit.Api.Features.Sensors.DeleteGateway;
 using SmartAudit.Api.Features.Sensors.GetBrokerCertificate;
 using SmartAudit.Api.Features.Sensors.GetGateway;
@@ -52,6 +54,26 @@ namespace SmartAudit.Api.Controllers
         public async Task<IActionResult> GetGateway(Guid id, CancellationToken ct)
         {
             var result = await _mediator.Send(new GetGatewayCommand(id, User.GetViewer()), ct);
+
+            return result.ToActionResult();
+        }
+
+        // Testovací síť kraje: pět virtuálních gatewayí v pěti okresech (jen kraj)
+        [HttpPost]
+        [Route("demo-network")]
+        public async Task<IActionResult> CreateDemoNetwork(CancellationToken ct)
+        {
+            var result = await _mediator.Send(new CreateDemoNetworkCommand(User.GetViewer()), ct);
+
+            return result.ToActionResult();
+        }
+
+        // Jednoklikové demo bez hardwaru: virtuální učebna v budově
+        [HttpPost]
+        [Route("virtual-gateways")]
+        public async Task<IActionResult> CreateVirtualGateway([FromBody] CreateVirtualGatewayRequest request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new CreateVirtualGatewayCommand(User.GetViewer(), request.FacilityId), ct);
 
             return result.ToActionResult();
         }

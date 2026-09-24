@@ -31,6 +31,10 @@ namespace SmartAudit.Api.Services.Sensors
         void RecordUnknown(string gatewayId, DateTimeOffset timestamp);
         void ForgetUnknown(string gatewayId);
         IReadOnlyList<UnknownGateway> GetUnknown();
+
+        // Odpověď od někoho jiného než aplikace (hardware, Python emulátor) — virtuální gateway pak uhne, aby neodpovídali dva
+        void RecordExternalResponse(string gatewayId, DateTimeOffset timestamp);
+        bool HasExternalResponder(string gatewayId, DateTimeOffset now);
     }
 
     public class IqrfGatewayState : IIqrfGatewayState
@@ -41,6 +45,15 @@ namespace SmartAudit.Api.Services.Sensors
         private readonly ConcurrentDictionary<string, LinkedList<GatewayMessage>> _messages = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<(string, string), LinkedList<ChannelSample>> _samples = new();
         private readonly ConcurrentDictionary<string, UnknownGateway> _unknown = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, DateTimeOffset> _externalResponses = new(StringComparer.OrdinalIgnoreCase);
+
+        // Jak dlouho po poslední cizí odpovědi virtuální gateway mlčí
+        private static readonly TimeSpan ExternalWindow = TimeSpan.FromMinutes(2);
+
+        public void RecordExternalResponse(string gatewayId, DateTimeOffset timestamp) => _externalResponses[gatewayId] = timestamp;
+
+        public bool HasExternalResponder(string gatewayId, DateTimeOffset now) =>
+            _externalResponses.TryGetValue(gatewayId, out var last) && now - last < ExternalWindow;
 
         public bool BrokerConnected { get; private set; }
         public string? BrokerError { get; private set; }

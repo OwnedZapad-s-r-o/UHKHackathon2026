@@ -428,6 +428,25 @@ Zde je přesné a jasné vysvětlení:
   4. Simuluje reálnou fyziku třídy: jak děti dýchají, hladina CO₂ plynule stoupá z 600 na 2 000 ppm a po vyvětrání prudce klesne.
   5. Odpovídá ve 100% shodném formátu IQRF JSON API jako skutečný hardwarový daemon.
 
+### 1b. Testovací síť kraje bez hardwaru (5 budov v 5 okresech)
+Na obrazovce **Senzory** má kraj tlačítko **Spustit testovací síť**. Aplikace založí pět *virtuálních* gatewayí:
+
+| Okres | Budova | Gateway | Uzly | Stav |
+|---|---|---|---|---|
+| Hradec Králové | Gymnázium J. K. Tyla (SKO-5205-12) | `gw-hk-tyl` | učebna (T, CO₂, RH), společné prostory (T, lx, pohyb) | přiřazená |
+| Jičín | Masarykova obchodní akademie (SKO-5207-04) | `gw-jc-moa` | počítačová učebna (CO₂, T), chodba (hluk, pohyb) | přiřazená |
+| Trutnov | Gymnázium Trutnov (SKO-5214-06) | `gw-tu-gym` | laboratoř (VOC, CO₂), sborovna (T, RH) | přiřazená |
+| Náchod | Jiráskovo gymnázium (SKO-5209-04) | `gw-na-jir` | knihovna (RH, T, lx), jídelna (CO₂, T) | přiřazená |
+| Rychnov n. Kn. | VOŠ a SPŠ Rychnov (SKO-5213-05) | `gw-rk-sps` | dílna (T, hluk), učebna automatizace (T, CO₂, RH) | **nepřiřazená** — k vyzkoušení |
+
+Virtuální gateway se k brokeru připojí **vlastním účtem jako skutečná** a odpovídá ve formátu IQRF Gateway Daemonu — data tak jdou
+celou skutečnou cestou (TLS/účty, MQTT, parser, uložení, audit), jen hardware nahrazuje aplikace. V UI je vždy označená jako **virtuální**.
+Průběhy odpovídají provozu: CO₂ ve třídě roste během hodiny a o přestávce klesne, v dílně je hluk podle směn, v noci útlum teploty.
+
+Totéž umí Python cluster (`tools/iqrf-emulator/multi_emulator.py`, profil `docker compose --profile emulators up -d`).
+Když za gateway odpovídá někdo jiný než aplikace (cluster nebo hardware), virtuální odpovědi aplikace samy ustoupí.
+Pro jednu budovu bez hardwaru slouží ve formuláři připojení tlačítko **Vyzkoušet demo s virtuální učebnou**.
+
 ### 2. Proč spustit Python emulátor v Dockeru?
 * Aby uživatel nemusel na svém počítači instalovat Python, pip a knihovnu `paho-mqtt`.
 * Jednoduchým příkazem v Dockeru lze spustit celý ekosystém včetně simulovaného hardwaru:

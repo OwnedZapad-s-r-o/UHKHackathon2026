@@ -16,7 +16,7 @@ namespace SmartAudit.Api.Features.Sensors.GetGateways
     // PublicTls = gatewaye se připojují šifrovaně; CaAvailable = certifikát CA brokeru jde stáhnout
     public record BrokerDto(bool Connected, string? Error, string? PublicHost, int PublicPort, bool PublicTls, bool CaAvailable, string ResponseTopicFilter, string RequestTopicTemplate);
 
-    public record GatewayListItemDto(Guid Id, string Name, string GatewayId, Guid FacilityId, string FacilityCode, string FacilityName, bool Online, DateTimeOffset? LastSeenAt, int NodeCount, int ChannelCount, int AssignedCount);
+    public record GatewayListItemDto(Guid Id, string Name, string GatewayId, Guid FacilityId, string FacilityCode, string FacilityName, bool Online, DateTimeOffset? LastSeenAt, int NodeCount, int ChannelCount, int AssignedCount, bool IsVirtual);
 
     public record UnknownGatewayDto(string GatewayId, DateTimeOffset LastSeenAt, int MessageCount);
 
@@ -57,6 +57,7 @@ namespace SmartAudit.Api.Features.Sensors.GetGateways
                     NodeCount = d.NodeAddresses.Length,
                     ChannelCount = d.Channels.Count,
                     AssignedCount = d.Channels.Count(c => c.SensorId != null),
+                    d.IsVirtual,
                 })
                 .ToListAsync(ct);
 
@@ -73,7 +74,8 @@ namespace SmartAudit.Api.Features.Sensors.GetGateways
                     d.LastSeenAt,
                     d.NodeCount,
                     d.ChannelCount,
-                    d.AssignedCount))
+                    d.AssignedCount,
+                    d.IsVirtual))
                 .ToList();
 
             // Neznámé gatewaye ukážeme jen kraji — správce by viděl i cizí zařízení v síti

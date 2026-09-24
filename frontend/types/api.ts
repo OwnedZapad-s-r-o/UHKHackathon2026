@@ -266,6 +266,8 @@ export type GatewayListItem = {
   nodeCount: number;
   channelCount: number;
   assignedCount: number;
+  // Virtuální gateway (testovací síť, demo) — odpovídá za ni aplikace, ne hardware
+  isVirtual: boolean;
 };
 
 export type GatewaysResponse = {
@@ -295,6 +297,7 @@ export type GatewayDetail = {
   name: string;
   gatewayId: string;
   pollSeconds: number;
+  isVirtual: boolean;
   nodes: number[];
   online: boolean;
   lastSeenAt: string | null;

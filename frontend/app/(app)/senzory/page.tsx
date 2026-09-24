@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Cpu, Radio, RadioTower } from "lucide-react";
 import { getFacilities, getGateways, getSession } from "@/lib/api";
-import { formatAgo } from "@/lib/sensor-meta";
+import { DEMO_NETWORK_GATEWAYS, formatAgo } from "@/lib/sensor-meta";
 import { readParam } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { TopBar } from "../_components/top-bar";
 import { brokerHost } from "./broker-host";
 import { ConnectGatewayForm } from "./_components/connect-gateway-form";
+import { DemoNetworkPanel } from "./_components/demo-network-panel";
 import { SENSOR_STEPS, SensorSteps } from "./_components/sensor-steps";
 import { Code, emulatorCommand } from "./_components/setup-guide";
 
@@ -61,6 +62,12 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
         </div>
 
         <SensorSteps current={1} className="mt-6" />
+
+        {session?.role === "Kraj" && (
+          <div className="mt-4">
+            <DemoNetworkPanel running={DEMO_NETWORK_GATEWAYS.every((id) => data.gateways.some((g) => g.gatewayId === id))} />
+          </div>
+        )}
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_26rem]">
           <div className="min-w-0 space-y-4">
@@ -119,7 +126,10 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
                           />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13.5px] font-bold">{gateway.name}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-[13.5px] font-bold">{gateway.name}</span>
+                            {gateway.isVirtual && <VirtualBadge />}
+                          </span>
                           <span className="block truncate text-xs text-slate-500">
                             {gateway.facilityCode} · {gateway.facilityName}
                           </span>
@@ -186,6 +196,15 @@ const NEXT_TEXT = [
   "Aplikace se sama zeptá na spárované uzly a jejich čidla. Uvidíte je naživo.",
   "U každého čidla vyberete místnost. Skutečná měření pak nahradí simulaci.",
 ];
+
+// Poctivé označení: data posílá aplikace místo hardwaru
+function VirtualBadge() {
+  return (
+    <span className="shrink-0 rounded-full border border-hk-blue/25 bg-[#EFF4FA] px-2 py-0.5 text-[10.5px] font-bold text-hk-blue" title="Gateway bez hardwaru — odpovídá za ni aplikace přes MQTT">
+      virtuální
+    </span>
+  );
+}
 
 function GatewayProgress({ assigned, total, online }: { assigned: number; total: number; online: boolean }) {
   const done = total > 0 && assigned === total;

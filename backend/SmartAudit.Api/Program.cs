@@ -86,6 +86,10 @@ builder.Services.AddSingleton<IIqrfGatewayState, IqrfGatewayState>();
 builder.Services.AddScoped<ISensorIngestService, SensorIngestService>();
 builder.Services.AddHostedService<IqrfGatewayService>();
 
+// Virtuální gatewaye (testovací síť, demo bez hardwaru) — odpovídají přes MQTT jako skutečný IQRF Gateway Daemon
+builder.Services.AddScoped<IVirtualGatewayProvisioner, VirtualGatewayProvisioner>();
+builder.Services.AddHostedService<VirtualGatewayService>();
+
 // PDF reporty — QuestPDF Community licence (zdarma pro malé organizace), písmo Hradec a logo HK
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 ReportStyles.Initialize(builder.Environment.ContentRootPath);

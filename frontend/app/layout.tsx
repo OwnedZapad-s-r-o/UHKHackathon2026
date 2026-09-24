@@ -28,6 +28,15 @@ export const metadata: Metadata = {
   title: "SmartAudit · Královéhradecký kraj",
   description:
     "Energetický audit budov zřizovaných Královéhradeckým krajem nad otevřenými daty KHK.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/hkIcon.ico" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -37,7 +46,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${hradec.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        <link rel="icon" href="/hkIcon.ico" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+        <link rel="alternate icon" href="/hkIcon.ico" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
       </head>
       <body className="flex h-dvh flex-col">{children}</body>
     </html>

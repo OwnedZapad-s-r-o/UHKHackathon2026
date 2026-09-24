@@ -37,3 +37,6 @@ export function formatSensorValue(value: number | null, metric: SensorMetric, un
   const digits = Math.abs(value) >= 100 ? 0 : 1;
   return `${value.toLocaleString("cs-CZ", { maximumFractionDigits: digits })}${unit ? ` ${unit}` : ""}`;
 }
+
+// Testovací síť kraje (backend VirtualGateways.Network) — podle nich se pozná, že už běží
+export const DEMO_NETWORK_GATEWAYS = ["gw-hk-tyl", "gw-jc-moa", "gw-tu-gym", "gw-na-jir", "gw-rk-sps"];
