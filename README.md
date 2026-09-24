@@ -77,7 +77,7 @@ Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlast
 - **👪 Pro veřejnost (`/objekty`):** bez přihlášení — najdi svou školu nebo domov, přehled kvality vnitřního vzduchu (ne žebříček), veřejná karta objektu s CO₂ po místnostech, grafem za 24 h, radou kdy větrat a tím, co kraj v budově řeší (bez Kč). QR kód k vytištění na dveře třídy.
 - **🏠 Landing page (`/`):** představení aplikace se snímky, živými čísly z otevřeného API a vstupem do dema.
 - **⚡ Portfolio a Anomálie:** Přehledná tabulka a seznam zjištění seřazený podle odhadované roční finanční ztráty v Kč.
-- **📄 PDF reporty:** Audit jednoho objektu (s grafy a lokalizační mapkou) i souhrnný přehled portfolia s mapou okresů.
+- **📄 PDF reporty:** Audit jednoho objektu (s grafy a lokalizační mapkou), souhrnný přehled portfolia s mapou okresů a **souhrn pro Radu kraje na jednu stranu A4** (ztráta kraje, pět priorit, pilot IQRF s návratností, návrh usnesení).
 - **🤖 AI analýza (Azure OpenAI):** Navrhne konkrétní opatření s vyčíslenou návratností a dopis správci. Výsledek se propisuje i do PDF auditního protokolu.
 - **🌐 Otevřené API (`/api/open/v1`):** JSON, GeoJSON a CSV exporty pro vývojáře bez nutnosti přihlášení a API klíčů (licence CC BY 4.0).
 

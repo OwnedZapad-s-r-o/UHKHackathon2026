@@ -16,5 +16,9 @@ namespace SmartAudit.Core.Domain.Settings
 
         // Limit CO₂ pro vyhodnocení (ppm)
         public double Co2LimitPpm { get; set; } = 1500;
+
+        // Sada čidel IQRF na jednu budovu bez DPH (gateway, 15 čidel do tříd, 3 do společných prostor, montáž) —
+        // pro návratnost pilotu v souhrnu pro Radu kraje, rozpočet v docs/SENZORY_IQRF.md
+        public decimal SensorKitCzkPerBuilding { get; set; } = 109_395m;
     }
 }
