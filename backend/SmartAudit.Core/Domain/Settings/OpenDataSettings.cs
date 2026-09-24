@@ -15,6 +15,9 @@ namespace SmartAudit.Core.Domain.Settings
 
         public int CuzkParallelism { get; set; } = 4;
 
+        // Poskytovatel v katalogu DCAT-AP-CZ (NKOD) — orgán veřejné moci z registru práv a povinností, výchozí Královéhradecký kraj (IČO 70889546)
+        public string CatalogProviderIri { get; set; } = "https://rpp-opendata.egon.gov.cz/odrpp/zdroj/orgán-veřejné-moci/70889546";
+
         public List<DatasetSettings> Datasets { get; set; } = new();
     }
 

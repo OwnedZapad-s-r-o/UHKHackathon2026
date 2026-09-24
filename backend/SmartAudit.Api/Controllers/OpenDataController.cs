@@ -9,8 +9,10 @@ using SmartAudit.Api.Features.Facilities.GetFacilityDetail;
 using SmartAudit.Api.Features.Facilities.GetFootprint;
 using SmartAudit.Api.Features.Facilities.GetTelemetry;
 using SmartAudit.Api.Features.OpenData.GetOpenFacilities;
+using SmartAudit.Api.Services.OpenData;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Domain.Enums;
+using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Controllers
 {
@@ -35,10 +37,43 @@ namespace SmartAudit.Api.Controllers
         private static readonly ViewerContext Public = new(AppRoles.Public, null);
 
         private readonly IMediator _mediator;
+        private readonly OpenDataSettings _settings;
 
-        public OpenDataController(IMediator mediator)
+        public OpenDataController(IMediator mediator, OpenDataSettings settings)
         {
             _mediator = mediator;
+            _settings = settings;
+        }
+
+        /// <summary>Lokální katalog otevřených dat (DCAT-AP-CZ, JSON-LD) — pro registraci v Národním katalogu otevřených dat</summary>
+        [HttpGet]
+        [Route("catalog")]
+        [Produces(DcatCatalog.ContentType)]
+        public IActionResult GetCatalog()
+        {
+            return Content(DcatCatalog.Catalog(PublicBaseUrl(), _settings.CatalogProviderIri), DcatCatalog.ContentType);
+        }
+
+        /// <summary>Záznam datové sady v katalogu (DCAT-AP-CZ, JSON-LD) — distribuce CSV, GeoJSON a JSON s podmínkami užití</summary>
+        /// <param name="dataset">Identifikátor datové sady z katalogu</param>
+        [HttpGet]
+        [Route("catalog/datasets/{dataset}")]
+        [Produces(DcatCatalog.ContentType)]
+        public IActionResult GetCatalogDataset(string dataset)
+        {
+            if (dataset != DcatCatalog.BuildingsDataset)
+                return NotFound(new { Message = "Datová sada s tímto identifikátorem v katalogu není" });
+
+            return Content(DcatCatalog.BuildingsDatasetRecord(PublicBaseUrl(), _settings.CatalogProviderIri), DcatCatalog.ContentType);
+        }
+
+        // IRI v katalogu musí být veřejné adresy — za proxy Next.js je API na interní adrese, veřejnou nese X-Forwarded-*
+        private string PublicBaseUrl()
+        {
+            var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault()?.Split(',')[0].Trim() ?? Request.Host.Value;
+            var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault()?.Split(',')[0].Trim() ?? Request.Scheme;
+
+            return $"{scheme}://{host}";
         }
 
         /// <summary>Seznam objektů kraje (JSON)</summary>
