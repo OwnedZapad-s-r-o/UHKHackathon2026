@@ -103,8 +103,8 @@ export function SetupGuide({ brokerHost, broker, gatewayId, credentials }: Setup
 
       <Step number={broker.publicTls ? 3 : 2} title="Aplikace sama najde uzly a jejich senzory">
         <p className="mt-1 text-slate-600">
-          Zeptá se koordinátoru na spárované uzly a pak každého uzlu na hodnoty (IQRF Standard Sensor). Typ senzoru určí veličinu —
-          teplota, CO₂, vlhkost, osvětlení, hluk, pohyb…
+          Zeptá se koordinátoru na spárované uzly a každého uzlu na jeho senzory (IQRF Standard Sensor). Typ senzoru určí veličinu —
+          teplota, CO₂, vlhkost, osvětlení, hluk, pohyb… Hodnoty pak sbírá hromadně příkazem FRC: jedna veličina ze všech uzlů naráz.
         </p>
       </Step>
 
