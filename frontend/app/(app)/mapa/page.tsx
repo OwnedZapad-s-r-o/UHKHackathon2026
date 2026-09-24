@@ -32,7 +32,7 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
 
       <div className="flex min-h-0 flex-1">
         <section className="@container flex min-w-0 flex-1 flex-col border-r border-slate-200 bg-white">
-          <MapFilterBar />
+          <MapFilterBar selectedFacility={selected && { name: selected.name, districtCode: selected.districtCode, districtName: selected.districtName }} />
           <div className="relative min-h-0 flex-1">
             <FacilityMap facilities={facilities} selectedId={selected?.id ?? null} selectedDistrict={filter.district ?? null} districtStats={stats} />
 
@@ -57,7 +57,7 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
         </section>
 
         {selected && (
-          <aside className="w-[35%] max-w-130 min-w-90 shrink-0 overflow-x-hidden overflow-y-auto bg-slate-50" aria-label="Inspekční panel">
+          <aside data-tour="panel" className="w-[35%] max-w-130 min-w-90 shrink-0 overflow-x-hidden overflow-y-auto bg-slate-50" aria-label="Inspekční panel">
             {/* Suspense: mapa se ukáže hned, panel s telemetrií dorazí streamem */}
             <Suspense key={`${selected.id}-${tab}`} fallback={<PanelSkeleton />}>
               <InspectionPanel facilityId={selected.id} tab={tab} searchParams={params} />

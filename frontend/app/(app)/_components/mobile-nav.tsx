@@ -14,13 +14,13 @@ export function MobileNav({ children }: { children: ReactNode }) {
 
   return (
     <div className="lg:hidden">
-      <div className="flex h-12 items-center gap-3 bg-black px-3 text-white">
+      <div className="flex h-12 items-center gap-3 bg-hk-navy px-3 text-white">
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Otevřít menu"
           aria-expanded={open}
-          className="flex size-9 items-center justify-center rounded-lg hover:bg-neutral-900"
+          className="flex size-9 items-center justify-center rounded-lg hover:bg-white/8"
         >
           <Menu className="size-5" />
         </button>
@@ -36,7 +36,7 @@ export function MobileNav({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Zavřít menu"
-              className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-lg text-white/70 hover:bg-neutral-900 hover:text-white"
+              className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-lg text-white/70 hover:bg-white/8 hover:text-white"
             >
               <X className="size-5" />
             </button>

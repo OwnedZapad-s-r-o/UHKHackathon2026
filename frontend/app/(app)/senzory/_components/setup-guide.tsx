@@ -28,7 +28,7 @@ export function SetupGuide({ brokerHost, brokerPort, gatewayId = "{id-gatewaye}"
     2,
   );
 
-  const emulator = `pip install -r tools/iqrf-emulator/requirements.txt\npython tools/iqrf-emulator/emulator.py --host ${brokerHost} --gateway ${gatewayId}`;
+  const emulator = emulatorCommand(brokerHost, gatewayId);
 
   return (
     <ol className="space-y-4 text-[13px] text-slate-700">
@@ -82,7 +82,12 @@ function Step({ number, title, children }: { number: number; title: string; chil
   );
 }
 
-function Code({ code }: { code: string }) {
+// Emulátor IQRF gatewaye z repozitáře — vyzkoušení celého postupu bez hardwaru
+export function emulatorCommand(brokerHost: string, gatewayId: string) {
+  return `pip install -r tools/iqrf-emulator/requirements.txt\npython tools/iqrf-emulator/emulator.py --host ${brokerHost} --gateway ${gatewayId}`;
+}
+
+export function Code({ code }: { code: string }) {
   return (
     <div className="mt-2 overflow-hidden rounded-xl bg-hk-navy">
       <div className="flex justify-end border-b border-white/10 px-2 py-1.5">

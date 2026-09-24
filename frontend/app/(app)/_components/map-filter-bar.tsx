@@ -2,16 +2,20 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { DISTRICTS } from "@/lib/facility-meta";
 import { withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { DistrictSelect, WHOLE_REGION } from "./district-select";
 
+type SelectedFacility = { name: string; districtCode: string; districtName: string };
+
 // Lišta nad mapou jako v prototypu: výběr okresu a hledání — obojí zapsané do URL.
 // Podle šířky mapové části (container query): široká → tlačítka okresů, úzká → rozbalovací výběr.
-export function MapFilterBar() {
+// Při otevřeném objektu místo výběru drobečková navigace „Celý kraj › Okres › objekt“ —
+// výběr okresu by ukazoval jiný kontext, než ve kterém objekt leží.
+export function MapFilterBar({ selectedFacility }: { selectedFacility: SelectedFacility | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -36,22 +40,40 @@ export function MapFilterBar() {
   }
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3.5">
-      <div className="hidden min-w-0 items-center gap-1.5 @4xl:flex">
-        <span className="mr-1 text-[11px] text-slate-500">Okres</span>
-        <DistrictChip active={district === null} onClick={() => selectDistrict(null)}>
-          Celý kraj
-        </DistrictChip>
-        {DISTRICTS.map((d) => (
-          <DistrictChip key={d.code} active={district === d.code} onClick={() => selectDistrict(d.code)}>
-            {d.name}
-          </DistrictChip>
-        ))}
-      </div>
+    <div data-tour="filtry" className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3.5">
+      {selectedFacility ? (
+        <nav className="flex min-w-0 items-center gap-1 text-[13px]" aria-label="Kde v kraji objekt leží">
+          <button type="button" onClick={() => selectDistrict(null)} className={CRUMB}>
+            Celý kraj
+          </button>
+          <ChevronRight className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+          <button type="button" onClick={() => selectDistrict(selectedFacility.districtCode)} className={cn(CRUMB, "whitespace-nowrap")}>
+            Okres {selectedFacility.districtName}
+          </button>
+          <ChevronRight className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+          <span className="truncate px-1.5 font-bold text-hk-navy" aria-current="location">
+            {selectedFacility.name}
+          </span>
+        </nav>
+      ) : (
+        <>
+          <div className="hidden min-w-0 items-center gap-1.5 @4xl:flex">
+            <span className="mr-1 text-[11px] text-slate-500">Okres</span>
+            <DistrictChip active={district === null} onClick={() => selectDistrict(null)}>
+              Celý kraj
+            </DistrictChip>
+            {DISTRICTS.map((d) => (
+              <DistrictChip key={d.code} active={district === d.code} onClick={() => selectDistrict(d.code)}>
+                {d.name}
+              </DistrictChip>
+            ))}
+          </div>
 
-      <div className="@4xl:hidden">
-        <DistrictSelect value={district ?? WHOLE_REGION} onValueChange={(next) => selectDistrict(next === WHOLE_REGION ? null : next)} className="h-8.5 min-w-40" />
-      </div>
+          <div className="@4xl:hidden">
+            <DistrictSelect value={district ?? WHOLE_REGION} onValueChange={(next) => selectDistrict(next === WHOLE_REGION ? null : next)} className="h-8.5 min-w-40" />
+          </div>
+        </>
+      )}
 
       <InputGroup className="ml-auto h-8.5 w-52 min-w-0 shrink border-slate-300 bg-white">
         <InputGroupAddon>
@@ -90,3 +112,5 @@ function DistrictChip({ active, onClick, children }: DistrictChipProps) {
     </button>
   );
 }
+
+const CRUMB = "shrink-0 rounded-md px-1.5 py-1 text-slate-600 transition-colors hover:bg-slate-100 hover:text-hk-navy";

@@ -39,7 +39,7 @@ def demo_token(base):
 
 def save(png_bytes, out, name):
     Image.open(io.BytesIO(png_bytes)).convert("RGB").save(out / f"{name}.webp", "WEBP", quality=82, method=6)
-    print("✔", name)
+    print(f"[OK] {name}")
 
 
 def pdf_sheet(pdf_bytes, out, name):
@@ -82,7 +82,9 @@ def main():
 
         page.goto(args.web + "/login")
         page.get_by_role("button", name="Jsem z kraje").click()
-        page.wait_for_url("**/mapa")
+        page.wait_for_url("**/mapa**")
+        # Demo po přihlášení spouští průvodce aplikací — na snímcích nemá co dělat
+        page.evaluate("['Kraj', 'Spravce', 'Verejnost'].forEach((role) => localStorage.setItem(`smartaudit:pruvodce:v1:${role}`, '1'))")
 
         def shot(path, name, wait=2500):
             if args.only and name not in args.only:
@@ -103,6 +105,15 @@ def main():
         if gateways:
             shot(f"/senzory/{gateways[0]['id']}", "senzory", 6000)
         shot("/otevrena-data", "otevrene-api")
+
+        # Další obrazovky pro prezentaci a README (landing je nepoužívá)
+        shot("/mapa?okres=CZ0521", "okres-vybrany", 6000)
+        shot("/portfolio", "portfolio")
+        shot("/anomalie", "anomalie")
+        shot("/zdroje-dat", "zdroje-dat")
+        shot("/objekty", "objekty")
+        shot(f"/objekty/{hero['code']}/qr", "qr-cedulka")
+        shot("/", "landing")
         shot(f"/objekty/{hero['code']}", "verejna-karta")
 
         page.set_viewport_size({"width": 390, "height": 844})

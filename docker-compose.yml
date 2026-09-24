@@ -61,5 +61,18 @@ services:
     ports:
       - "3000:3000"
 
+  # Volitelný emulátor IQRF gatewaye (Python) bez nutnosti instalovat Python na počítač:
+  # docker compose --profile emulator up
+  emulator:
+    image: python:3.12-slim
+    profiles: ["emulator"]
+    working_dir: /app
+    volumes:
+      - ./tools/iqrf-emulator:/app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt && python emulator.py --host mqtt --gateway ucebna-1"
+    depends_on:
+      - mqtt
+
 volumes:
   db_data:

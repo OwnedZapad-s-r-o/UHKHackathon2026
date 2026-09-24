@@ -1,5 +1,6 @@
-# Soukromé podklady (pravidla soutěže, kontakty) — jen lokálně
+# Soukromé podklady (pravidla soutěže, kontakty, hodnocení poroty) — jen lokálně
 _private/
+dev/
 
 # Nástroje editorů a agentů
 .claude/

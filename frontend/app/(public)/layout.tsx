@@ -2,85 +2,103 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { getSession } from "@/lib/api";
+import { PUBLIC_LINKS } from "./_components/public-links";
+import { PublicMenu } from "./_components/public-menu";
 
 const REPOSITORY_URL = "https://github.com/OwnedZapad-s-r-o/UHK_Hackathon_2026";
 
 // Veřejná část bez přihlášení — landing page, hledání objektů a jejich karty.
-// Tělo stránky má pevnou výšku (root layout), proto vlastní posuvný kontejner.
+// Tělo stránky má pevnou výšku (root layout), proto vlastní posuvný kontejner (s plynulým posunem na kotvy).
 export default async function PublicLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-white text-hk-navy">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur print:hidden">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-8 w-auto invert" />
-            <span className="leading-tight">
-              <span className="block text-[15px] font-bold tracking-tight">SmartAudit</span>
-              <span className="block text-[10.5px] text-slate-500">Královéhradecký kraj</span>
+    <div className="scrollbar-hk min-h-0 flex-1 overflow-y-auto scroll-smooth bg-white text-hk-navy motion-reduce:scroll-auto print:overflow-visible">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/94 backdrop-blur-md print:hidden">
+        <div className="relative mx-auto flex h-17 max-w-300 items-center gap-4 px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-3.5">
+            <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-8.5 w-auto invert" />
+            <span className="leading-[1.15]">
+              <span className="block text-[15px] font-bold">SmartAudit</span>
+              <span className="block text-[11px] text-slate-500">Královéhradecký kraj</span>
             </span>
           </Link>
 
-          <nav className="ml-auto hidden items-center gap-5 text-[13.5px] text-slate-600 md:flex" aria-label="Veřejná navigace">
-            <Link href="/objekty" className="hover:text-hk-red">
-              Najdi svou školu
-            </Link>
-            <Link href="/objekty?razeni=vzduch" className="hover:text-hk-red">
-              Kvalita vzduchu
-            </Link>
-            <a href="/api/open/docs/" className="hover:text-hk-red">
-              Otevřená data
-            </a>
+          <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Veřejná navigace">
+            {PUBLIC_LINKS.map((link) => (
+              <a key={link.label} href={link.href} className="rounded-lg px-3 py-2 text-[14px] text-slate-700 transition-colors hover:bg-slate-100 hover:text-hk-navy">
+                {link.label}
+              </a>
+            ))}
           </nav>
 
           <Link
             href={session ? "/mapa" : "/login"}
-            className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-hk-navy px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-hk-blue md:ml-0"
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-[10px] bg-hk-navy px-4 text-[14px] font-bold text-white transition-colors hover:bg-hk-blue focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#8DAACD] md:ml-2"
           >
             {session ? "Do aplikace" : "Přihlásit"}
-            <ArrowRight className="size-3.5" aria-hidden />
+            <ArrowRight className="size-3.75" aria-hidden />
           </Link>
+          <PublicMenu />
         </div>
       </header>
 
       {children}
 
-      <footer className="border-t border-slate-200 bg-slate-50 print:hidden">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 text-[13px] text-slate-600 sm:grid-cols-3 sm:px-6">
-          <div>
-            <p className="font-bold text-hk-navy">SmartAudit KHK</p>
-            <p className="mt-1.5 leading-relaxed">Energetický audit a kvalita vnitřního vzduchu v budovách, které zřizuje Královéhradecký kraj.</p>
+      <footer className="border-t border-slate-200 bg-white print:hidden">
+        <div className="mx-auto max-w-300 px-6 pt-14 pb-8">
+          <div className="grid gap-9 text-[14px] sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} className="h-9 w-auto invert" />
+              <p className="mt-4.5 max-w-[34ch] leading-[1.55] text-slate-600">
+                Energetický audit a kvalita vnitřního vzduchu v budovách, které zřizuje Královéhradecký kraj.
+              </p>
+            </div>
+            <FooterColumn title="Pro veřejnost">
+              <Link href="/objekty" className={FOOTER_LINK}>
+                Najdi svou školu
+              </Link>
+              <Link href="/objekty?razeni=vzduch" className={FOOTER_LINK}>
+                Kvalita vzduchu
+              </Link>
+              <Link href="/login" className={FOOTER_LINK}>
+                Přihlásit
+              </Link>
+            </FooterColumn>
+            <FooterColumn title="Data">
+              <a href="https://www.datakhk.cz" target="_blank" rel="noreferrer" className={FOOTER_LINK}>
+                Otevřená data Královéhradeckého kraje
+              </a>
+              <a href="/api/open/docs/" className={FOOTER_LINK}>
+                Otevřené API SmartAuditu
+              </a>
+              <span className="text-slate-600">ČÚZK · Open-Meteo · MŠMT</span>
+            </FooterColumn>
+            <FooterColumn title="Projekt">
+              <a href={REPOSITORY_URL} target="_blank" rel="noreferrer" className={FOOTER_LINK}>
+                Zdrojový kód na GitHubu
+              </a>
+              <span className="text-slate-600">Hackathon Královéhradeckého kraje 2026</span>
+              <span className="text-slate-600">Licence dat CC BY 4.0</span>
+            </FooterColumn>
           </div>
-          <div>
-            <p className="font-bold text-hk-navy">Data</p>
-            <ul className="mt-1.5 space-y-1">
-              <li>
-                <a href="https://www.datakhk.cz" target="_blank" rel="noreferrer" className="hover:text-hk-red">
-                  Otevřená data Královéhradeckého kraje
-                </a>
-              </li>
-              <li>
-                <a href="/api/open/docs/" className="hover:text-hk-red">
-                  Otevřené API SmartAuditu (CC BY 4.0)
-                </a>
-              </li>
-              <li>ČÚZK · Open-Meteo · MŠMT</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-bold text-hk-navy">Projekt</p>
-            <ul className="mt-1.5 space-y-1">
-              <li>
-                <a href={REPOSITORY_URL} target="_blank" rel="noreferrer" className="hover:text-hk-red">
-                  Zdrojový kód na GitHubu
-                </a>
-              </li>
-              <li>Hackathon Královéhradeckého kraje 2026</li>
-            </ul>
+          <div className="mt-12 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-5 text-[12px] text-slate-500">
+            <span>SmartAudit KHK</span>
+            <span>Hodnoty bez čidla jsou modelová data a jsou tak označené.</span>
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+const FOOTER_LINK = "text-slate-600 transition-colors hover:text-hk-red";
+
+function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <p className="text-[13px] font-bold text-hk-navy">{title}</p>
+      {children}
     </div>
   );
 }

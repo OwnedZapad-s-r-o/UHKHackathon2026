@@ -40,7 +40,8 @@ export async function demoLogin(_prevState: LoginState, formData: FormData): Pro
   }
 
   await startSession(result.data);
-  redirect("/mapa");
+  // Demo je ukázka pro nového člověka — průvodce aplikací se spustí po každém přihlášení
+  redirect("/mapa?pruvodce=1");
 }
 
 export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {

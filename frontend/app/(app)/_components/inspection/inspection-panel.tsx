@@ -37,6 +37,7 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
         <a
           href={`/reporty/objekt/${facility.id}`}
           title="Stáhnout PDF audit objektu"
+          data-tour="panel-pdf"
           className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[12px] font-bold text-hk-navy transition-colors hover:bg-slate-100"
         >
           <FileDown className="size-3.5" aria-hidden />
@@ -55,7 +56,7 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
 
       <FacilityHeader facility={facility} />
 
-      <nav className="mt-4 flex gap-0.5 border-b border-slate-200" aria-label="Záložky objektu">
+      <nav data-tour="panel-zalozky" className="mt-4 flex gap-0.5 border-b border-slate-200" aria-label="Záložky objektu">
         {PANEL_TABS.map(({ key, label }) => (
           <Link
             key={key}

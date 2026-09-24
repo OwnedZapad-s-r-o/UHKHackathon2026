@@ -36,14 +36,15 @@ export function SidebarNav({ counts }: SidebarNavProps) {
             key={href}
             href={`${href}${["/zdroje-dat", "/reporty", "/otevrena-data", "/senzory"].includes(href) ? "" : issues}`}
             aria-current={active ? "page" : undefined}
+            data-tour={`nav-${href.slice(1)}`}
             className={cn(
               "flex h-10.5 items-center gap-3 rounded-lg px-3 text-sm transition-colors hover:text-white",
-              active ? "bg-neutral-900 font-bold text-white shadow-[inset_0_-3px_0_0_var(--color-hk-red)]" : "text-white/58",
+              active ? "bg-white/8 font-bold text-white shadow-[inset_0_-3px_0_0_var(--color-hk-red)]" : "text-white/58",
             )}
           >
             <Icon className="size-4.5" strokeWidth={1.75} aria-hidden />
             <span className="flex-1">{label}</span>
-            {badge !== undefined && <span className={cn("text-xs tabular-nums", active ? "text-white/70" : "text-neutral-600")}>{badge}</span>}
+            {badge !== undefined && <span className={cn("text-xs tabular-nums", active ? "text-white/70" : "text-white/40")}>{badge}</span>}
           </Link>
         );
       })}

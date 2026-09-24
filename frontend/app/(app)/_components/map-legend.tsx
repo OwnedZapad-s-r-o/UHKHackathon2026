@@ -6,10 +6,11 @@ import type { AuditStatus, FacilityCategory, FacilityListItem } from "@/types/ap
 const STATUSES: AuditStatus[] = ["Critical", "Warning", "Nominal"];
 const CATEGORIES: FacilityCategory[] = ["School", "Social", "Health", "Culture"];
 
-// Legenda mapy: stav (barva špendlíku), okresy (barva výplně), druh (ikona ve špendlíku)
-export function MapLegend({ facilities }: { facilities: FacilityListItem[] }) {
+// Legenda mapy: stav (barva špendlíku), okresy (barva výplně), druh (ikona ve špendlíku).
+// Škála okresů jen v pohledu na kraj — u vybraného objektu je výplň okresů vybledlá a škála by jen mátla.
+export function MapLegend({ facilities, showDistricts }: { facilities: FacilityListItem[]; showDistricts: boolean }) {
   return (
-    <div className="absolute bottom-10 left-4 z-10 w-52 rounded-xl border border-slate-200 bg-white p-4 text-hk-navy shadow-[0_8px_20px_rgba(11,25,44,0.12)]">
+    <div data-tour="legenda" className="absolute bottom-10 left-4 z-10 w-52 rounded-xl border border-slate-200 bg-white p-4 text-hk-navy shadow-[0_8px_20px_rgba(11,25,44,0.12)]">
       <p className="text-xs font-bold">Stav objektů</p>
       <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
         {STATUSES.map((status) => (
@@ -21,16 +22,20 @@ export function MapLegend({ facilities }: { facilities: FacilityListItem[] }) {
         ))}
       </ul>
 
-      <p className="mt-4 text-xs font-bold">Okresy — podíl se zjištěním</p>
-      <div className="mt-2 flex gap-0.5" aria-hidden>
-        {ISSUE_SHARE_COLORS.map((color) => (
-          <span key={color} className="h-2.5 flex-1 rounded-[3px] border border-slate-200" style={{ background: color }} />
-        ))}
-      </div>
-      <p className="mt-1 flex justify-between text-[10.5px] text-slate-500">
-        <span>{ISSUE_SHARE_LABELS[0]}</span>
-        <span>{ISSUE_SHARE_LABELS.at(-1)}</span>
-      </p>
+      {showDistricts && (
+        <>
+          <p className="mt-4 text-xs font-bold">Okresy — podíl se zjištěním</p>
+          <div className="mt-2 flex gap-0.5" aria-hidden>
+            {ISSUE_SHARE_COLORS.map((color) => (
+              <span key={color} className="h-2.5 flex-1 rounded-[3px] border border-slate-200" style={{ background: color }} />
+            ))}
+          </div>
+          <p className="mt-1 flex justify-between text-[10.5px] text-slate-500">
+            <span>{ISSUE_SHARE_LABELS[0]}</span>
+            <span>{ISSUE_SHARE_LABELS.at(-1)}</span>
+          </p>
+        </>
+      )}
 
       <p className="mt-4 text-xs font-bold">Druh objektu</p>
       <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
