@@ -42,7 +42,17 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
       <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="min-w-0">
           <p className="font-mono text-[11px] text-hk-blue">gateway/{gateway.gatewayId}/iqrf</p>
-          <h1 className="mt-1 text-[28px] leading-tight font-bold tracking-tight">{gateway.name}</h1>
+          <h1 className="mt-1 flex flex-wrap items-center gap-2.5 text-[28px] leading-tight font-bold tracking-tight">
+            {gateway.name}
+            {gateway.isVirtual && (
+              <span
+                className="rounded-full border border-hk-blue/25 bg-[#EFF4FA] px-2.5 py-0.5 text-[12px] font-bold tracking-normal text-hk-blue"
+                title="Gateway bez hardwaru — odpovídá za ni aplikace přes MQTT stejně jako IQRF Gateway Daemon"
+              >
+                virtuální gateway
+              </span>
+            )}
+          </h1>
           <Link href={`/mapa?objekt=${gateway.facility.id}`} className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-hk-red hover:underline">
             <MapPin className="size-3.5" aria-hidden />
             {gateway.facility.code} · {gateway.facility.name}

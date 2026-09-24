@@ -38,6 +38,33 @@ export async function createGateway(_state: SensorActionState, formData: FormDat
   redirect(`/senzory/${result.data.id}`);
 }
 
+// Testovací síť kraje: pět virtuálních gatewayí v pěti okresech, čtyři předem přiřazené do místností
+export async function createDemoNetwork(): Promise<DemoNetworkState> {
+  const session = await getSession();
+  if (session?.role !== "Kraj") return { error: "Testovací síť celého kraje může spustit jen kraj." };
+
+  const result = await apiSendAuthorized<{ created: number; gateways: { gatewayId: string }[] }>("POST", "/api/sensors/demo-network");
+  if (!result.ok) return { error: result.message };
+
+  revalidatePath("/senzory");
+  revalidatePath("/mapa");
+  return { created: result.data.created, total: result.data.gateways.length };
+}
+
+export type DemoNetworkState = { error: string } | { created: number; total: number } | null;
+
+// Jednoklikové demo bez hardwaru: virtuální učebna ve vybrané budově (nebo v první budově uživatele) → rovnou na detail
+export async function createVirtualGateway(facilityId: string | null): Promise<SensorActionState> {
+  if (!(await canManageSensors())) return { error: "Senzory může připojit jen kraj nebo správce budovy." };
+  if (facilityId !== null && !ID_PATTERN.test(facilityId)) return { error: "Neplatný objekt." };
+
+  const result = await apiSendAuthorized<{ id: string }>("POST", "/api/sensors/virtual-gateways", { facilityId });
+  if (!result.ok) return { error: result.message };
+
+  revalidatePath("/senzory");
+  redirect(`/senzory/${result.data.id}`);
+}
+
 export async function assignChannel(gatewayId: string, channelId: string, zoneId: string | null, metric: SensorMetric): Promise<SensorActionState> {
   if (!(await canManageSensors())) return { error: "Kanál může přiřadit jen kraj nebo správce budovy." };
   if (!ID_PATTERN.test(gatewayId) || !ID_PATTERN.test(channelId) || (zoneId !== null && !ID_PATTERN.test(zoneId))) return { error: "Neplatný výběr." };
