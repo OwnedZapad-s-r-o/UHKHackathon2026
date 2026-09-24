@@ -30,6 +30,9 @@ namespace SmartAudit.Api.Services.Reports
     {
         private static readonly CultureInfo Cs = CultureInfo.GetCultureInfo("cs-CZ");
 
+        // Schematický řez budovou je zatím skrytý (dispozici z otevřených dat neznáme); implementace zůstává
+        private static readonly bool ShowBuildingSection = false;
+
         private readonly FacilityReportData _data;
 
         public FacilityReportDocument(FacilityReportData data)
@@ -147,13 +150,16 @@ namespace SmartAudit.Api.Services.Reports
                 heatmap.Item().Svg(ReportCharts.Heatmap(_data.Heatmap, _data.HeatmapMin, _data.HeatmapMax, "kWh/h"));
             });
 
-            column.Item().ShowEntire().Column(section =>
+            if (ShowBuildingSection)
             {
-                section.Item().SectionTitle("Řez budovou");
-                section.Item().Svg(ReportCharts.BuildingSection(_data.Floors, _data.Zones, _data.Co2Limit));
-                section.Item().PaddingTop(4).Text("Schéma podle druhu zařízení a odhadu podlaží — otevřená data vnitřní dispozici budov neobsahují.")
-                    .FontSize(7.5f).FontColor(ReportStyles.Muted);
-            });
+                column.Item().ShowEntire().Column(section =>
+                {
+                    section.Item().SectionTitle("Řez budovou");
+                    section.Item().Svg(ReportCharts.BuildingSection(_data.Floors, _data.Zones, _data.Co2Limit));
+                    section.Item().PaddingTop(4).Text("Schéma podle druhu zařízení a odhadu podlaží — otevřená data vnitřní dispozici budov neobsahují.")
+                        .FontSize(7.5f).FontColor(ReportStyles.Muted);
+                });
+            }
 
             // Budova a kontext z otevřených dat
             column.Item().ShowEntire().Column(context =>
