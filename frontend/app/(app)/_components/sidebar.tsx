@@ -22,7 +22,7 @@ type SidebarProps = {
 export function Sidebar({ session, counts, className }: SidebarProps) {
   return (
     <aside className={cn("flex w-58 shrink-0 flex-col overflow-y-auto bg-black px-4 pt-7 pb-5 text-white", className)}>
-      <Link href="/" className="block px-2">
+      <Link href="/mapa" className="block px-2">
         <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-11 w-auto" />
         <span className="mt-4.5 block text-[15px] font-bold tracking-tight">SmartAudit</span>
         <span className="mt-0.5 block text-[11px] text-white/55">Královéhradecký kraj</span>

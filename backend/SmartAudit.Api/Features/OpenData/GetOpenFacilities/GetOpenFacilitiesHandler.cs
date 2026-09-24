@@ -35,6 +35,10 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
         double? Temperature,
         double? Co2,
         double? Power,
+        // Hodin nad limitem CO₂ (1 500 ppm) za posledních 7 dní — srovnání kvality vzduchu
+        double? Co2HoursOverLimit,
+        // Objekt měří aspoň jedno skutečné čidlo IQRF (jinak modelová data)
+        bool HasLiveSensors,
         DateTimeOffset? EvaluatedAt);
 
     // Seznam objektů pro otevřené API — JSON, GeoJSON i CSV staví nad stejným výsledkem
@@ -95,6 +99,8 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
                     f.Assessment != null ? f.Assessment.LatestTemperature : null,
                     f.Assessment != null ? f.Assessment.LatestCo2 : null,
                     f.Assessment != null ? f.Assessment.LatestPower : null,
+                    f.Assessment != null ? f.Assessment.Co2HoursOverLimit : null,
+                    f.Sensors.Any(s => s.Source == SensorSource.Physical && s.IsActive),
                     f.Assessment != null ? f.Assessment.EvaluatedAt : null))
                 .ToListAsync(ct);
 
