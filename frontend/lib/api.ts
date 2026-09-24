@@ -9,7 +9,6 @@ import type {
   DataSourcesResponse,
   FacilityDetail,
   FacilityListItem,
-  Footprint,
   Heatmap,
   SensorMetric,
   Session,
@@ -109,20 +108,6 @@ export async function apiPostAuthorized<T>(path: string): Promise<{ ok: true; da
   }
 
   return { ok: true, data: (await response.json()) as T };
-}
-
-// Půdorys z katastru se prakticky nemění — bez tokenu (veřejná data), aby ho API i Next mohly cachovat 2 dny
-const FOOTPRINT_CACHE_SECONDS = 2 * 24 * 60 * 60;
-
-export async function getFootprint(id: string): Promise<Footprint> {
-  const path = `/api/facilities/${id}/footprint`;
-  const response = await fetch(`${API_URL}${path}`, { next: { revalidate: FOOTPRINT_CACHE_SECONDS, tags: [`footprint-${id}`] } });
-
-  if (!response.ok) {
-    throw new Error(`API ${path} vrátilo ${response.status}`);
-  }
-
-  return (await response.json()) as Footprint;
 }
 
 export function getSection(id: string) {
