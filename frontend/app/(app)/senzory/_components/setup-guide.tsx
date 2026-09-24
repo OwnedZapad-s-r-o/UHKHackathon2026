@@ -69,36 +69,34 @@ export function SetupGuide({ brokerHost, broker, gatewayId, credentials }: Setup
       )}
 
       <Step number={broker.publicTls ? 2 : 1} title="Gateway se přihlásí k brokeru MQTT této aplikace">
-        <dl className="mt-2 grid gap-x-4 gap-y-1 font-mono text-[12px] sm:grid-cols-[auto_1fr]">
-          <dt className="text-slate-500">broker</dt>
-          <dd className="flex items-center gap-1.5">
-            {broker.publicTls && <ShieldCheck className="size-3.5 text-emerald-600" aria-label="šifrováno" />}
-            {address}
-          </dd>
-          <dt className="text-slate-500">jméno</dt>
-          <dd>{credentials?.username ?? gatewayId}</dd>
-          <dt className="text-slate-500">heslo</dt>
-          <dd className="flex items-center gap-2">
-            {credentials ? (
-              <>
-                <KeyRound className="size-3.5 text-hk-blue" aria-hidden />
-                <span className="break-all">{credentials.password}</span>
-                <CopyButton text={credentials.password} />
-              </>
-            ) : (
-              <span className="text-amber-800">broker nemá nastavené účty</span>
-            )}
-          </dd>
-          <dt className="text-slate-500">dotazy</dt>
-          <dd className="break-all">{requestTopic}</dd>
-          <dt className="text-slate-500">odpovědi</dt>
-          <dd className="break-all">{responseTopic}</dd>
-        </dl>
+        {/* Tři údaje, které se do IQRF Gateway Webapp opravdu zadávají — každý s kopírováním */}
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
+          <CopyCard label="Broker (server)" value={address} icon={broker.publicTls ? <ShieldCheck className="size-3.5 text-emerald-600" aria-label="šifrováno" /> : null} />
+          <CopyCard label="Uživatelské jméno" value={credentials?.username ?? gatewayId} />
+          {credentials ? (
+            <CopyCard label="Heslo" value={credentials.password} icon={<KeyRound className="size-3.5 text-hk-blue" aria-hidden />} />
+          ) : (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-900">Broker nemá nastavené účty gatewayí</div>
+          )}
+        </div>
         <p className="mt-2 text-slate-600">
-          Gateway smí jen na tyto dva topicy — cizí data nepřečte a za jinou budovu nic nepošle. V IQRF Gateway Webapp:{" "}
-          <b>Konfigurace → Messaging → MQTT</b> → nová instance s těmito hodnotami (nebo soubor <code className="font-mono text-[12px]">iqrf__MqttMessaging.json</code>):
+          V IQRF Gateway Webapp: <b>Konfigurace → Messaging → MQTT</b> → nová instance, vyplňte tyto tři údaje. Gateway smí jen na své topicy — cizí data
+          nepřečte a za jinou budovu nic nepošle.
         </p>
-        <Code code={daemonConfig} />
+        <details className="mt-2 rounded-xl border border-slate-200">
+          <summary className="cursor-pointer px-3 py-2 text-[12.5px] font-bold text-slate-600 select-none">
+            Pro techniky: topicy a celý soubor iqrf__MqttMessaging.json
+          </summary>
+          <div className="border-t border-slate-100 p-3">
+            <dl className="grid gap-x-4 gap-y-1 font-mono text-[12px] sm:grid-cols-[auto_1fr]">
+              <dt className="text-slate-500">dotazy</dt>
+              <dd className="break-all">{requestTopic}</dd>
+              <dt className="text-slate-500">odpovědi</dt>
+              <dd className="break-all">{responseTopic}</dd>
+            </dl>
+            <Code code={daemonConfig} />
+          </div>
+        </details>
       </Step>
 
       <Step number={broker.publicTls ? 3 : 2} title="Aplikace sama najde uzly a jejich senzory">
@@ -118,6 +116,21 @@ export function SetupGuide({ brokerHost, broker, gatewayId, credentials }: Setup
         <Code code={emulator} />
       </Step>
     </ol>
+  );
+}
+
+function CopyCard({ label, value, icon = null }: { label: string; value: string; icon?: React.ReactNode }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <p className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+        {label}
+        <CopyButton text={value} tone="light" />
+      </p>
+      <p className="mt-1 flex items-center gap-1.5 font-mono text-[12.5px] font-bold break-all text-hk-navy">
+        {icon}
+        {value}
+      </p>
+    </div>
   );
 }
 

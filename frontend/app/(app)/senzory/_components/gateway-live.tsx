@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { METRIC_META, METRICS, formatAgo, formatSensorValue } from "@/lib/sensor-meta";
 import { cn } from "@/lib/utils";
 import type { GatewayChannel, GatewayDetail, SensorMetric } from "@/types/api";
-import { assignChannel, deleteGateway } from "../actions";
+import { assignChannel, assignNode, deleteGateway } from "../actions";
 import { SensorSteps } from "./sensor-steps";
 
 // Průvodce obnovuje stav každé 2 s — hodnoty z gatewaye jsou vidět hned, jak přijdou
@@ -104,14 +104,29 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
               </h2>
               <p className="text-xs text-slate-500">Přiřazený kanál se ukládá a nahradí simulaci v dané místnosti.</p>
             </div>
-            {nodes.map((node) => (
+            {nodes.map((node, index) => (
               <div key={node} className="border-b border-slate-100 last:border-b-0">
-                <p className="bg-slate-50 px-5 py-1.5 font-mono text-[11px] text-slate-500">uzel {node}</p>
+                <NodeHeader
+                  gatewayId={gateway.id}
+                  node={node}
+                  channels={gateway.channels.filter((c) => c.nodeAddress === node)}
+                  zones={gateway.zones}
+                  onAssigned={refresh}
+                  tourTarget={index === 0}
+                />
                 <ul className="divide-y divide-slate-100">
                   {gateway.channels
                     .filter((c) => c.nodeAddress === node)
                     .map((channel) => (
-                      <ChannelRow key={channel.id} gatewayId={gateway.id} channel={channel} zones={gateway.zones} onAssigned={refresh} now={now} />
+                      // Klíč i s místností: po hromadném přiřazení se řádek načte znovu s novou místností
+                      <ChannelRow
+                        key={`${channel.id}-${channel.sensorId ?? ""}-${channel.zoneId ?? ""}`}
+                        gatewayId={gateway.id}
+                        channel={channel}
+                        zones={gateway.zones}
+                        onAssigned={refresh}
+                        now={now}
+                      />
                     ))}
                 </ul>
               </div>
@@ -212,6 +227,80 @@ function Check_({ done, label, hint }: { done: boolean; label: string; hint?: st
         {hint && <span className="block text-[11.5px] text-slate-500">{hint}</span>}
       </span>
     </li>
+  );
+}
+
+type NodeHeaderProps = {
+  gatewayId: string;
+  node: number;
+  channels: GatewayChannel[];
+  zones: GatewayDetail["zones"];
+  onAssigned: () => void;
+  tourTarget: boolean;
+};
+
+// Záhlaví uzlu: celá krabička (teplota, CO₂, vlhkost…) do jedné místnosti jedním kliknutím
+function NodeHeader({ gatewayId, node, channels, zones, onAssigned, tourTarget }: NodeHeaderProps) {
+  const [zone, setZone] = useState("");
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const zoneItems = [{ value: WHOLE_BUILDING, label: "Celý objekt" }, ...zones.map((z) => ({ value: z.id, label: `${z.name} · ${z.floor === 0 ? "přízemí" : `${z.floor}. NP`}` }))];
+  const assigned = channels.filter((c) => c.sensorId !== null).length;
+
+  function assignAll() {
+    if (!zone) return;
+    setMessage(null);
+    startTransition(async () => {
+      const result = await assignNode(gatewayId, channels.map((c) => ({ id: c.id, metric: c.metric })), zone === WHOLE_BUILDING ? null : zone);
+      if ("error" in result) {
+        setMessage({ tone: "error", text: result.error });
+        return;
+      }
+      const label = zoneItems.find((z) => z.value === zone)?.label.split(" · ")[0] ?? "místnosti";
+      setMessage({ tone: "ok", text: `${result.assigned} čidel v místnosti ${label}${result.skipped > 0 ? ` · ${result.skipped} s neznámou veličinou vyberte níže` : ""}` });
+      setZone("");
+      onAssigned();
+    });
+  }
+
+  return (
+    <div data-tour={tourTarget ? "gateway-uzel" : undefined} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-5 py-2.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="font-mono text-xs font-bold text-hk-navy">Uzel {node}</span>
+        <span className="text-xs text-slate-500">
+          {channels.length} {channels.length === 1 ? "veličina" : channels.length < 5 ? "veličiny" : "veličin"} · {assigned === channels.length ? "vše v místnostech" : `${assigned}/${channels.length} přiřazeno`}
+        </span>
+        {message && (
+          <span role={message.tone === "error" ? "alert" : "status"} className={cn("text-xs font-bold", message.tone === "error" ? "text-red-700" : "text-emerald-700")}>
+            {message.text}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <Select items={zoneItems} value={zone || null} onValueChange={(next) => setZone((next as string | null) ?? "")}>
+          <SelectTrigger aria-label={`Místnost pro celý uzel ${node}`} className="h-9 min-w-52 border-slate-300 bg-white text-[13px]">
+            <SelectValue placeholder="Celý uzel do místnosti…" />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false} className="w-max min-w-(--anchor-width) text-[13px]">
+            {zoneItems.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          type="button"
+          onClick={assignAll}
+          disabled={!zone || isPending}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-hk-red px-3 text-[12.5px] font-bold text-white transition-colors hover:bg-hk-red-dark disabled:opacity-50"
+        >
+          {isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+          Přiřadit vše
+        </button>
+      </div>
+    </div>
   );
 }
 

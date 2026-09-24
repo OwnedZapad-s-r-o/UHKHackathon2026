@@ -74,6 +74,25 @@ export async function assignChannel(gatewayId: string, channelId: string, zoneId
   return result.ok ? null : { error: result.message };
 }
 
+// Hromadné přiřazení: všechna čidla jednoho uzlu (krabičky) do jedné místnosti. Kanály s neznámou veličinou se přeskočí —
+// u nich musí uživatel veličinu vybrat sám.
+export async function assignNode(
+  gatewayId: string,
+  channels: { id: string; metric: SensorMetric }[],
+  zoneId: string | null,
+): Promise<{ error: string } | { assigned: number; skipped: number }> {
+  if (!(await canManageSensors())) return { error: "Kanály může přiřadit jen kraj nebo správce budovy." };
+  if (!ID_PATTERN.test(gatewayId) || (zoneId !== null && !ID_PATTERN.test(zoneId)) || channels.some((c) => !ID_PATTERN.test(c.id))) return { error: "Neplatný výběr." };
+
+  const known = channels.filter((c) => c.metric !== "Other");
+  for (const channel of known) {
+    const result = await apiSendAuthorized<{ sensorId: string }>("POST", `/api/sensors/gateways/${gatewayId}/channels/${channel.id}/assign`, { zoneId, metric: channel.metric });
+    if (!result.ok) return { error: result.message };
+  }
+
+  return { assigned: known.length, skipped: channels.length - known.length };
+}
+
 export async function deleteGateway(gatewayId: string): Promise<SensorActionState> {
   if (!(await canManageSensors())) return { error: "Gateway může odebrat jen kraj nebo správce budovy." };
   if (!ID_PATTERN.test(gatewayId)) return { error: "Neplatné id gatewaye." };
