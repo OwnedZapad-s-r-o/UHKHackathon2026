@@ -232,6 +232,8 @@ export type AiAnalysis = {
   recommendations: AiRecommendation[];
   letterDraft: string | null;
   createdAt: string;
+  // Stav budovy se od poslední analýzy nezměnil — API vrátilo uloženou analýzu bez volání modelu
+  fromCache?: boolean;
 };
 
 export type AiAuditState = {

@@ -66,6 +66,12 @@ export function AiAuditCard({ facilityId, configured, initialAnalysis }: AiAudit
         </p>
       )}
 
+      {analysis?.fromCache && (
+        <p role="status" className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[12.5px] text-slate-600">
+          Stav budovy se od poslední analýzy nezměnil — ukazujeme ji znovu, model se nevolal.
+        </p>
+      )}
+
       {analysis && <AnalysisBody analysis={analysis} />}
     </section>
   );
