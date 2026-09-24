@@ -112,7 +112,7 @@ export default async function LandingPage() {
       <section className="mx-auto max-w-6xl space-y-24 px-4 py-20 sm:px-6">
         <FeatureRow icon={MapIcon} eyebrow="Mapa kraje" title="Celý kraj na jedné mapě" image={{ src: "/landing/mapa-okresy.webp", alt: "Mapa okresů obarvených podle podílu budov se zjištěním", ...SHOT }}>
           <p>Nejdřív kraj po okresech, pak budovy v okrese, nakonec jedna budova ve 3D. Okresy mají barvu podle toho, kolik budov má problém.</p>
-          <Bullets items={["Na kraji štítky okresů s počty a tečky budov", "Po výběru okresu špendlíky jen z něj — barva = stav, ikona = druh", "3D budova z katastru v barvě stavu"]} />
+          <Bullets items={["Na kraji bubliny okresů se složením stavů a tečky budov", "Po výběru okresu špendlíky jen z něj — barva = stav, ikona = druh", "3D budova z katastru v barvě stavu"]} />
         </FeatureRow>
 
         <FeatureRow
