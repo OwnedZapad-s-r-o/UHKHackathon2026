@@ -5,58 +5,41 @@
 
 ---
 
-## 📸 Ukázky rozhraní (Screenshots)
+## 📸 Ukázky rozhraní
 
-### 🗺️ 2D a 3D Mapa objektů kraje
-*Celkový 2D pohled na mapu s budovami zřizovanými Královéhradeckým krajem (školy, domovy pro seniory, nemocnice, kulturní objekty):*
+Snímky generuje `tools/screenshots/capture.py` (Playwright) — stejné obrázky používá landing page.
 
-![2D Mapa objektů kraje](docs/images/02-mapa-2d-prehled.png)
+### 🗺️ Mapa kraje a okresy
+*Okresy obarvené podle podílu budov se zjištěním, špendlíky podle stavu a druhu budovy:*
 
-*3D náhled na vybranou budovu (Střední uměleckoprůmyslová škola hudebních nástrojů a nábytku u UHK v Hradci Králové) s 3D extruzí půdorysu z ČÚZK a okolní zástavbou:*
+![Mapa kraje s okresy](frontend/public/landing/mapa-okresy.webp)
 
-![3D model budovy na mapě](docs/images/03-mapa-3d-budova.png)
+### 🏢 3D budova a inspekční panel
+*Klik na špendlík přiblíží budovu ve 3D (půdorys ČÚZK v barvě stavu), panel ukáže telemetrii a místnosti:*
 
----
+![3D budova a inspekční panel](frontend/public/landing/mapa-3d.webp)
 
-### 📋 Inspekční panel & Telemetrie
-*Živá telemetrie vybraného objektu (teplota, CO₂, příkon) s grafy průběhu za posledních 48 hodin:*
+*Zjištění auditu a AI analýza (Azure OpenAI):*
 
-![Inspekční panel - Telemetrie](docs/images/04-inspekce-telemetrie.png)
+![Audit a AI analýza](frontend/public/landing/inspekce.webp)
 
----
+### 📡 Skutečná čidla IQRF
+*Gateway se připojí přes MQTT, aplikace sama najde uzly a senzory, správce přiřadí místnost:*
 
-### 🏢 Karta budovy ČÚZK & Schematický řez budovou
-*Oficiální karta budovy s katastrálními daty z ČÚZK INSPIRE WFS a schematický řez budovou po podlažích a zónách s alokací senzorů a detekcí překročení limitů CO₂:*
+![Senzory IQRF](frontend/public/landing/senzory.webp)
 
-![Karta budovy ČÚZK a Schematický řez](docs/images/05-inspekce-budova-rez-cuzk.png)
+### 📄 PDF audit
+![PDF audit objektu](frontend/public/landing/pdf.webp)
 
----
+### 👪 Pro veřejnost — „Jak se dýchá ve škole?“
+*Veřejná karta objektu bez přihlášení (kvalita vzduchu, místnosti, kdy větrat) a QR kód na dveře:*
 
-### 🤖 AI Analýza & Doporučení opatření (Azure OpenAI)
-*Automatické vyhodnocení úsporných opatření s propočtem návratnosti v Kč a generováním podkladů pro správce:*
+![Veřejná karta objektu](frontend/public/landing/verejna-karta.webp)
 
-![AI Analýza a Audit](docs/images/06-inspekce-audit-ai.png)
+<img src="frontend/public/landing/karta-mobil.webp" alt="Veřejná karta v telefonu" width="260">
 
----
-
-### 📊 Portfolio a Anomálie
-*Přehledové portfolio budov kraje s možností filtrace podle okresů a typů zřízení:*
-![Portfolio objektů](docs/images/07-portfolio.png)
-
-*Seznam detekovaných anomálií a plýtvání energií seřazený dle výše finanční ztráty:*
-![Anomálie a energetické ztráty](docs/images/08-anomalie.png)
-
----
-
-### 📄 PDF Reporty, Otevřené API & Zdroje Dat
-*Exporty kompletních energetických auditů do PDF:*
-![PDF Reporty](docs/images/09-reporty.png)
-
-*Veřejné otevřené API (Scalar / OpenAPI documentation, CORS, bez klíče):*
-![Otevřené API](docs/images/10-otevrena-data.png)
-
-*Katalog využitých 25+ sad otevřených dat Královéhradeckého kraje:*
-![Zdroje otevřených dat](docs/images/11-zdroje-dat.png)
+### 🌐 Otevřené API
+![Otevřené API](frontend/public/landing/otevrene-api.webp)
 
 ---
 
@@ -70,7 +53,9 @@ docker compose up --build
 
 | Služba | URL | Popis |
 |---|---|---|
-| **Web UI (Next.js)** | [http://localhost:3000](http://localhost:3000) | Uživatelské rozhraní aplikace |
+| **Landing page** | [http://localhost:3000](http://localhost:3000) | Představení aplikace, vstup do dema |
+| **Aplikace (mapa)** | [http://localhost:3000/mapa](http://localhost:3000/mapa) | Po přihlášení (tlačítka Demo) |
+| **Pro veřejnost** | [http://localhost:3000/objekty](http://localhost:3000/objekty) | Najdi svou školu, kvalita vzduchu — bez přihlášení |
 | **API Backend (ASP.NET)** | [http://localhost:8080](http://localhost:8080) | REST API backend |
 | **Otevřené API Docs** | [http://localhost:3000/api/open/docs/](http://localhost:3000/api/open/docs/) | Interaktivní OpenAPI (Scalar) |
 | **PostgreSQL / PostGIS** | `localhost:5432` | Databáze (`smartaudit` / `smartaudit`) |
@@ -88,7 +73,9 @@ Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlast
 
 - **📡 Skutečná čidla IQRF:** IQRF gateway se přes MQTT připojí k aplikaci, ta sama najde uzly a senzory (teplota, CO₂, vlhkost, osvětlení, hluk, pohyb…) a po přiřazení do místnosti nahradí simulaci skutečným měřením. Návod v [docs/SENZORY_IQRF.md](docs/SENZORY_IQRF.md), emulátor gatewaye v `tools/iqrf-emulator/`.
 - **🗺️ Mapa objektů kraje:** Šedý podklad (mapcn), okresy obarvené podle podílu objektů se zjištěním (klik vybere okres), piny podle stavu a druhu budovy a vyhledávání. Na startu není vybraný žádný objekt; po kliknutí mapa přeletí k budově a ukáže ji ve 3D (vybraná budova „vyroste“ v barvě stavu, okolí zprůhlední). Výběr zruší křížek, klik do mapy nebo Esc.
-- **📋 Inspekční panel:** Přehled, telemetrie (živé grafy), auditní zjištění, karta budovy ČÚZK a unikátní schematický řez budovou podle zón.
+- **📋 Inspekční panel:** Přehled, telemetrie (grafy a „Místnosti teď“ s odznakem živého čidla), auditní zjištění a karta budovy ČÚZK. Schematický řez budovou je zatím skrytý (`FEATURES.buildingSection`).
+- **👪 Pro veřejnost (`/objekty`):** bez přihlášení — najdi svou školu nebo domov, přehled kvality vnitřního vzduchu (ne žebříček), veřejná karta objektu s CO₂ po místnostech, grafem za 24 h, radou kdy větrat a tím, co kraj v budově řeší (bez Kč). QR kód k vytištění na dveře třídy.
+- **🏠 Landing page (`/`):** představení aplikace se snímky, živými čísly z otevřeného API a vstupem do dema.
 - **⚡ Portfolio a Anomálie:** Přehledná tabulka a seznam zjištění seřazený podle odhadované roční finanční ztráty v Kč.
 - **📄 PDF reporty:** Audit jednoho objektu (s grafy a lokalizační mapkou) i souhrnný přehled portfolia s mapou okresů.
 - **🤖 AI analýza (Azure OpenAI):** Navrhne konkrétní opatření s vyčíslenou návratností a dopis správci. Výsledek se propisuje i do PDF auditního protokolu.
