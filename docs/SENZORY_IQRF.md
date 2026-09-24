@@ -142,8 +142,8 @@ Odpověď brány:
 }
 ```
 
-#### B. Vyčtení hodnot senzorů uzlu (`iqrfSensor_ReadSensorsWithTypes`)
-Aplikace periodicky (např. každých 15–60 s) dotazuje uzel `nAdr: 1`:
+#### B. Objevení senzorů uzlu (`iqrfSensor_ReadSensorsWithTypes`)
+Nový uzel (a jednou za 10 minut celá síť, kvůli nově spárovaným čidlům) se čte po uzlech — odpověď řekne, jaké senzory uzel má:
 ```json
 {
   "mType": "iqrfSensor_ReadSensorsWithTypes",
@@ -202,6 +202,28 @@ Odpověď brány s naměřenými hodnotami (standardní formát IQRF):
   }
 }
 ```
+
+#### C. Průběžný sběr hodnot hromadně (`iqrfSensor_Frc`)
+Známé senzory aplikace nečte po jednom uzlu, ale příkazem **FRC (Fast Response Command)**: jedna veličina ze **všech uzlů
+v jednom rádiovém cyklu** IQMESH. U sítě s 30 uzly a 3 veličinami jsou to 3 dotazy místo 30 — koordinátor není zahlcený
+a celá síť je vyčtená v řádu sekund, i s bateriovými uzly. Pořadí senzoru daného typu nese id zprávy (`frc-t1-i0-…`),
+aby odpověď šla přiřadit ke kanálu `n{uzel}/t{typ}-{pořadí}`:
+```json
+{
+  "mType": "iqrfSensor_Frc",
+  "data": {
+    "msgId": "frc-t1-i0-sa-4f2c1d9e0b",
+    "req": { "nAdr": 0, "param": { "sensorType": 1, "sensorIndex": 0, "frcCommand": 224, "getExtraResult": true } },
+    "returnVerbose": true
+  }
+}
+```
+Odpověď je pole indexované adresou uzlu (`0` = koordinátor, uzel bez senzoru = `null`). Příkaz FRC se volí podle šířky hodnoty:
+typy 1–127 = 2 bajty (`224`), 128–159 = 1 bajt (`144`), 160–191 = 4 bajty (`249`). Bloky dat (192+) FRC neumí a čtou se po uzlech.
+
+**Výpadek spojení:** backend má u brokeru trvalou relaci (QoS 1), takže odpovědi, které dorazí během jeho restartu, broker podrží.
+Ukládání měření při výpadku internetu ve škole je věc gateway — IQRF Gateway Daemon má pro MQTT perzistentní frontu (`Persistence: 1`)
+a zprávy odešle po obnovení spojení.
 
 ### Mapování typů senzorů v kódu SmartAudit (`IqrfSensorTypes.cs`)
 

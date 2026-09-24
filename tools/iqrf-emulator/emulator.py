@@ -69,6 +69,17 @@ def response(request, room):
 
     if m_type == "iqrfEmbedCoordinator_BondedDevices":
         result = {"bondedDevices": sorted(NODES)}
+    elif m_type == "iqrfSensor_Frc":
+        # Jedna veličina ze všech uzlů: pole indexované adresou uzlu (0 = koordinátor), uzel bez senzoru = null
+        param = req.get("param", {})
+        sensor_type, sensor_index = param.get("sensorType"), param.get("sensorIndex", 0)
+        sensors = [None] * (max(NODES) + 1)
+        for node, node_sensors in NODES.items():
+            of_type = [s for s in node_sensors if s[0] == sensor_type]
+            if sensor_index < len(of_type):
+                stype, sid, name, unit = of_type[sensor_index]
+                sensors[node] = {"id": sid, "type": stype, "name": name, "shortName": sid[:3], "value": room.value(node, stype), "unit": unit, "decimalPlaces": 2}
+        result = {"sensors": sensors}
     elif m_type == "iqrfSensor_ReadSensorsWithTypes":
         if n_adr not in NODES:
             return envelope(m_type, msg_id, n_adr, None, status=1002, status_str="Timeout — uzel neodpověděl")
@@ -130,7 +141,9 @@ def main():
             return
         reply = response(request, room)
         client.publish(response_topic, json.dumps(reply, ensure_ascii=False))
-        print(f"← {request.get('mType')} uzel {request.get('data', {}).get('req', {}).get('nAdr')}  → odpověď {reply['data']['statusStr']}")
+        req = request.get("data", {}).get("req", {})
+        target = f"typ {req.get('param', {}).get('sensorType')} ze všech uzlů" if request.get("mType") == "iqrfSensor_Frc" else f"uzel {req.get('nAdr')}"
+        print(f"← {request.get('mType')} {target}  → odpověď {reply['data']['statusStr']}")
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"iqrf-emulator-{args.gateway}")
     client.username_pw_set(args.gateway, password)

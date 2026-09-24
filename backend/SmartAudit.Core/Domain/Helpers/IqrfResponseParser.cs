@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SmartAudit.Core.Domain.Helpers
 {
@@ -12,7 +13,7 @@ namespace SmartAudit.Core.Domain.Helpers
     // Odpovědi IQRF Gateway Daemonu (IQRF JSON API) → hodnoty senzorů.
     // Podporuje iqrfSensor_ReadSensorsWithTypes (jeden uzel, všechny senzory), iqrfSensor_Frc (jeden typ, všechny uzly)
     // a iqrfEmbedCoordinator_BondedDevices (seznam spárovaných uzlů pro dotazování).
-    public static class IqrfResponseParser
+    public static partial class IqrfResponseParser
     {
         public const string ReadSensorsWithTypes = "iqrfSensor_ReadSensorsWithTypes";
         public const string SensorFrc = "iqrfSensor_Frc";
@@ -48,7 +49,7 @@ namespace SmartAudit.Core.Domain.Helpers
                 var readings = messageType switch
                 {
                     ReadSensorsWithTypes when nodeAddress != null => NodeSensors(nodeAddress.Value, Property(result, "sensors")),
-                    SensorFrc => FrcSensors(Property(result, "sensors")),
+                    SensorFrc => FrcSensors(Property(result, "sensors"), FrcSensorIndex(messageId)),
                     _ => [],
                 };
 
@@ -74,6 +75,56 @@ namespace SmartAudit.Core.Domain.Helpers
                 },
             });
         }
+
+        // Hromadný dotaz FRC: jedna veličina (typ a pořadí senzoru toho typu) ze všech uzlů sítě v jednom rádiovém cyklu.
+        // Pořadí senzoru se odpověď nevrací — nese ho id zprávy (…-i{pořadí}-…), aby odpověď šla přiřadit ke kanálu.
+        public static string FrcRequest(int sensorType, int sensorIndex, string messageId)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                mType = SensorFrc,
+                data = new
+                {
+                    msgId = FrcMessageId(sensorType, sensorIndex, messageId),
+                    req = new
+                    {
+                        nAdr = 0,
+                        param = new { sensorType, sensorIndex, frcCommand = FrcCommand(sensorType), getExtraResult = true },
+                    },
+                    returnVerbose = true,
+                },
+            });
+        }
+
+        // Typy s daty v jednom příkazu FRC (IQRF Standard Sensor): 1–127 = 2 bajty, 128–159 = 1 bajt, 160–191 = 4 bajty.
+        // Bloky dat (192+) FRC neumí — ty se čtou po uzlech.
+        public static bool SupportsFrc(int sensorType) => sensorType is > 0 and < 192;
+
+        public static int FrcCommand(int sensorType) => sensorType switch
+        {
+            < 128 => 0xE0,
+            < 160 => 0x90,
+            _ => 0xF9,
+        };
+
+        public static string FrcMessageId(int sensorType, int sensorIndex, string messageId) => $"frc-t{sensorType}-i{sensorIndex}-{messageId}";
+
+        // Pořadí senzoru z id zprávy; neznámá zpráva (dotaz z jiné aplikace) = první senzor typu
+        public static int FrcSensorIndex(string? messageId)
+        {
+            var match = messageId == null ? null : FrcIndexPattern().Match(messageId);
+            return match is { Success: true } ? int.Parse(match.Groups[1].Value) : 0;
+        }
+
+        // Pořadí senzoru daného typu z klíče kanálu n{uzel}/t{typ}-{pořadí}
+        public static int ChannelOrdinal(string channelKey)
+        {
+            var dash = channelKey.LastIndexOf('-');
+            return dash >= 0 && int.TryParse(channelKey[(dash + 1)..], out var ordinal) ? ordinal : 0;
+        }
+
+        [GeneratedRegex(@"^frc-t\d+-i(\d+)-")]
+        private static partial Regex FrcIndexPattern();
 
         // Požadavek na seznam spárovaných uzlů (koordinátor má adresu 0)
         public static string BondedDevicesRequest(string messageId)
@@ -109,8 +160,8 @@ namespace SmartAudit.Core.Domain.Helpers
             return readings;
         }
 
-        // FRC vrací jeden senzor ze všech uzlů; index v poli je adresa uzlu (0 = koordinátor)
-        private static List<IqrfReading> FrcSensors(JsonElement sensors)
+        // FRC vrací jeden senzor ze všech uzlů; index v poli je adresa uzlu (0 = koordinátor), uzel bez senzoru = null
+        private static List<IqrfReading> FrcSensors(JsonElement sensors, int sensorIndex)
         {
             var readings = new List<IqrfReading>();
             if (sensors.ValueKind != JsonValueKind.Array)
@@ -120,7 +171,7 @@ namespace SmartAudit.Core.Domain.Helpers
             foreach (var sensor in sensors.EnumerateArray())
             {
                 var nodeAddress = Int(sensor, "nAdr") ?? index;
-                if (nodeAddress > 0 && Reading(nodeAddress, sensor, new Dictionary<int, int>()) is { } reading)
+                if (nodeAddress > 0 && Reading(nodeAddress, sensor, new Dictionary<int, int>(), sensorIndex) is { } reading)
                     readings.Add(reading);
                 index++;
             }
@@ -128,7 +179,8 @@ namespace SmartAudit.Core.Domain.Helpers
             return readings;
         }
 
-        private static IqrfReading? Reading(int nodeAddress, JsonElement sensor, Dictionary<int, int> ordinals)
+        // fixedOrdinal = pořadí známé z dotazu (FRC); jinak se počítá postupně v rámci uzlu
+        private static IqrfReading? Reading(int nodeAddress, JsonElement sensor, Dictionary<int, int> ordinals, int? fixedOrdinal = null)
         {
             if (sensor.ValueKind != JsonValueKind.Object)
                 return null;
@@ -137,7 +189,7 @@ namespace SmartAudit.Core.Domain.Helpers
             if (type == null)
                 return null;
 
-            var ordinal = ordinals.GetValueOrDefault(type.Value);
+            var ordinal = fixedOrdinal ?? ordinals.GetValueOrDefault(type.Value);
             ordinals[type.Value] = ordinal + 1;
 
             // Senzor bez hodnoty (chyba čtení) — kanál přeskočit, ale pořadí typu už je započítané
