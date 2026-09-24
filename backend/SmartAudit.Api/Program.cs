@@ -74,6 +74,7 @@ builder.Services.AddHostedService<SensorSimulationService>();
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 ReportStyles.Initialize(builder.Environment.ContentRootPath);
 builder.Services.AddScoped<IReportAiSource, ReportAiSource>();
+builder.Services.AddScoped<IDistrictMapSource, DistrictMapSource>();
 
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -110,6 +111,7 @@ builder.Services.AddOutputCache(options =>
 {
     options.AddPolicy(OpenDataController.ListCachePolicy, policy => policy.Expire(TimeSpan.FromSeconds(OpenDataController.ListCacheSeconds)));
     options.AddPolicy(OpenDataController.FootprintCachePolicy, policy => policy.Expire(TimeSpan.FromSeconds(OpenDataController.FootprintCacheSeconds)));
+    options.AddPolicy(MapController.RegionsCachePolicy, policy => policy.Expire(TimeSpan.FromSeconds(MapController.RegionsCacheSeconds)));
 });
 
 // Dokumentace: otevřené API je veřejná vždy, interní API aplikace jen při vývoji

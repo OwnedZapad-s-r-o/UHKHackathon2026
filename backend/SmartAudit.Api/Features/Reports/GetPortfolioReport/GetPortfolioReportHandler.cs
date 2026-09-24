@@ -15,10 +15,12 @@ namespace SmartAudit.Api.Features.Reports.GetPortfolioReport
     public class GetPortfolioReportHandler : IRequestHandler<GetPortfolioReportCommand, Response<GetPortfolioReportDto>>
     {
         private readonly IMediator _mediator;
+        private readonly IDistrictMapSource _districtMapSource;
 
-        public GetPortfolioReportHandler(IMediator mediator)
+        public GetPortfolioReportHandler(IMediator mediator, IDistrictMapSource districtMapSource)
         {
             _mediator = mediator;
+            _districtMapSource = districtMapSource;
         }
 
         public async Task<Response<GetPortfolioReportDto>> Handle(GetPortfolioReportCommand request, CancellationToken ct)
@@ -30,7 +32,9 @@ namespace SmartAudit.Api.Features.Reports.GetPortfolioReport
             var list = facilities.Data.ToList();
             var districtName = request.District == null ? null : list.FirstOrDefault()?.DistrictName ?? request.District;
 
-            var data = new PortfolioReportData(list, districtName, request.OnlyIssues, request.Viewer.CanSeeMoney, DateTimeOffset.UtcNow);
+            var districts = await _districtMapSource.GetDistrictsAsync(ct);
+
+            var data = new PortfolioReportData(list, request.District, districtName, request.OnlyIssues, request.Viewer.CanSeeMoney, districts, DateTimeOffset.UtcNow);
             var pdf = new PortfolioReportDocument(data).GeneratePdf();
 
             var suffix = request.District == null ? "kraj" : request.District.ToLowerInvariant();

@@ -24,11 +24,13 @@ namespace SmartAudit.Api.Features.Reports.GetFacilityReport
 
         private readonly IMediator _mediator;
         private readonly IReportAiSource _aiSource;
+        private readonly IDistrictMapSource _districtMapSource;
 
-        public GetFacilityReportHandler(IMediator mediator, IReportAiSource aiSource)
+        public GetFacilityReportHandler(IMediator mediator, IReportAiSource aiSource, IDistrictMapSource districtMapSource)
         {
             _mediator = mediator;
             _aiSource = aiSource;
+            _districtMapSource = districtMapSource;
         }
 
         public async Task<Response<GetFacilityReportDto>> Handle(GetFacilityReportCommand request, CancellationToken ct)
@@ -49,6 +51,7 @@ namespace SmartAudit.Api.Features.Reports.GetFacilityReport
             var aiAnalysis = request.Viewer.CanSeeMoney ? await _aiSource.GetLatestAsync(request.FacilityId, ct) : null;
 
             var energyPoints = energy.Data?.Series.FirstOrDefault()?.Points ?? [];
+            var districts = await _districtMapSource.GetDistrictsAsync(ct);
 
             var data = new FacilityReportData(
                 detail.Data,
@@ -63,6 +66,7 @@ namespace SmartAudit.Api.Features.Reports.GetFacilityReport
                 section.Data?.Zones.Select(z => new SectionZone(z.Name, z.Floor, z.Temperature, z.Co2)).ToList() ?? [],
                 section.Data?.Co2Limit ?? 1500,
                 aiAnalysis,
+                districts,
                 now);
 
             var pdf = new FacilityReportDocument(data).GeneratePdf();

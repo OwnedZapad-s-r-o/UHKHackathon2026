@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.Precision;
+using NetTopologySuite.Simplify;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain;
 using SmartAudit.Core.Domain.Enums;
@@ -18,6 +20,12 @@ namespace SmartAudit.Api.Features.Map.GetRegions
 
     public class GetRegionsHandler : IRequestHandler<GetRegionsCommand, Response<GetRegionsDto>>
     {
+        // ~60 m — hranice okresu na mapě kraje ani v PDF nepozná rozdíl, data se zmenší z ~300 KB na desítky KB
+        private const double SimplifyToleranceDegrees = 0.0008;
+
+        // Souřadnice na 5 desetinných míst (~1 m) — víc je v JSONu jen šum
+        private static readonly PrecisionModel FiveDecimals = new(100_000);
+
         private readonly SmartAuditDbContext _dbContext;
 
         public GetRegionsHandler(SmartAuditDbContext dbContext)
@@ -34,15 +42,23 @@ namespace SmartAudit.Api.Features.Map.GetRegions
             if (request.OnlyThreatened)
                 query = query.Where(r => r.IsThreatened);
 
-            var features = await query
+            var regions = await query
                 .OrderBy(r => r.Name)
-                .Select(r => new RegionFeatureDto(
-                    "Feature",
-                    r.Geometry,
-                    new RegionPropertiesDto(r.Code, r.Name, r.Type, r.IsThreatened, r.ThreatLevel, r.GrantCount, r.GrantTotal)))
                 .ToListAsync(ct);
 
+            var features = regions
+                .Select(r => new RegionFeatureDto(
+                    "Feature",
+                    Simplify(r.Geometry),
+                    new RegionPropertiesDto(r.Code, r.Name, r.Type, r.IsThreatened, r.ThreatLevel, r.GrantCount, r.GrantTotal)))
+                .ToList();
+
             return Response.Success(new GetRegionsDto("FeatureCollection", features));
+        }
+
+        public static Geometry? Simplify(Geometry? geometry)
+        {
+            return geometry == null ? null : GeometryPrecisionReducer.Reduce(TopologyPreservingSimplifier.Simplify(geometry, SimplifyToleranceDegrees), FiveDecimals);
         }
     }
 }
