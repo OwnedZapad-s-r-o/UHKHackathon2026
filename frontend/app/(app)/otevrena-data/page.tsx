@@ -5,7 +5,7 @@ import { getFacilities } from "@/lib/api";
 import { CATEGORY_META, DISTRICTS, STATUS_META } from "@/lib/facility-meta";
 import type { AuditStatus, FacilityCategory } from "@/types/api";
 import { TopBar } from "../_components/top-bar";
-import { CopyButton } from "./_components/copy-button";
+import { CopyButton } from "../_components/copy-button";
 
 export const metadata: Metadata = {
   title: "Otevřené API · SmartAudit KHK",

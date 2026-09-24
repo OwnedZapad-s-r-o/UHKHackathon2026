@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AlertTriangle, Braces, Building2, Database, FileDown, MapPin, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Braces, Building2, Database, FileDown, MapPin, RadioTower, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SidebarNavProps = {
@@ -21,6 +21,7 @@ export function SidebarNav({ counts }: SidebarNavProps) {
     { href: "/portfolio", label: "Portfolio", icon: Building2, badge: counts.portfolio },
     { href: "/anomalie", label: "Anomálie", icon: AlertTriangle, badge: counts.anomalies },
     { href: "/reporty", label: "Reporty", icon: FileDown },
+    { href: "/senzory", label: "Senzory", icon: RadioTower },
     { href: "/zdroje-dat", label: "Zdroje dat", icon: Database },
     { href: "/otevrena-data", label: "Otevřené API", icon: Braces },
   ];
@@ -33,7 +34,7 @@ export function SidebarNav({ counts }: SidebarNavProps) {
         return (
           <Link
             key={href}
-            href={`${href}${["/zdroje-dat", "/reporty", "/otevrena-data"].includes(href) ? "" : issues}`}
+            href={`${href}${["/zdroje-dat", "/reporty", "/otevrena-data", "/senzory"].includes(href) ? "" : issues}`}
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex h-10.5 items-center gap-3 rounded-lg px-3 text-sm transition-colors hover:text-white",

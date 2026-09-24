@@ -90,15 +90,21 @@ function SectionGrid({ section }: { section: BuildingSection }) {
                 return (
                   <div
                     key={zone.id}
-                    className={cn("min-w-0 flex-1 rounded-lg border px-2.5 py-2", level ? STATUS_META[level].pill : "border-slate-200 bg-slate-50")}
-                    title={`${zone.name} · ${zone.wing}`}
+                    className={cn(
+                      "min-w-0 flex-1 rounded-lg border px-2.5 py-2",
+                      level ? STATUS_META[level].pill : "border-slate-200 bg-slate-50",
+                      zone.live && "ring-2 ring-emerald-500/60",
+                    )}
+                    title={`${zone.name} · ${zone.wing}${zone.live ? " · skutečné čidlo IQRF" : ""}`}
                   >
                     <p className="flex items-center gap-1 truncate text-[11px] font-bold">
                       {StatusIcon && <StatusIcon className="size-3 shrink-0" aria-hidden />}
                       {zone.name}
+                      {zone.live && <LiveBadge />}
                     </p>
                     <p className="mt-0.5 font-mono text-[11px]">
                       {formatNumber(zone.temperature, "°C")} · {formatNumber(zone.co2, "ppm")}
+                      {zone.humidity !== null && ` · ${formatNumber(zone.humidity, "%")}`}
                     </p>
                   </div>
                 );
@@ -108,6 +114,16 @@ function SectionGrid({ section }: { section: BuildingSection }) {
         );
       })}
     </div>
+  );
+}
+
+// Zónu měří skutečné čidlo — odliší ji od simulovaných hodnot
+function LiveBadge() {
+  return (
+    <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-1.5 py-px text-[9px] font-bold tracking-wide text-white uppercase">
+      <span className="size-1 animate-pulse rounded-full bg-white" aria-hidden />
+      živě
+    </span>
   );
 }
 
