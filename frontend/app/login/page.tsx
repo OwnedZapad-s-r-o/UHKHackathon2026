@@ -44,35 +44,36 @@ export default async function LoginPage() {
             </li>
           ))}
         </ul>
-        <div className="relative mt-auto -mr-20 translate-y-4 pt-8">
-          {/* Ambientní záře za oknem pro vizuální odtržení od tmavého pozadí */}
-          <div className="absolute -inset-2 -top-4 rounded-3xl bg-gradient-to-tr from-hk-accent/25 via-blue-500/20 to-transparent blur-2xl" aria-hidden />
+        <div className="relative mt-auto pt-8">
+          {/* Ambientní záře za oknem pro vizuální odtržení */}
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-hk-accent/35 via-blue-500/25 to-sky-400/10 blur-xl" aria-hidden />
 
-          {/* Rám okna aplikace */}
-          <div className="relative overflow-hidden rounded-t-2xl border border-white/25 bg-slate-900/90 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(30,62,98,0.4)] backdrop-blur-md">
-            {/* Horní lišta okna (macOS style tečky a URL pilulka) */}
-            <div className="flex items-center justify-between border-b border-white/15 bg-white/10 px-4 py-2.5">
+          {/* Rám okna aplikace jako ucelená karta s kompletními zaoblenými rohy a světlejší lištou proti splývání */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/30 bg-slate-900 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/20">
+            {/* Horní lišta okna (světlejší styl jako macOS Safari pro jasné ohraničení tmavého panelu) */}
+            <div className="flex items-center justify-between border-b border-slate-300/80 bg-slate-200/95 px-4 py-2.5 backdrop-blur-md">
               <div className="flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-[#ff5f56]" />
                 <span className="size-2.5 rounded-full bg-[#ffbd2e]" />
                 <span className="size-2.5 rounded-full bg-[#27c93f]" />
               </div>
-              <div className="flex items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-3 py-0.5 text-[11px] font-medium text-white/70">
-                <span className="size-1.5 rounded-full bg-emerald-400" />
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-0.5 text-[11px] font-medium text-slate-700 shadow-xs">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
                 <span>smartaudit.khk.cz/mapa</span>
               </div>
               <div className="w-10" />
             </div>
 
-            {/* Vnitřní rám s jemným obrysem proti splynutí */}
-            <div className="relative bg-black/40 p-1">
+            {/* Obrázek orámovaný celistvě bez ořezu */}
+            <div className="relative overflow-hidden bg-slate-950">
               <Image
                 src="/landing/mapa-okresy.webp"
                 alt="Ukázka aplikace SmartAudit KHK"
                 width={1440}
                 height={900}
-                sizes="640px"
-                className="h-auto w-full rounded-t-lg ring-1 ring-white/15"
+                sizes="520px"
+                priority
+                className="h-auto w-full block"
               />
             </div>
           </div>
