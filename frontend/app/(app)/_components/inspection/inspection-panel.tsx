@@ -43,10 +43,10 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
           PDF
         </a>
         <Link
-          href={withParams("/", searchParams, { inspekce: "0" })}
+          href={withParams("/", searchParams, { objekt: null, panel: null })}
           scroll={false}
-          aria-label="Zavřít inspekční panel"
-          title="Zavřít inspekční panel"
+          aria-label="Zrušit výběr objektu"
+          title="Zrušit výběr objektu (Esc)"
           className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-hk-navy"
         >
           <X className="size-4" />

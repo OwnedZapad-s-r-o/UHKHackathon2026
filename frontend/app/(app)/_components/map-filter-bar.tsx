@@ -30,8 +30,9 @@ export function MapFilterBar() {
     return () => clearTimeout(timer);
   }, [query, pathname, router, searchParams]);
 
+  // Jiný okres = jiný výřez mapy, dosavadní výběr objektu by v něm visel mimo záběr
   function selectDistrict(code: string | null) {
-    router.push(withParams(pathname, searchParams, { okres: code }));
+    router.push(withParams(pathname, searchParams, { okres: code, objekt: null, panel: null }));
   }
 
   return (
