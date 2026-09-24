@@ -9,6 +9,7 @@ import { TopBar } from "../_components/top-bar";
 import { brokerHost } from "./broker-host";
 import { ConnectGatewayForm } from "./_components/connect-gateway-form";
 import { DemoNetworkPanel } from "./_components/demo-network-panel";
+import { SensorTourLink } from "./_components/sensor-tour-link";
 import { SENSOR_STEPS, SensorSteps } from "./_components/sensor-steps";
 import { Code, emulatorCommand } from "./_components/setup-guide";
 
@@ -47,7 +48,9 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
 
   return (
     <>
-      <TopBar title="Senzory" />
+      <TopBar title="Senzory">
+        <SensorTourLink href="/senzory?pruvodce=1" />
+      </TopBar>
 
       <main className="min-h-0 flex-1 overflow-y-auto p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -96,7 +99,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
               </section>
             )}
 
-            <section aria-labelledby="gateways" className="rounded-2xl border border-slate-200 bg-white">
+            <section data-tour="senzory-seznam" aria-labelledby="gateways" className="rounded-2xl border border-slate-200 bg-white">
               <h2 id="gateways" className="border-b border-slate-100 px-5 py-3.5 text-[11px] font-bold tracking-wide text-slate-500 uppercase">
                 Připojené gatewaye
               </h2>
@@ -117,7 +120,11 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
                 <ul className="divide-y divide-slate-100">
                   {data.gateways.map((gateway) => (
                     <li key={gateway.id}>
-                      <Link href={`/senzory/${gateway.id}`} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50">
+                      <Link
+                        href={`/senzory/${gateway.id}`}
+                        data-tour-gateway={gateway.channelCount > 0 && gateway.assignedCount < gateway.channelCount ? "neprirazena" : "ok"}
+                        className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50"
+                      >
                         <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-hk-navy">
                           <RadioTower className="size-4.5" strokeWidth={1.75} aria-hidden />
                           <span
@@ -173,7 +180,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
             </section>
           </div>
 
-          <section id="pripojit" aria-labelledby="connect" className="h-fit scroll-mt-4 rounded-2xl border-2 border-hk-red/20 bg-white p-5 xl:sticky xl:top-0">
+          <section id="pripojit" data-tour="senzory-formular" aria-labelledby="connect" className="h-fit scroll-mt-4 rounded-2xl border-2 border-hk-red/20 bg-white p-5 xl:sticky xl:top-0">
             <p className="font-mono text-[11px] font-bold text-hk-red">krok 1</p>
             <h2 id="connect" className="mt-0.5 flex items-center gap-2.5 text-lg font-bold tracking-tight">
               <RadioTower className="size-5 text-hk-blue" aria-hidden />

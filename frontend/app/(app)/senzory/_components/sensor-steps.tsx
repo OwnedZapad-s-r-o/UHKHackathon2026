@@ -13,7 +13,7 @@ export const SENSOR_STEPS = [
 // Aktuální krok 1–5; 5 = vše hotovo (všechny kroky odškrtnuté)
 export function SensorSteps({ current, className }: { current: number; className?: string }) {
   return (
-    <ol className={cn("grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-5", className)} aria-label="Postup připojení čidla">
+    <ol data-tour="senzory-postup" className={cn("grid gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-5", className)} aria-label="Postup připojení čidla">
       {SENSOR_STEPS.map((step, index) => {
         const number = index + 1;
         const done = number < current || current === SENSOR_STEPS.length;

@@ -9,9 +9,11 @@ export type TourStep = {
   highlights?: { title: string; text: string }[];
   // Poslední krok nabídne otevřít konkrétní budovu a pokračovat průvodcem v ní
   finale?: { action: string; skip: string };
+  // Text posledního kroku, když není kam pokračovat (na stránce zatím žádná gateway)
+  finaleFallback?: string;
 };
 
-export type TourPhase = "aplikace" | "objekt";
+export type TourPhase = "aplikace" | "objekt" | "senzory" | "gateway";
 
 const WELCOME: Record<Role, TourStep> = {
   Kraj: {
@@ -136,6 +138,68 @@ const FACILITY_STEPS: Record<Role, TourStep[]> = {
   ],
 };
 
+// Průvodce nastavením čidel — obrazovka Senzory (kraj a správce budovy; kroky bez prvku na stránce se vynechají)
+const SENSOR_STEPS: TourStep[] = [
+  {
+    target: "senzory-postup",
+    title: "Připojení čidla v pěti krocích",
+    body: "Zadáte gateway, nastavíte ji v budově, aplikace sama najde čidla a vy je přiřadíte do místností. Aktuální krok je vždy zvýrazněný.",
+  },
+  {
+    target: "senzory-sit",
+    title: "Testovací síť kraje",
+    body: "Jedním klikem pět virtuálních gatewayí v pěti okresech. Posílají živá data stejnou cestou jako hardware — hned je uvidíte v mapě.",
+  },
+  {
+    target: "senzory-demo",
+    title: "Nemáte hardware?",
+    body: "Virtuální učebna se dvěma uzly se připojí jedním klikem. Přiřazení čidel do místností si na ní vyzkoušíte bez rizika.",
+  },
+  {
+    target: "senzory-formular",
+    title: "Skutečná gateway",
+    body: "Vyberte budovu, dejte gateway název a opište identifikátor ze štítku. Uzly aplikace zjistí sama z koordinátoru.",
+  },
+  {
+    target: "senzory-seznam",
+    title: "Připojené gatewaye",
+    body: "Zelená tečka znamená, že gateway odpovídá. Vpravo vidíte, kolik čidel už měří v místnostech.",
+  },
+  {
+    title: "Vyzkoušejte přiřazení čidel",
+    body: "Otevřeme gateway, která ještě čeká na přiřazení, a ukážeme, jak celý uzel dostanete do místnosti jedním kliknutím.",
+    finale: { action: "Otevřít gateway", skip: "Prozkoumám sám" },
+    finaleFallback: "Zatím tu žádná gateway není. Spusťte testovací síť nebo demo s virtuální učebnou a průvodce spusťte znovu.",
+  },
+];
+
+const GATEWAY_STEPS: TourStep[] = [
+  {
+    target: "gateway-stav",
+    title: "Je gateway ve spojení?",
+    body: "Zelená pulzující tečka znamená, že gateway odpovídá. Postup nahoře ukazuje, v jakém kroku připojení jste.",
+  },
+  {
+    target: "gateway-uzel",
+    title: "Celý uzel jedním kliknutím",
+    body: "Uzel je jedna krabička s čidly. Vyberte místnost v záhlaví uzlu a klikněte na Přiřadit vše — teplota, CO₂ i vlhkost se přiřadí naráz.",
+  },
+  {
+    target: "gateway-mapa",
+    title: "Výsledek v mapě",
+    body: "Po přiřazení měří místnosti skutečná (nebo virtuální) čidla. Tady otevřete budovu ve 3D mapě s živými grafy. Tím je průvodce u konce.",
+  },
+];
+
 export function tourSteps(role: Role, phase: TourPhase) {
-  return phase === "aplikace" ? STEPS[role] : FACILITY_STEPS[role];
+  switch (phase) {
+    case "aplikace":
+      return STEPS[role];
+    case "objekt":
+      return FACILITY_STEPS[role];
+    case "senzory":
+      return role === "Verejnost" ? [] : SENSOR_STEPS;
+    case "gateway":
+      return role === "Verejnost" ? [] : GATEWAY_STEPS;
+  }
 }

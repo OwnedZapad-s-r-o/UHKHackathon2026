@@ -8,11 +8,24 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/types/api";
 import { tourSteps, type TourPhase, type TourStep } from "./tour-steps";
 
-// Hotový (nebo přeskočený) průvodce se pamatuje v prohlížeči pro každou roli zvlášť.
+// Hotový (nebo přeskočený) průvodce se pamatuje v prohlížeči pro každou roli a stránku zvlášť.
 // Demo účty ho dostanou po každém přihlášení (?pruvodce=1 z přihlášení), skutečné účty jen napoprvé.
-const SEEN_KEY = (role: Role) => `smartaudit:pruvodce:v1:${role}`;
-// Pokračování průvodce po otevření budovy — přežije navigaci, ne zavření karty
+const SEEN_KEY = (role: Role, phase: TourPhase) => (phase === "aplikace" ? `smartaudit:pruvodce:v1:${role}` : `smartaudit:pruvodce:v1:${role}:${phase}`);
+// Pokračování průvodce na další stránce (budova v mapě, detail gatewaye) — přežije navigaci, ne zavření karty
 const NEXT_PHASE_KEY = "smartaudit:pruvodce:dalsi";
+
+// Stránky s vlastním průvodcem a na co se čeká, než se dá začít (obsah dorazí streamem)
+const PAGE_PHASES: { match: (pathname: string) => boolean; phase: TourPhase; autoStart: boolean }[] = [
+  { match: (p) => p === "/mapa", phase: "aplikace", autoStart: true },
+  { match: (p) => p === "/senzory", phase: "senzory", autoStart: true },
+  { match: (p) => /^\/senzory\/[0-9a-f-]{36}$/i.test(p), phase: "gateway", autoStart: false },
+];
+
+// Pokračovací fáze: na které stránce a na jaký prvek počkat
+const CONTINUATIONS: Partial<Record<TourPhase, { ready: (pathname: string, params: URLSearchParams) => boolean; target: string }>> = {
+  objekt: { ready: (p, params) => p === "/mapa" && params.get("objekt") !== null, target: "panel-zalozky" },
+  gateway: { ready: (p) => /^\/senzory\/[0-9a-f-]{36}$/i.test(p), target: "gateway-stav" },
+};
 
 const CARD_WIDTH = 344;
 const GAP = 16;
@@ -33,43 +46,50 @@ export function AppTour({ role, facility }: AppTourProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [tour, setTour] = useState<ActiveTour | null>(null);
-  // Průvodce aplikací se v jedné relaci stránky sám spustí jen jednou; znovu jen na výslovné ?pruvodce=1
-  const started = useRef(false);
+  // Na každé stránce se průvodce sám spustí jen jednou za relaci; znovu jen na výslovné ?pruvodce=1
+  const started = useRef(new Set<TourPhase>());
 
-  // Kroky, jejichž prvek na stránce není (např. postranní panel na mobilu), se vynechají — počítadlo pak sedí
+  // Kroky, jejichž prvek na stránce není (postranní panel na mobilu, panel jen pro kraj), se vynechají — počítadlo pak sedí.
+  // Závěrečná nabídka „otevřít gateway“ má smysl jen tehdy, když je na stránce nějaká gateway.
   const begin = useCallback(
     (phase: TourPhase) => {
-      const steps = tourSteps(role, phase).filter((step) => !step.target || findTarget(step.target));
+      const steps = tourSteps(role, phase)
+        .filter((step) => !step.target || findTarget(step.target))
+        .map((step) => (step.finale && phase === "senzory" && !gatewayLink() ? { ...step, finale: undefined, body: step.finaleFallback ?? step.body } : step));
       if (steps.length > 0) setTour({ phase, steps, index: 0 });
     },
     [role],
   );
 
-  // Kdy průvodce spustit: ?pruvodce=1 (demo, tlačítko v menu), první návštěva mapy, nebo pokračování v otevřené budově
+  // Kdy průvodce spustit: ?pruvodce=1 (demo, tlačítko), první návštěva stránky, nebo pokračování z předchozí stránky
   useEffect(() => {
-    if (pathname !== "/mapa") return;
+    const pending = readStorage(sessionStorage, NEXT_PHASE_KEY) as TourPhase | null;
+    const continuation = pending ? CONTINUATIONS[pending] : undefined;
 
-    if (readStorage(sessionStorage, NEXT_PHASE_KEY) === "objekt" && searchParams.get("objekt")) {
-      // Panel budovy dorazí streamem — počkat, až je v DOM (nejdéle ~6 s)
+    if (pending && continuation?.ready(pathname, searchParams)) {
+      // Obsah stránky dorazí streamem — počkat, až je prvek v DOM (nejdéle ~6 s)
       let attempts = 0;
       const timer = setInterval(() => {
-        if (findTarget("panel-zalozky") || ++attempts > 30) {
+        if (findTarget(continuation.target) || ++attempts > 30) {
           clearInterval(timer);
           removeStorage(sessionStorage, NEXT_PHASE_KEY);
-          begin("objekt");
+          begin(pending);
         }
       }, 200);
       return () => clearInterval(timer);
     }
 
-    const forced = searchParams.get("pruvodce") === "1";
-    if (!forced && (started.current || readStorage(localStorage, SEEN_KEY(role)))) return;
+    const page = PAGE_PHASES.find((entry) => entry.match(pathname));
+    if (!page) return;
 
-    // Krátká prodleva: mapa a legenda se musí vykreslit, aby je šlo zvýraznit
+    const forced = searchParams.get("pruvodce") === "1";
+    if (!forced && (!page.autoStart || started.current.has(page.phase) || readStorage(localStorage, SEEN_KEY(role, page.phase)))) return;
+
+    // Krátká prodleva: obsah stránky se musí vykreslit, aby šel zvýraznit
     const timer = setTimeout(
       () => {
-        started.current = true;
-        begin("aplikace");
+        started.current.add(page.phase);
+        begin(page.phase);
         if (forced) router.replace(withParams(pathname, searchParams, { pruvodce: null }), { scroll: false });
       },
       forced ? 700 : 1200,
@@ -78,22 +98,32 @@ export function AppTour({ role, facility }: AppTourProps) {
   }, [pathname, searchParams, router, role, begin]);
 
   const close = useCallback(() => {
-    writeStorage(localStorage, SEEN_KEY(role), "1");
+    if (tour) writeStorage(localStorage, SEEN_KEY(role, tour.phase === "objekt" ? "aplikace" : tour.phase), "1");
     setTour(null);
-  }, [role]);
+  }, [role, tour]);
 
-  const openFacility = useCallback(() => {
+  // Poslední krok nabídne pokračovat na další stránce: z mapy do budovy, ze seznamu gatewayí do detailu
+  const continueTour = useCallback(() => {
+    const phase = tour?.phase;
     close();
-    if (!facility) return;
-    writeStorage(sessionStorage, NEXT_PHASE_KEY, "objekt");
-    const panel = role === "Verejnost" ? "telemetrie" : "audit";
-    router.push(`/mapa?okres=${facility.districtCode}&objekt=${facility.id}&panel=${panel}`);
-  }, [close, facility, role, router]);
+
+    if (phase === "aplikace" && facility) {
+      writeStorage(sessionStorage, NEXT_PHASE_KEY, "objekt");
+      const panel = role === "Verejnost" ? "telemetrie" : "audit";
+      router.push(`/mapa?okres=${facility.districtCode}&objekt=${facility.id}&panel=${panel}`);
+    } else if (phase === "senzory") {
+      const href = gatewayLink();
+      if (!href) return;
+      writeStorage(sessionStorage, NEXT_PHASE_KEY, "gateway");
+      router.push(href as `/senzory/${string}`);
+    }
+  }, [close, facility, role, router, tour?.phase]);
 
   if (!tour) return null;
 
   const step = tour.steps[tour.index];
   const isLast = tour.index === tour.steps.length - 1;
+  const canContinue = step.finale && (tour.phase === "senzory" || facility !== null);
 
   return (
     <TourOverlay
@@ -105,10 +135,17 @@ export function AppTour({ role, facility }: AppTourProps) {
       onBack={tour.index > 0 ? () => setTour({ ...tour, index: tour.index - 1 }) : undefined}
       onNext={isLast ? close : () => setTour({ ...tour, index: tour.index + 1 })}
       onClose={close}
-      onFinale={step.finale && facility ? openFacility : undefined}
+      onFinale={canContinue ? continueTour : undefined}
       isLast={isLast}
     />
   );
+}
+
+// Gateway pro pokračování průvodce: přednostně nepřiřazená (na ní jde vyzkoušet hromadné přiřazení), jinak první v seznamu
+function gatewayLink() {
+  const link =
+    document.querySelector<HTMLAnchorElement>('a[data-tour-gateway="neprirazena"]') ?? document.querySelector<HTMLAnchorElement>("a[data-tour-gateway]");
+  return link?.getAttribute("href") ?? null;
 }
 
 type TourOverlayProps = {

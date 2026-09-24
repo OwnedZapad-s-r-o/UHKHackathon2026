@@ -6,6 +6,7 @@ import { getGateway } from "@/lib/api";
 import { TopBar } from "../../_components/top-bar";
 import { brokerHost } from "../broker-host";
 import { GatewayLive } from "../_components/gateway-live";
+import { SensorTourLink } from "../_components/sensor-tour-link";
 import { SetupGuide } from "../_components/setup-guide";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default async function GatewayPage({ params }: PageProps<"/senzory/[id]">
           <ChevronLeft className="size-4" aria-hidden />
           Všechny gatewaye
         </Link>
+        <SensorTourLink href={`/senzory/${gateway.id}?pruvodce=1`} />
       </TopBar>
 
       <main className="min-h-0 flex-1 overflow-y-auto p-6">

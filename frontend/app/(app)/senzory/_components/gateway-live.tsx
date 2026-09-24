@@ -53,12 +53,12 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
               </span>
             )}
           </h1>
-          <Link href={`/mapa?objekt=${gateway.facility.id}`} className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-hk-red hover:underline">
+          <Link href={`/mapa?objekt=${gateway.facility.id}`} data-tour="gateway-mapa" className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-hk-red hover:underline">
             <MapPin className="size-3.5" aria-hidden />
             {gateway.facility.code} · {gateway.facility.name}
           </Link>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div data-tour="gateway-stav" className="flex flex-col items-end gap-2">
           <StatusPill online={gateway.online} lastSeenAt={gateway.lastSeenAt} now={now} />
           <p className="font-mono text-[11px] text-slate-500">
             uzly {gateway.nodes.length > 0 ? gateway.nodes.join(", ") : "—"} · dotaz každých {gateway.pollSeconds} s
