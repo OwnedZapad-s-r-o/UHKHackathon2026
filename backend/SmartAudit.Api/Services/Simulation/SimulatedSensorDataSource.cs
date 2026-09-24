@@ -9,7 +9,7 @@ using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Services.Simulation
 {
-    // Zdroj telemetrie — dnes simulace, později IQRF/MQTT gateway se stejným rozhraním
+    // Simulovaná telemetrie; skutečná čidla chodí přes IQRF gateway (Services/Sensors)
     public interface ISensorDataSource
     {
         Task<int> SyncAsync(DateTimeOffset now, CancellationToken ct);
@@ -36,8 +36,10 @@ namespace SmartAudit.Api.Services.Simulation
             var end = new DateTimeOffset(now.UtcTicks - now.UtcTicks % step.Ticks, TimeSpan.Zero);
             var backfillStart = end.AddDays(-_settings.BackfillDays);
 
+            // Jen aktivní simulovaná čidla — skutečná posílají data sama a zónu, kterou převzala, už simulace nekreslí
             var sensors = await _dbContext.Sensors
                 .AsNoTracking()
+                .Where(s => s.Source == SensorSource.Simulated && s.IsActive)
                 .Select(s => new
                 {
                     s.Id,

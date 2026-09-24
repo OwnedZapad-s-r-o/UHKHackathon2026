@@ -12,6 +12,7 @@ using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Import;
 using SmartAudit.Api.Services.Reports;
+using SmartAudit.Api.Services.Sensors;
 using SmartAudit.Api.Services.Simulation;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
@@ -68,7 +69,14 @@ builder.Services.AddHostedService<DataPipelineService>();
 builder.Services.AddScoped<ISensorProvisioningService, SensorProvisioningService>();
 builder.Services.AddScoped<ISensorDataSource, SimulatedSensorDataSource>();
 builder.Services.AddScoped<IFacilityAuditService, FacilityAuditService>();
+builder.Services.AddSingleton<IAuditTrigger, AuditTrigger>();
 builder.Services.AddHostedService<SensorSimulationService>();
+
+// Skutečná čidla — IQRF Gateway Daemon přes MQTT broker (služba mqtt v docker-compose)
+builder.Services.AddSingleton(builder.Configuration.GetSection(IqrfSettings.SectionName).Get<IqrfSettings>() ?? new IqrfSettings());
+builder.Services.AddSingleton<IIqrfGatewayState, IqrfGatewayState>();
+builder.Services.AddScoped<ISensorIngestService, SensorIngestService>();
+builder.Services.AddHostedService<IqrfGatewayService>();
 
 // PDF reporty — QuestPDF Community licence (zdarma pro malé organizace), písmo Hradec a logo HK
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;

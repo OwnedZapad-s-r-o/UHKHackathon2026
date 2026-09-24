@@ -9,13 +9,15 @@ namespace SmartAudit.Api.Services.Simulation
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IPipelineStateService _state;
         private readonly SimulationSettings _settings;
+        private readonly IAuditTrigger _auditTrigger;
         private readonly ILogger<SensorSimulationService> _logger;
 
-        public SensorSimulationService(IServiceScopeFactory scopeFactory, IPipelineStateService state, SimulationSettings settings, ILogger<SensorSimulationService> logger)
+        public SensorSimulationService(IServiceScopeFactory scopeFactory, IPipelineStateService state, SimulationSettings settings, IAuditTrigger auditTrigger, ILogger<SensorSimulationService> logger)
         {
             _scopeFactory = scopeFactory;
             _state = state;
             _settings = settings;
+            _auditTrigger = auditTrigger;
             _logger = logger;
         }
 
@@ -54,7 +56,8 @@ namespace SmartAudit.Api.Services.Simulation
 
                     var written = await provider.GetRequiredService<ISensorDataSource>().SyncAsync(now, ct);
 
-                    if (written > 0 || firstRun)
+                    // Přepočet i po nových měřeních ze skutečných čidel (IQRF), ne jen po simulaci
+                    if (written > 0 || firstRun || _auditTrigger.TryConsume())
                         await provider.GetRequiredService<IFacilityAuditService>().EvaluateAllAsync(now, ct);
 
                     firstRun = false;

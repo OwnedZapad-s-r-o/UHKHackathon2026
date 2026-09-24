@@ -69,12 +69,7 @@ namespace SmartAudit.Api.Features.Facilities.GetHeatmap
                 .ToList();
 
             var values = cells.Values.ToList();
-            var unit = request.Metric switch
-            {
-                SensorMetric.Temperature => "°C",
-                SensorMetric.Co2 => "ppm",
-                _ => "kWh/h",
-            };
+            var unit = SensorUnits.Of(request.Metric);
 
             var dto = new GetHeatmapDto(request.Metric, unit, values.Count > 0 ? Math.Round(values.Min(), 1) : null, values.Count > 0 ? Math.Round(values.Max(), 1) : null, days);
 

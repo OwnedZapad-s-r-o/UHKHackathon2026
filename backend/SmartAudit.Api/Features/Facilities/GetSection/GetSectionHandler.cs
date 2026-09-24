@@ -13,7 +13,8 @@ namespace SmartAudit.Api.Features.Facilities.GetSection
 
     public record GetSectionDto(int Floors, bool FloorsEstimated, double Co2Limit, IReadOnlyCollection<string> Wings, IReadOnlyCollection<SectionZoneDto> Zones, DateTimeOffset? UpdatedAt);
 
-    public record SectionZoneDto(Guid Id, string Name, ZoneType Type, int Floor, string Wing, bool IsHotspot, double? Temperature, double? Co2);
+    // Live = v zóně měří skutečné čidlo (IQRF); vlhkost jen tam, kde ji čidlo posílá
+    public record SectionZoneDto(Guid Id, string Name, ZoneType Type, int Floor, string Wing, bool IsHotspot, double? Temperature, double? Co2, double? Humidity, bool Live);
 
     // Schematický řez podlaží × zóny s posledními hodnotami (F21) — dispozice je schéma, ne reálný plán
     public class GetSectionHandler : IRequestHandler<GetSectionCommand, Response<GetSectionDto>>
@@ -57,6 +58,7 @@ namespace SmartAudit.Api.Features.Facilities.GetSection
                 {
                     s.ZoneId,
                     s.Metric,
+                    Live = s.Source == SensorSource.Physical && s.IsActive,
                     Last = _dbContext.SensorReadings
                         .Where(r => r.SensorId == s.Id && r.Timestamp >= since)
                         .OrderByDescending(r => r.Timestamp)
@@ -65,10 +67,24 @@ namespace SmartAudit.Api.Features.Facilities.GetSection
                 })
                 .ToListAsync(ct);
 
-            double? ValueFor(Guid zoneId, SensorMetric metric) => latest.FirstOrDefault(l => l.ZoneId == zoneId && l.Metric == metric)?.Last?.Value;
+            // Nejnovější hodnota zóny — po připojení skutečného čidla přebije poslední simulovanou
+            double? ValueFor(Guid zoneId, SensorMetric metric) => latest
+                .Where(l => l.ZoneId == zoneId && l.Metric == metric && l.Last != null)
+                .OrderByDescending(l => l.Last!.Timestamp)
+                .FirstOrDefault()?.Last?.Value;
 
             var sectionZones = zones
-                .Select(z => new SectionZoneDto(z.Id, z.Name, z.Type, z.Floor, z.Wing, z.IsHotspot, ValueFor(z.Id, SensorMetric.Temperature), ValueFor(z.Id, SensorMetric.Co2)))
+                .Select(z => new SectionZoneDto(
+                    z.Id,
+                    z.Name,
+                    z.Type,
+                    z.Floor,
+                    z.Wing,
+                    z.IsHotspot,
+                    ValueFor(z.Id, SensorMetric.Temperature),
+                    ValueFor(z.Id, SensorMetric.Co2),
+                    ValueFor(z.Id, SensorMetric.Humidity),
+                    latest.Any(l => l.ZoneId == z.Id && l.Live)))
                 .ToList();
 
             var floors = Math.Max(facility.Floors ?? 1, zones.Count > 0 ? zones.Max(z => z.Floor) + 1 : 1);

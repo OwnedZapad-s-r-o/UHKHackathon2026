@@ -21,7 +21,8 @@ namespace SmartAudit.Api.Features.Facilities.GetTelemetry
 
     public record GetTelemetryDto(SensorMetric Metric, string Unit, TelemetryBucket Bucket, DateTimeOffset From, DateTimeOffset To, IReadOnlyCollection<TelemetrySeriesDto> Series);
 
-    public record TelemetrySeriesDto(Guid? ZoneId, string Name, int? Floor, bool IsHotspot, IReadOnlyCollection<TelemetryPointDto> Points);
+    // Live = zónu měří skutečné čidlo (IQRF), ne simulace
+    public record TelemetrySeriesDto(Guid? ZoneId, string Name, int? Floor, bool IsHotspot, bool Live, IReadOnlyCollection<TelemetryPointDto> Points);
 
     public record TelemetryPointDto(DateTimeOffset Timestamp, double Value);
 
@@ -65,6 +66,7 @@ namespace SmartAudit.Api.Features.Facilities.GetTelemetry
                 {
                     s.Id,
                     s.ZoneId,
+                    Live = s.Source == SensorSource.Physical && s.IsActive,
                     Name = s.Zone != null ? s.Zone.Name : "Celý objekt",
                     Floor = s.Zone != null ? s.Zone.Floor : (int?)null,
                     Order = s.Zone != null ? s.Zone.Order : 0,
@@ -83,7 +85,10 @@ namespace SmartAudit.Api.Features.Facilities.GetTelemetry
 
             var bySensor = readings.GroupBy(r => r.SensorId).ToDictionary(g => g.Key, g => g.Select(r => new TelemetryPointDto(r.Timestamp, r.Value)).ToList());
 
+            // Jedna série za zónu — po připojení skutečného čidla na ni navazuje místo simulace
             var series = sensors
+                .GroupBy(s => s.ZoneId)
+                .Select(zone => zone.First() with { Live = zone.Any(s => s.Live) })
                 .OrderBy(s => s.Floor)
                 .ThenBy(s => s.Order)
                 .Select(s => new TelemetrySeriesDto(
@@ -91,10 +96,14 @@ namespace SmartAudit.Api.Features.Facilities.GetTelemetry
                     s.Name,
                     s.Floor,
                     s.IsHotspot,
-                    Aggregate(bySensor.GetValueOrDefault(s.Id) ?? [], request.Bucket, request.Metric)))
+                    s.Live,
+                    Aggregate(
+                        sensors.Where(z => z.ZoneId == s.ZoneId).SelectMany(z => bySensor.GetValueOrDefault(z.Id) ?? []).OrderBy(p => p.Timestamp).ToList(),
+                        request.Bucket,
+                        request.Metric)))
                 .ToList();
 
-            var dto = new GetTelemetryDto(request.Metric, Unit(request.Metric, request.Bucket), request.Bucket, from, to, series);
+            var dto = new GetTelemetryDto(request.Metric, SensorUnits.Of(request.Metric, request.Bucket == TelemetryBucket.Day), request.Bucket, from, to, series);
 
             return Response.Success(dto);
         }
@@ -119,16 +128,6 @@ namespace SmartAudit.Api.Features.Facilities.GetTelemetry
                     SchoolCalendar.LocalMidnightUtc(g.Key),
                     Math.Round(metric == SensorMetric.Power ? g.Sum(p => p.Value) : g.Average(p => p.Value), 1)))
                 .ToList();
-        }
-
-        private static string Unit(SensorMetric metric, TelemetryBucket bucket)
-        {
-            return metric switch
-            {
-                SensorMetric.Temperature => "°C",
-                SensorMetric.Co2 => "ppm",
-                _ => bucket == TelemetryBucket.Day ? "kWh/den" : "kWh/h",
-            };
         }
     }
 }
