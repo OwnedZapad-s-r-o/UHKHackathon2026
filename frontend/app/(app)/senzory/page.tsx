@@ -155,10 +155,11 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
                 Nemáte hardware? Vyzkoušejte to s emulátorem
               </h2>
               <p className="mt-1 text-[13px] text-slate-600">
-                Emulátor se chová jako IQRF gateway se dvěma uzly (teplota, CO₂, vlhkost, osvětlení a pohyb). Spusťte ho a ve formuláři zadejte id{" "}
-                <code className="rounded bg-slate-100 px-1 font-mono text-[12px] font-bold">{EMULATOR_ID}</code>.
+                Emulátor se chová jako IQRF gateway se dvěma uzly (teplota, CO₂, vlhkost, osvětlení a pohyb). Ve formuláři zadejte id{" "}
+                <code className="rounded bg-slate-100 px-1 font-mono text-[12px] font-bold">{EMULATOR_ID}</code> — broker pustí jen připojené gatewaye.
+                Heslo a hotový příkaz pak najdete na detailu gatewaye.
               </p>
-              <Code code={emulatorCommand(host, EMULATOR_ID)} />
+              <Code code={emulatorCommand(host, EMULATOR_ID, { tls: data.broker.publicTls, port: data.broker.publicPort })} />
             </section>
           </div>
 

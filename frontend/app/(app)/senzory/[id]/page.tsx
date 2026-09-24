@@ -33,7 +33,7 @@ export default async function GatewayPage({ params }: PageProps<"/senzory/[id]">
       <main className="min-h-0 flex-1 overflow-y-auto p-6">
         <GatewayLive
           initial={gateway}
-          guide={<SetupGuide brokerHost={host} brokerPort={gateway.broker.publicPort} gatewayId={gateway.gatewayId} />}
+          guide={<SetupGuide brokerHost={host} broker={gateway.broker} gatewayId={gateway.gatewayId} credentials={gateway.credentials} />}
         />
       </main>
     </>

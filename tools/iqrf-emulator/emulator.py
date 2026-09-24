@@ -5,16 +5,25 @@ odebírá gateway/{id}/iqrf/requests a na dotazy aplikace odpovídá do gateway/
 stejným JSON formátem jako skutečný daemon (IQRF JSON API).
 
     pip install -r tools/iqrf-emulator/requirements.txt
-    python tools/iqrf-emulator/emulator.py --gateway demo-gw
+    python tools/iqrf-emulator/emulator.py --gateway ucebna-1 --password <heslo gatewaye>
+
+Broker nepouští anonymy: jméno = id gatewaye, heslo ukáže aplikace u gatewaye (Senzory → detail).
+Místo hesla lze zadat --device-secret (MQTT_DEVICE_SECRET z .env) — emulátor si heslo odvodí stejně jako aplikace.
+Přes síť šifrovaně: --port 8883 --tls --cafile smartaudit-ca.crt (certifikát CA ke stažení v aplikaci).
 
 Uzel 1 — učebna: teplota, CO₂, vlhkost. Uzel 2 — chodba: teplota, osvětlení, pohyb (PIR).
 CO₂ v učebně roste a po „vyvětrání“ spadne, aby graf v aplikaci žil.
 """
 
 import argparse
+import base64
+import hashlib
+import hmac
 import json
 import math
+import os
 import random
+import ssl
 import time
 
 import paho.mqtt.client as mqtt
@@ -82,18 +91,35 @@ def envelope(m_type, msg_id, n_adr, result, status=0, status_str="ok"):
     return {"mType": m_type, "data": {"msgId": msg_id, "rsp": rsp, "insId": "iqrfgd2-emulator", "status": status, "statusStr": status_str}}
 
 
+def gateway_password(device_secret, gateway_id):
+    """Stejné odvození jako GatewayCredentials v aplikaci: HMAC-SHA256, base64url, 24 znaků."""
+    digest = hmac.new(device_secret.encode("utf-8"), f"mqtt:{gateway_id}".encode("utf-8"), hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")[:24]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Emulátor IQRF Gateway Daemonu (MQTT)")
     parser.add_argument("--host", default="localhost", help="MQTT broker (výchozí localhost)")
-    parser.add_argument("--port", type=int, default=1883)
-    parser.add_argument("--gateway", default="demo-gw", help="Id gatewaye v topicu gateway/{id}/iqrf/...")
+    parser.add_argument("--port", type=int, default=1883, help="1883 = na tomto počítači, 8883 = TLS přes síť")
+    parser.add_argument("--gateway", default="ucebna-1", help="Id gatewaye v topicu gateway/{id}/iqrf/... (musí být připojená v aplikaci)")
+    parser.add_argument("--password", help="Heslo gatewaye z aplikace (jméno = id gatewaye)")
+    parser.add_argument("--device-secret", default=os.environ.get("MQTT_DEVICE_SECRET"), help="Místo hesla: MQTT_DEVICE_SECRET, heslo se odvodí")
+    parser.add_argument("--tls", action="store_true", help="Šifrované spojení (port 8883)")
+    parser.add_argument("--cafile", help="Certifikát CA brokeru pro ověření serveru (smartaudit-ca.crt)")
     args = parser.parse_args()
+
+    password = args.password or (gateway_password(args.device_secret, args.gateway) if args.device_secret else None)
+    if not password:
+        parser.error("zadejte --password (z aplikace) nebo --device-secret")
 
     request_topic = f"gateway/{args.gateway}/iqrf/requests"
     response_topic = f"gateway/{args.gateway}/iqrf/responses"
     room = Room()
 
     def on_connect(client, _userdata, _flags, reason_code, _properties):
+        if reason_code.is_failure:
+            print(f"Broker odmítl připojení: {reason_code} — je gateway „{args.gateway}“ připojená v aplikaci a sedí heslo?")
+            return
         print(f"Připojeno k {args.host}:{args.port} ({reason_code}), poslouchám {request_topic}")
         client.subscribe(request_topic)
 
@@ -107,6 +133,9 @@ def main():
         print(f"← {request.get('mType')} uzel {request.get('data', {}).get('req', {}).get('nAdr')}  → odpověď {reply['data']['statusStr']}")
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"iqrf-emulator-{args.gateway}")
+    client.username_pw_set(args.gateway, password)
+    if args.tls:
+        client.tls_set(ca_certs=args.cafile, tls_version=ssl.PROTOCOL_TLS_CLIENT)
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(args.host, args.port)

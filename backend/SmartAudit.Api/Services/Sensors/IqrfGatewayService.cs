@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MQTTnet;
+using MQTTnet.Protocol;
 using SmartAudit.Api.Services.Simulation;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain.Helpers;
@@ -10,12 +11,16 @@ namespace SmartAudit.Api.Services.Sensors
     // Most mezi aplikací a IQRF Gateway Daemonem přes MQTT:
     // - odebírá gateway/+/iqrf/responses a každou odpověď předá SensorIngestService,
     // - každé gatewayi v databázi posílá v jejím intervalu dotaz na hodnoty senzorů všech uzlů
-    //   (a dokud uzly nezná, dotaz na spárované uzly koordinátoru).
+    //   (a dokud uzly nezná, dotaz na spárované uzly koordinátoru),
+    // - na brokeru drží účty gatewayí (Dynamic Security): gateway v databázi = účet s právy jen na její topicy.
     public class IqrfGatewayService : BackgroundService
     {
         private static readonly TimeSpan DeviceRefresh = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(5);
         private static readonly TimeSpan DiscoveryInterval = TimeSpan.FromSeconds(5);
+
+        // Pevné id klienta + trvalá relace: odpovědi s QoS 1, které dorazí během restartu backendu, broker podrží
+        private const string ClientId = "smartaudit-backend";
 
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IPipelineStateService _pipeline;
@@ -24,6 +29,9 @@ namespace SmartAudit.Api.Services.Sensors
         private readonly ILogger<IqrfGatewayService> _logger;
 
         private readonly Dictionary<Guid, DateTimeOffset> _nextPoll = [];
+
+        // Gatewaye, kterým už broker v tomto připojení založil účet
+        private readonly HashSet<string> _provisioned = [];
 
         public IqrfGatewayService(IServiceScopeFactory scopeFactory, IPipelineStateService pipeline, IIqrfGatewayState state, IqrfSettings settings, ILogger<IqrfGatewayService> logger)
         {
@@ -67,6 +75,7 @@ namespace SmartAudit.Api.Services.Sensors
                     {
                         devices = await LoadDevicesAsync(ct);
                         devicesLoadedAt = now;
+                        await SyncAccountsAsync(client, devices, ct);
                     }
 
                     foreach (var device in devices.Where(d => _nextPoll.GetValueOrDefault(d.Id) <= now))
@@ -93,21 +102,55 @@ namespace SmartAudit.Api.Services.Sensors
         {
             var options = new MqttClientOptionsBuilder()
                 .WithTcpServer(_settings.Host, _settings.Port)
-                .WithClientId($"smartaudit-{Environment.MachineName}-{Guid.NewGuid():N}"[..40])
-                .WithCleanSession();
+                .WithClientId(ClientId)
+                .WithCleanSession(false);
 
             if (!string.IsNullOrEmpty(_settings.Username))
                 options = options.WithCredentials(_settings.Username, _settings.Password);
 
+            if (_settings.UseTls)
+                options = options.WithTlsOptions(tls => tls.UseTls());
+
             await client.ConnectAsync(options.Build(), ct);
 
             var subscription = factory.CreateSubscribeOptionsBuilder()
-                .WithTopicFilter(filter => filter.WithTopic(_settings.ResponseTopicFilter))
+                .WithTopicFilter(filter => filter.WithTopic(_settings.ResponseTopicFilter).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce))
+                .WithTopicFilter(filter => filter.WithTopic(DynamicSecurity.ResponseTopic))
                 .Build();
             await client.SubscribeAsync(subscription, ct);
 
+            // Po (novém) připojení broker nemusí účty znát — např. po změně hesla backendu se konfigurace založí znovu
+            _provisioned.Clear();
+            await client.PublishStringAsync(DynamicSecurity.CommandTopic, DynamicSecurity.GrantBackendRequests(string.Format(_settings.RequestTopicTemplate, "+")), cancellationToken: ct);
+
             _state.SetBrokerStatus(true, null);
             _logger.LogInformation("Připojeno k MQTT brokeru {Host}:{Port}, odebírám {Topic}", _settings.Host, _settings.Port, _settings.ResponseTopicFilter);
+        }
+
+        // Účty na brokeru kopírují gatewaye v databázi: nová gateway dostane účet, odebraná o něj přijde
+        private async Task SyncAccountsAsync(IMqttClient client, List<PolledDevice> devices, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(_settings.DeviceSecret))
+                return;
+
+            foreach (var device in devices.Where(d => !_provisioned.Contains(d.GatewayId)))
+            {
+                var credentials = GatewayCredentials.For(_settings.DeviceSecret, device.GatewayId);
+                var payload = DynamicSecurity.ProvisionGateway(
+                    credentials,
+                    string.Format(_settings.RequestTopicTemplate, device.GatewayId),
+                    string.Format(_settings.ResponseTopicTemplate, device.GatewayId));
+
+                await client.PublishStringAsync(DynamicSecurity.CommandTopic, payload, cancellationToken: ct);
+                _provisioned.Add(device.GatewayId);
+            }
+
+            var current = devices.Select(d => d.GatewayId).ToHashSet();
+            foreach (var removed in _provisioned.Where(id => !current.Contains(id)).ToList())
+            {
+                await client.PublishStringAsync(DynamicSecurity.CommandTopic, DynamicSecurity.RemoveGateway(removed), cancellationToken: ct);
+                _provisioned.Remove(removed);
+            }
         }
 
         private async Task<List<PolledDevice>> LoadDevicesAsync(CancellationToken ct)
@@ -147,6 +190,13 @@ namespace SmartAudit.Api.Services.Sensors
         // gateway/{id}/iqrf/responses → id gatewaye je druhý segment
         private async Task HandleMessageAsync(string topic, string payload)
         {
+            if (topic == DynamicSecurity.ResponseTopic)
+            {
+                foreach (var error in DynamicSecurity.Errors(payload))
+                    _logger.LogWarning("Dynamic Security na brokeru hlásí chybu: {Error}", error);
+                return;
+            }
+
             var segments = topic.Split('/');
             if (segments.Length < 2 || string.IsNullOrWhiteSpace(segments[1]))
                 return;

@@ -15,13 +15,21 @@ services:
       timeout: 5s
       retries: 20
 
-  # MQTT broker pro IQRF Gateway Daemon — gateway v síti se připojí na IP tohoto počítače, port 1883
+  # MQTT broker pro IQRF Gateway Daemon — gateway v síti se připojí na IP tohoto počítače, port 8883 (TLS, jméno a heslo).
+  # Nešifrovaný port 1883 je jen pro backend v síti Dockeru a nástroje na tomto počítači (127.0.0.1).
   mqtt:
-    image: eclipse-mosquitto:2
+    build:
+      context: ./mqtt
+    environment:
+      MQTT_BACKEND_USERNAME: smartaudit-backend
+      MQTT_BACKEND_PASSWORD: ${MQTT_BACKEND_PASSWORD:-local-demo-mqtt-backend-password}
+      MQTT_TLS_HOSTS: ${IQRF_BROKER_PUBLIC_HOST:-}
     volumes:
-      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt_data:/mosquitto/data
+      - mqtt_certs:/mosquitto/certs
     ports:
-      - "1883:1883"
+      - "${MQTT_PLAIN_BIND:-127.0.0.1}:1883:1883"
+      - "8883:8883"
 
   api:
     build:
@@ -42,9 +50,15 @@ services:
       AzureOpenAiSettings__ApiKey: ${AZURE_OPENAI_API_KEY:-}
       AzureOpenAiSettings__Deployment: ${AZURE_OPENAI_DEPLOYMENT:-}
       IqrfSettings__Host: mqtt
+      IqrfSettings__Username: smartaudit-backend
+      IqrfSettings__Password: ${MQTT_BACKEND_PASSWORD:-local-demo-mqtt-backend-password}
+      IqrfSettings__DeviceSecret: ${MQTT_DEVICE_SECRET:-local-demo-mqtt-device-secret-0123456789}
       IqrfSettings__PublicHost: ${IQRF_BROKER_PUBLIC_HOST:-}
+      IqrfSettings__CaCertificatePath: /mqtt-certs/ca.crt
     volumes:
       - ./seed:/seed
+      # Jen ke čtení — aplikace nabídne správci ke stažení veřejný certifikát CA pro gateway
+      - mqtt_certs:/mqtt-certs:ro
     ports:
       - "8080:8080"
 
@@ -63,12 +77,16 @@ services:
 
   # Volitelný emulátor IQRF gatewaye (Python) bez nutnosti instalovat Python na počítač:
   # docker compose --profile emulator up
+  # Gateway „ucebna-1“ musí být v aplikaci připojená (Senzory → Připojit), jinak ji broker nepustí.
+  # Heslo gatewaye si emulátor odvodí ze stejného tajemství jako backend.
   emulator:
     image: python:3.12-slim
     profiles: ["emulator"]
     working_dir: /app
     volumes:
       - ./tools/iqrf-emulator:/app
+    environment:
+      MQTT_DEVICE_SECRET: ${MQTT_DEVICE_SECRET:-local-demo-mqtt-device-secret-0123456789}
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt && python emulator.py --host mqtt --gateway ucebna-1"
     depends_on:
@@ -76,3 +94,5 @@ services:
 
 volumes:
   db_data:
+  mqtt_data:
+  mqtt_certs:
