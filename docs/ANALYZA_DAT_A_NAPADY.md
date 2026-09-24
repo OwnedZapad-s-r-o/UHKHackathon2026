@@ -93,7 +93,8 @@ doprava, ambulance, turistické POI a sady o firmách.
 
 - **Simulovaná telemetrie:** v ukázce vždy říct nahlas, co je simulace a co skutečné čidlo.
   Aplikace to rozlišuje odznakem **živě**.
-- **Odhad ztráty v Kč** zatím stojí na simulačním profilu, ne na měření. Odpověď na dotaz:
-  „Po připojení čidel se počítá z naměřených hodin přetápění.“ To je nápad č. 6.
+- **Odhad ztráty v Kč** se počítá z naměřené vnitřní teploty (hodiny přetápění mimo provoz × tepelná ztráta budovy
+  z plochy a stáří v ČÚZK × cena tepla), ne ze simulačního profilu. Kde čidlo chybí, jsou „naměřené“ hodnoty simulované —
+  po připojení skutečného čidla, které ukáže útlum, ztráta klesne k nule.
 - **Bezpečnost MQTT:** broker nepouští anonymy — každá gateway má vlastní účet s právy jen na své topicy
   a přes síť se připojuje šifrovaně (TLS, port 8883). Podrobnosti v `docs/SENZORY_IQRF.md`, kapitola 8.
