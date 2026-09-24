@@ -95,7 +95,7 @@ function AnomalyCard({ facility, index }: { facility: FacilityListItem; index: n
           </div>
         )}
         <Link
-          href={`/?objekt=${facility.id}&panel=audit`}
+          href={`/mapa?objekt=${facility.id}&panel=audit`}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[13px] transition-colors hover:bg-slate-100"
         >
           <MapPin className="size-3.5" aria-hidden />

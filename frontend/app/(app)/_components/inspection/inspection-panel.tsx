@@ -43,7 +43,7 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
           PDF
         </a>
         <Link
-          href={withParams("/", searchParams, { objekt: null, panel: null })}
+          href={withParams("/mapa", searchParams, { objekt: null, panel: null })}
           scroll={false}
           aria-label="Zrušit výběr objektu"
           title="Zrušit výběr objektu (Esc)"
@@ -59,7 +59,7 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
         {PANEL_TABS.map(({ key, label }) => (
           <Link
             key={key}
-            href={withParams("/", searchParams, { panel: key })}
+            href={withParams("/mapa", searchParams, { panel: key })}
             scroll={false}
             aria-current={tab === key ? "page" : undefined}
             className={cn(

@@ -17,7 +17,7 @@ export function SidebarNav({ counts }: SidebarNavProps) {
   const issues = searchParams.get("zjisteni") === "1" ? "?zjisteni=1" : "";
 
   const items: { href: string; label: string; icon: LucideIcon; badge?: number }[] = [
-    { href: "/", label: "Mapa", icon: MapPin },
+    { href: "/mapa", label: "Mapa", icon: MapPin },
     { href: "/portfolio", label: "Portfolio", icon: Building2, badge: counts.portfolio },
     { href: "/anomalie", label: "Anomálie", icon: AlertTriangle, badge: counts.anomalies },
     { href: "/reporty", label: "Reporty", icon: FileDown },
@@ -29,7 +29,7 @@ export function SidebarNav({ counts }: SidebarNavProps) {
   return (
     <nav className="mt-8 flex flex-col gap-0.5" aria-label="Hlavní navigace">
       {items.map(({ href, label, icon: Icon, badge }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        const active = pathname.startsWith(href);
 
         return (
           <Link

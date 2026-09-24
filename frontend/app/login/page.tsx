@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage() {
-  if (await getSession()) redirect("/");
+  if (await getSession()) redirect("/mapa");
 
   return (
     <main className="flex flex-1 items-center justify-center bg-muted/40 p-4">

@@ -40,7 +40,7 @@ export async function demoLogin(_prevState: LoginState, formData: FormData): Pro
   }
 
   await startSession(result.data);
-  redirect("/");
+  redirect("/mapa");
 }
 
 export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
@@ -57,7 +57,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   await startSession(result.data);
-  redirect("/");
+  redirect("/mapa");
 }
 
 export async function logout() {
