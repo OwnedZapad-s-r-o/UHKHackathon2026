@@ -15,6 +15,14 @@ services:
       timeout: 5s
       retries: 20
 
+  # MQTT broker pro IQRF Gateway Daemon — gateway v síti se připojí na IP tohoto počítače, port 1883
+  mqtt:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "1883:1883"
+
   api:
     build:
       context: ./backend
@@ -22,6 +30,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mqtt:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -31,6 +41,8 @@ services:
       AzureOpenAiSettings__Endpoint: ${AZURE_OPENAI_ENDPOINT:-}
       AzureOpenAiSettings__ApiKey: ${AZURE_OPENAI_API_KEY:-}
       AzureOpenAiSettings__Deployment: ${AZURE_OPENAI_DEPLOYMENT:-}
+      IqrfSettings__Host: mqtt
+      IqrfSettings__PublicHost: ${IQRF_BROKER_PUBLIC_HOST:-}
     volumes:
       - ./seed:/seed
     ports:
