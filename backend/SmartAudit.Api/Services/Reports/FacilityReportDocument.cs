@@ -22,6 +22,7 @@ namespace SmartAudit.Api.Services.Reports
         IReadOnlyList<SectionZone> Zones,
         double Co2Limit,
         AiAnalysisSection? AiAnalysis,
+        IReadOnlyList<MapDistrict> Districts,
         DateTimeOffset GeneratedAt);
 
     // Energetický audit jednoho objektu — karta, zjištění, grafy telemetrie, budova a kontext z otevřených dat
@@ -72,9 +73,20 @@ namespace SmartAudit.Api.Services.Reports
                     title.Item().PaddingTop(2).Text(facility.Name).FontSize(18).Bold();
                     title.Item().PaddingTop(2).Text(facility.Address.Label).FontSize(9).FontColor(ReportStyles.Muted);
                 });
-                row.ConstantItem(120).AlignRight().AlignTop()
-                    .Background(status.Background).Border(1).BorderColor(status.Foreground).CornerRadius(10).PaddingVertical(4).PaddingHorizontal(8)
-                    .AlignCenter().Text(status.Label).FontSize(8.5f).Bold().FontColor(status.Foreground);
+                // Stav a lokalizační mapka — kde v kraji objekt leží (okres zvýrazněný)
+                row.ConstantItem(150).Column(side =>
+                {
+                    side.Item().AlignRight().Width(120)
+                        .Background(status.Background).Border(1).BorderColor(status.Foreground).CornerRadius(10).PaddingVertical(4).PaddingHorizontal(8)
+                        .AlignCenter().Text(status.Label).FontSize(8.5f).Bold().FontColor(status.Foreground);
+                    side.Item().PaddingTop(6).Svg(ReportCharts.DistrictMap(
+                        _data.Districts,
+                        [new MapPoint(facility.Longitude, facility.Latitude, assessment?.Status ?? AuditStatus.Nominal)],
+                        facility.Address.DistrictCode,
+                        150,
+                        88,
+                        detailed: false));
+                });
             });
 
             // Ukazatele

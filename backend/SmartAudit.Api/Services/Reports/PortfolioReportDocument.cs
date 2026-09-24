@@ -7,7 +7,7 @@ using SmartAudit.Core.Domain.Enums;
 
 namespace SmartAudit.Api.Services.Reports
 {
-    public record PortfolioReportData(IReadOnlyList<GetFacilityDto> Facilities, string? DistrictName, bool OnlyIssues, bool MoneyVisible, DateTimeOffset GeneratedAt);
+    public record PortfolioReportData(IReadOnlyList<GetFacilityDto> Facilities, string? DistrictCode, string? DistrictName, bool OnlyIssues, bool MoneyVisible, IReadOnlyList<MapDistrict> Districts, DateTimeOffset GeneratedAt);
 
     // Přehled portfolia pro investiční odbor — souhrn, ztráty podle ORP, pořadí objektů
     public class PortfolioReportDocument : IDocument
@@ -68,6 +68,16 @@ namespace SmartAudit.Api.Services.Reports
                 Kpi(row.RelativeItem(), "Kritických anomálií", facilities.Count(f => f.Status == AuditStatus.Critical).ToString(), "#991B1B");
                 Kpi(row.RelativeItem(), "Varování", facilities.Count(f => f.Status == AuditStatus.Warning).ToString(), "#92400E");
                 Kpi(row.RelativeItem(), "Odhad ztrát / rok", _data.MoneyVisible ? facilities.Sum(f => f.AnnualLossCzk ?? 0).ToString("C0", Cs) : "jen pro kraj", "#991B1B");
+            });
+
+            // Mapa okresů — barva podle podílu objektů se zjištěním, vybraný okres zvýrazněný
+            column.Item().ShowEntire().Column(map =>
+            {
+                map.Item().SectionTitle(_data.DistrictName == null ? "Okresy kraje" : $"Okres {_data.DistrictName} v kraji");
+                map.Item().Svg(ReportCharts.DistrictMap(
+                    _data.Districts,
+                    facilities.Select(f => new MapPoint(f.Longitude, f.Latitude, f.Status)).ToList(),
+                    _data.DistrictCode));
             });
 
             // Druhy objektů
