@@ -27,7 +27,7 @@ function Tile({ label, value, className }: { label: string; value: string; class
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <p className="text-[11px] text-slate-500">{label}</p>
-      <p className={cn("mt-1.5 text-2xl font-bold tracking-tight", className)}>{value}</p>
+      <p className={cn("mt-1.5 text-xl font-bold tracking-tight break-words sm:text-2xl", className)}>{value}</p>
     </div>
   );
 }
