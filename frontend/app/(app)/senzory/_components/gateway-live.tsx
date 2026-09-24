@@ -387,7 +387,7 @@ function ChannelRow({ gatewayId, channel, zones, onAssigned, now }: ChannelRowPr
             type="button"
             onClick={save}
             disabled={!zone || isPending}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-hk-accent px-3 text-[12.5px] font-bold text-white transition-colors hover:bg-hk-red disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-hk-red px-3 text-[12.5px] font-bold text-white transition-colors hover:bg-hk-red-dark disabled:opacity-50"
           >
             {isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
             {assigned ? "Přesunout" : "Přiřadit"}

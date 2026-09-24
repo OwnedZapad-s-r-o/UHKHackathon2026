@@ -70,12 +70,12 @@ export function MapFilterBar({ selectedFacility }: { selectedFacility: SelectedF
           </div>
 
           <div className="@4xl:hidden">
-            <DistrictSelect value={district ?? WHOLE_REGION} onValueChange={(next) => selectDistrict(next === WHOLE_REGION ? null : next)} className="h-8.5 min-w-40" />
+            <DistrictSelect value={district ?? WHOLE_REGION} onValueChange={(next) => selectDistrict(next === WHOLE_REGION ? null : next)} className="h-9 min-w-40" />
           </div>
         </>
       )}
 
-      <InputGroup className="ml-auto h-8.5 w-52 min-w-0 shrink border-slate-300 bg-white">
+      <InputGroup className="ml-auto h-9 w-52 min-w-0 shrink border-slate-300 bg-white">
         <InputGroupAddon>
           <Search className="text-slate-400" aria-hidden />
         </InputGroupAddon>
@@ -104,7 +104,7 @@ function DistrictChip({ active, onClick, children }: DistrictChipProps) {
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "h-8.5 shrink-0 rounded-lg border px-2.5 text-[13px] whitespace-nowrap transition-colors",
+        "h-9 shrink-0 rounded-lg border px-2.5 text-[13px] whitespace-nowrap transition-colors",
         active ? "border-hk-blue bg-hk-blue font-bold text-white" : "border-slate-200 bg-white text-hk-navy hover:bg-slate-100",
       )}
     >

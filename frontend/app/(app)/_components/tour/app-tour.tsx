@@ -331,7 +331,7 @@ function PrimaryButton({ ref, onClick, children }: { ref: React.Ref<HTMLButtonEl
       ref={ref}
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-hk-accent px-4 py-2 text-[13px] font-bold text-white whitespace-nowrap transition-colors hover:bg-hk-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hk-red"
+      className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-hk-red px-4 py-2 text-[13px] font-bold text-white whitespace-nowrap transition-colors hover:bg-hk-red-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hk-red"
     >
       {children}
     </button>

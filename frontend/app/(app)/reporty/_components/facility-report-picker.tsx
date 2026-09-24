@@ -39,7 +39,7 @@ export function FacilityReportPicker({ options }: { options: FacilityOption[] })
       <a
         href={selected ? `/reporty/objekt/${selected.value}` : undefined}
         aria-disabled={!selected}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-hk-accent px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red aria-disabled:pointer-events-none aria-disabled:opacity-50"
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-hk-red px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red-dark aria-disabled:pointer-events-none aria-disabled:opacity-50"
       >
         <FileDown className="size-4" aria-hidden />
         Stáhnout PDF auditu

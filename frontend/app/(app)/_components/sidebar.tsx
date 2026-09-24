@@ -28,7 +28,7 @@ export function Sidebar({ session, counts, className }: SidebarProps) {
         <span className="mt-0.5 block text-[11px] text-white/55">Královéhradecký kraj</span>
       </Link>
 
-      <SidebarNav counts={counts} />
+      <SidebarNav counts={counts} role={session.role} />
 
       <div className="mx-2 my-5 h-px bg-white/10" aria-hidden />
 

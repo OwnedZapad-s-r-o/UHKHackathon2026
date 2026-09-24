@@ -69,7 +69,7 @@ console.log(objekty.features.length, "objektů");`;
           href={DOCS_PATH}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-hk-accent px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-hk-red"
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-hk-red px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-hk-red-dark"
         >
           <BookOpen className="size-4" aria-hidden />
           Interaktivní dokumentace

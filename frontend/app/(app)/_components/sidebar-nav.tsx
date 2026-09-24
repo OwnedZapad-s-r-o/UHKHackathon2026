@@ -4,12 +4,17 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AlertTriangle, Braces, Building2, Database, FileDown, MapPin, RadioTower, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Role } from "@/types/api";
 
 type SidebarNavProps = {
   counts: { portfolio: number; anomalies: number };
+  role: Role;
 };
 
-export function SidebarNav({ counts }: SidebarNavProps) {
+// Položky jen pro role, které s nimi mohou něco dělat — veřejnost čidla nepřipojuje, slepá ulička by jen mátla
+const MANAGEMENT_ONLY = new Set(["/senzory"]);
+
+export function SidebarNav({ counts, role }: SidebarNavProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -24,7 +29,7 @@ export function SidebarNav({ counts }: SidebarNavProps) {
     { href: "/senzory", label: "Senzory", icon: RadioTower },
     { href: "/zdroje-dat", label: "Zdroje dat", icon: Database },
     { href: "/otevrena-data", label: "Otevřené API", icon: Braces },
-  ];
+  ].filter((item) => role !== "Verejnost" || !MANAGEMENT_ONLY.has(item.href));
 
   return (
     <nav className="mt-8 flex flex-col gap-0.5" aria-label="Hlavní navigace">

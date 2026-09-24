@@ -9,6 +9,7 @@ import { TopBar } from "../_components/top-bar";
 import { brokerHost } from "./broker-host";
 import { ConnectGatewayForm } from "./_components/connect-gateway-form";
 import { DemoNetworkPanel } from "./_components/demo-network-panel";
+import { PublicMonitoringInfo } from "./_components/public-monitoring-info";
 import { SensorTourLink } from "./_components/sensor-tour-link";
 import { SENSOR_STEPS, SensorSteps } from "./_components/sensor-steps";
 import { Code, emulatorCommand } from "./_components/setup-guide";
@@ -29,9 +30,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
       <>
         <TopBar title="Senzory" />
         <main className="min-h-0 flex-1 overflow-y-auto p-6">
-          <p className="max-w-xl rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-            Připojování čidel je pro kraj a správce budov. Naměřené hodnoty vidíte v mapě u každého objektu.
-          </p>
+          <PublicMonitoringInfo />
         </main>
       </>
     );

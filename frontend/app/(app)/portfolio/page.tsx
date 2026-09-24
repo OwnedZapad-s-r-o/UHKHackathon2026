@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { getFacilities, getSession } from "@/lib/api";
 import { CATEGORY_META, STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
@@ -112,9 +112,21 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
                       className={cn("px-3 py-3 text-[11px] font-normal whitespace-nowrap first:pl-4 last:pr-4", column.align === "right" && "text-right", column.className)}
                       aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : undefined}
                     >
-                      <Link href={withParams("/portfolio", params, { razeni: column.key, smer: nextDirection })} className={cn("hover:text-black", active ? "font-bold text-black" : "text-slate-500")}>
+                      <Link
+                        href={withParams("/portfolio", params, { razeni: column.key, smer: nextDirection })}
+                        className={cn("group inline-flex items-center gap-1 hover:text-hk-navy", active ? "font-bold text-hk-navy" : "text-slate-500")}
+                      >
                         {column.label}
-                        {active && (direction === "asc" ? " ↑" : " ↓")}
+                        {/* Šipka u každého sloupce: neaktivní naznačuje, že jde řadit, aktivní ukazuje směr */}
+                        {active ? (
+                          direction === "asc" ? (
+                            <ArrowUp className="size-3.5 text-hk-red" aria-label="vzestupně" />
+                          ) : (
+                            <ArrowDown className="size-3.5 text-hk-red" aria-label="sestupně" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="size-3 text-slate-300 group-hover:text-slate-500" aria-hidden />
+                        )}
                       </Link>
                     </th>
                   );

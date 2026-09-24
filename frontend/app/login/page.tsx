@@ -39,7 +39,7 @@ export default async function LoginPage() {
         <ul className="mt-6 space-y-2.5 text-[15px] text-white/80">
           {PROMISES.map((promise) => (
             <li key={promise} className="flex gap-2.5">
-              <Check className="mt-0.5 size-4 shrink-0 text-hk-accent" aria-hidden />
+              <Check className="mt-0.5 size-4 shrink-0 text-hk-red" aria-hidden />
               {promise}
             </li>
           ))}
@@ -111,7 +111,7 @@ export default async function LoginPage() {
             </div>
             <Link
               href="/objekty"
-              className="mt-3.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-hk-navy text-[14px] font-bold text-white transition-colors hover:bg-hk-blue"
+              className="mt-3.5 flex h-12 items-center justify-center gap-2 rounded-xl bg-hk-navy text-[14px] font-bold text-white transition-colors hover:bg-hk-blue"
             >
               <Search className="size-4" aria-hidden />
               Najít svou školu nebo domov

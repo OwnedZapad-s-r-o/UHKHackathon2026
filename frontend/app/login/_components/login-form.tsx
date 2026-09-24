@@ -30,7 +30,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-hk-navy text-[14px] font-bold text-white transition-colors hover:bg-hk-blue disabled:opacity-60"
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-hk-navy text-[14px] font-bold text-white transition-colors hover:bg-hk-blue disabled:opacity-60"
       >
         {isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
         {isPending ? "Přihlašuji…" : "Přihlásit se"}

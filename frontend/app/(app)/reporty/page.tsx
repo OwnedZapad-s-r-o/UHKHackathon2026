@@ -42,7 +42,7 @@ export default async function ReportsPage() {
                 Odhad ztráty celého kraje, mapa okresů, pět budov s nejvyšší ztrátou, pilot čidel IQRF s návratností a návrh usnesení.
               </p>
             </div>
-            <ExecutiveSummaryLink className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-hk-accent px-5 text-sm font-bold text-white transition-colors hover:bg-hk-red" />
+            <ExecutiveSummaryLink className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-hk-red px-5 text-sm font-bold text-white transition-colors hover:bg-hk-red-dark" />
           </section>
         )}
 
@@ -83,7 +83,7 @@ export default async function ReportsPage() {
               </label>
               <button
                 type="submit"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-hk-accent px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-hk-red px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red-dark"
               >
                 <FileDown className="size-4" aria-hidden />
                 Stáhnout PDF portfolia
