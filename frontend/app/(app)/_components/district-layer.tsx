@@ -27,6 +27,14 @@ const FADE_END_ZOOM = 13.5;
 
 const SELECTED_OUTLINE = "#d90429";
 
+// Zvýraznění vybraného okresu — koncové hodnoty animace (mapcn vrstvy: geojson-fill-{id}, geojson-line-{id})
+const MASK_LAYER = "geojson-fill-district-mask";
+const GLOW_LAYER = "geojson-line-district-glow";
+const MASK_OPACITY = 0.78;
+const GLOW_WIDTH = 10;
+const GLOW_OPACITY = 0.35;
+const HIGHLIGHT_MS = 1400;
+
 // Obálka pro masku „vše kromě vybraného okresu“ — s rezervou kolem celého kraje
 const MASK_EXTENT: Position[] = [
   [11.5, 48.3],
@@ -87,7 +95,7 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
 
   // Bez výběru choropleth; s výběrem výplň zmizí a okres zvýrazní maska kolem něj
   const fillPaint = useMemo(() => {
-    const opacity = selectedCode ? 0 : 0.55;
+    const opacity = selectedCode ? 0 : 0.65;
 
     return {
       "fill-color": matchByCode(stats, (entry) => issueShareColor(entry.issueShare), "#f8fafc"),
@@ -105,12 +113,37 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
   );
 
   const fillHoverPaint = useMemo(() => ({ "fill-color": "#1e3e62" }), []);
-  const maskPaint = useMemo(() => ({ "fill-color": "#f8fafc", "fill-opacity": 0.78 }), []);
-  const glowPaint = useMemo(() => ({ "line-color": SELECTED_OUTLINE, "line-width": 10, "line-blur": 8, "line-opacity": 0.35 }), []);
+  const maskPaint = useMemo(() => ({ "fill-color": "#f8fafc", "fill-opacity": MASK_OPACITY }), []);
+  const glowPaint = useMemo(() => ({ "line-color": SELECTED_OUTLINE, "line-width": GLOW_WIDTH, "line-blur": 8, "line-opacity": GLOW_OPACITY }), []);
   const outlinePaint = useMemo(() => ({ "line-color": SELECTED_OUTLINE, "line-width": 2.5 }), []);
 
   const mask = useMemo(() => (selectedFeature ? maskAround(selectedFeature) : EMPTY), [selectedFeature]);
   const outline = useMemo(() => (selectedFeature ? { type: "FeatureCollection" as const, features: [selectedFeature] } : EMPTY), [selectedFeature]);
+
+  // Animace výběru okresu: okolí plynule zešedne a obrys dvakrát pulzne září
+  useEffect(() => {
+    if (!map || !isLoaded || !selectedCode) return;
+
+    const start = performance.now();
+    let frame = 0;
+
+    function step(now: number) {
+      if (!map!.getLayer(MASK_LAYER) || !map!.getLayer(GLOW_LAYER)) return;
+
+      const t = Math.min(1, (now - start) / HIGHLIGHT_MS);
+      const fade = 1 - Math.pow(1 - Math.min(1, t * 2.2), 3);
+      const pulse = Math.sin(t * Math.PI * 2) ** 2 * (1 - t);
+
+      map!.setPaintProperty(MASK_LAYER, "fill-opacity", MASK_OPACITY * fade);
+      map!.setPaintProperty(GLOW_LAYER, "line-width", GLOW_WIDTH + 18 * pulse);
+      map!.setPaintProperty(GLOW_LAYER, "line-opacity", GLOW_OPACITY + 0.45 * pulse);
+
+      if (t < 1) frame = requestAnimationFrame(step);
+    }
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [map, isLoaded, selectedCode]);
 
   // Výběr okresu přiblíží mapu na jeho hranice; „Celý kraj“ vrátí výřez kraje
   const previousCode = useRef<string | null>(null);
@@ -164,7 +197,7 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
       <MapGeoJSON id="district-outline" data={outline} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={false} linePaint={outlinePaint} />
 
       {showLabels &&
-        districts.features.map((feature) => {
+        districts.features.map((feature, index) => {
           const entry = stats[feature.properties.code];
           if (!entry) return null;
           const [longitude, latitude] = labelPoint(feature);
@@ -172,7 +205,7 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
           return (
             <MapMarker key={feature.properties.code} longitude={longitude} latitude={latitude} onClick={() => onSelect(entry.code)}>
               <MarkerContent>
-                <DistrictLabel stats={entry} />
+                <DistrictBubble stats={entry} delay={index * 60} />
               </MarkerContent>
             </MapMarker>
           );
@@ -184,25 +217,40 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
   );
 }
 
-// Štítek okresu v pohledu na kraj — název, počet objektů a kolik z nich má zjištění
-function DistrictLabel({ stats }: { stats: DistrictStats }) {
+// Bublina okresu v pohledu na kraj: prstenec = složení stavů (kritické, varování, v pořádku), uprostřed počet objektů,
+// pod ní název s bílým obrysem písma — bez rámečku, aby zakrývala co nejméně mapy
+function DistrictBubble({ stats, delay }: { stats: DistrictStats; delay: number }) {
+  const size = 46;
+  const radius = 19;
+  const circumference = 2 * Math.PI * radius;
+  const nominal = stats.total - stats.critical - stats.warning;
+  const segments = [
+    { value: stats.critical, color: "#ef4444" },
+    { value: stats.warning, color: "#f59e0b" },
+    { value: nominal, color: "#10b981" },
+  ];
+
+  let offset = 0;
+
   return (
-    <span className="flex cursor-pointer flex-col items-center rounded-xl border border-slate-200 bg-white/95 px-3 py-1.5 text-center text-hk-navy shadow-[0_8px_20px_rgba(11,25,44,0.16)] transition-transform hover:-translate-y-0.5 hover:border-hk-red/50">
-      <span className="text-[12.5px] font-bold whitespace-nowrap">{stats.name}</span>
-      <span className="mt-0.5 flex items-center gap-2 text-[10.5px] whitespace-nowrap text-slate-500">
-        {stats.total} objektů
-        {stats.critical > 0 && (
-          <span className="inline-flex items-center gap-1 font-bold text-red-700">
-            <span className="size-1.5 rounded-full bg-red-500" aria-hidden />
-            {stats.critical}
-          </span>
-        )}
-        {stats.warning > 0 && (
-          <span className="inline-flex items-center gap-1 font-bold text-amber-700">
-            <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
-            {stats.warning}
-          </span>
-        )}
+    <span className="animate-bubble-pop group flex cursor-pointer flex-col items-center" style={{ animationDelay: `${delay}ms` }}>
+      <span className="relative flex items-center justify-center rounded-full bg-white shadow-[0_6px_16px_rgba(11,25,44,0.25)] transition-transform duration-200 group-hover:scale-110">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
+          {segments.map((segment) => {
+            const length = stats.total > 0 ? (segment.value / stats.total) * circumference : 0;
+            const dash = `${length} ${circumference - length}`;
+            const circle = (
+              <circle key={segment.color} cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={segment.color} strokeWidth={5} strokeDasharray={dash} strokeDashoffset={-offset} />
+            );
+            offset += length;
+            return circle;
+          })}
+        </svg>
+        <span className="absolute font-mono text-[13px] font-bold text-hk-navy tabular-nums">{stats.total}</span>
+      </span>
+      <span className="mt-1 text-[12.5px] font-bold whitespace-nowrap text-hk-navy [text-shadow:0_0_3px_#fff,0_0_3px_#fff,0_0_6px_#fff]">{stats.name}</span>
+      <span className="text-[10.5px] font-bold whitespace-nowrap text-red-700 [text-shadow:0_0_3px_#fff,0_0_3px_#fff]">
+        {stats.critical + stats.warning > 0 ? `${stats.critical + stats.warning} se zjištěním` : "bez zjištění"}
       </span>
     </span>
   );

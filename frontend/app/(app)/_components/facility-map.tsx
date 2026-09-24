@@ -90,7 +90,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
           onDeselectFacility={() => navigate({ objekt: null, panel: null })}
         />
 
-        {showPins && ordered.map((facility) => {
+        {showPins && ordered.map((facility, index) => {
           const isSelected = facility.id === selectedId;
 
           return (
@@ -102,7 +102,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
               onClick={() => navigate({ objekt: facility.id })}
             >
               <MarkerContent>
-                <FacilityPin category={facility.category} status={facility.status} selected={isSelected} />
+                <FacilityPin category={facility.category} status={facility.status} selected={isSelected} dropDelay={Math.min(index * 14, 450)} />
                 {isSelected && (
                   <MarkerLabel position="bottom" className="mt-2">
                     <SelectedLabel facility={facility} />

@@ -10,7 +10,7 @@ namespace SmartAudit.Api.Services.Reports
     {
         // Hranice tříd podílu objektů se zjištěním a sekvenční modrá škála (5 tříd)
         public static readonly double[] IssueShareBreaks = [0.15, 0.22, 0.29, 0.36];
-        public static readonly string[] IssueShareColors = ["#EEF3F8", "#CBDAEA", "#9DB8D5", "#6A8FB8", "#3F6592"];
+        public static readonly string[] IssueShareColors = ["#D5E1EE", "#B3C8E0", "#8DAACD", "#6687B5", "#3F6592"];
 
         private static readonly Dictionary<AuditStatus, string> StatusDot = new()
         {
