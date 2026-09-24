@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { getFacilities } from "@/lib/api";
+import { getFacilities, getSession } from "@/lib/api";
 import { CATEGORY_META, STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
 import { facilityMapHref, readParam, withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { FacilityListItem } from "@/types/api";
+import { ExecutiveSummaryLink } from "../_components/executive-summary-link";
 import { KpiRow } from "../_components/kpi-row";
 import { PortfolioReportLink } from "../_components/portfolio-report-link";
 import { TopBar } from "../_components/top-bar";
@@ -41,7 +42,7 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
   const sortKey = (COLUMNS.find((c) => c.key === readParam(params, "razeni"))?.key ?? "status") as SortKey;
   const direction = readParam(params, "smer") === "desc" ? "desc" : "asc";
 
-  const facilities = await getFacilities({ q: query, onlyIssues: readParam(params, "zjisteni") === "1" });
+  const [facilities, session] = await Promise.all([getFacilities({ q: query, onlyIssues: readParam(params, "zjisteni") === "1" }), getSession()]);
   const rows = sortFacilities(facilities, sortKey, direction);
   const moneyVisible = facilities.some((f) => f.annualLossCzk !== null);
   const columns = COLUMNS.filter((c) => c.key !== "loss" || moneyVisible);
@@ -49,6 +50,7 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
   return (
     <>
       <TopBar title="Portfolio">
+        {session?.role === "Kraj" && <ExecutiveSummaryLink />}
         <PortfolioReportLink onlyIssues={readParam(params, "zjisteni") === "1"} />
       </TopBar>
 
