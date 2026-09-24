@@ -83,20 +83,32 @@ namespace SmartAudit.Api.Services.Sensors
 
             await _dbContext.SaveChangesAsync(ct);
 
-            // Klíč (SensorId, Timestamp) — opakovaná zpráva ve stejné sekundě se tiše zahodí
-            var timestamp = new DateTimeOffset(now.UtcTicks - now.UtcTicks % TimeSpan.TicksPerSecond, TimeSpan.Zero);
-            var stored = 0;
-            foreach (var (sensorId, value) in toStore)
-            {
-                stored += await _dbContext.Database.ExecuteSqlAsync(
-                    $"INSERT INTO \"SensorReadings\" (\"SensorId\", \"Timestamp\", \"Value\") VALUES ({sensorId}, {timestamp}, {value}) ON CONFLICT DO NOTHING",
-                    ct);
-            }
+            var stored = await StoreReadingsAsync(toStore, now, ct);
 
+            // Přepočet auditu jen pro budovu této gatewaye, ne pro celý kraj
             if (stored > 0)
-                _auditTrigger.Request();
+                _auditTrigger.RequestFacility(device.FacilityId);
 
             return new IngestResult(true, response.MessageType, response.Readings.Count, stored);
+        }
+
+        // Všechna měření jedné odpovědi jedním příkazem (pole senzorů a hodnot přes unnest) — jeden round-trip do databáze
+        // místo jednoho na každé čidlo. Klíč (SensorId, Timestamp): opakovaná zpráva ve stejné sekundě se tiše zahodí.
+        private async Task<int> StoreReadingsAsync(List<(Guid SensorId, double Value)> readings, DateTimeOffset now, CancellationToken ct)
+        {
+            if (readings.Count == 0)
+                return 0;
+
+            var timestamp = new DateTimeOffset(now.UtcTicks - now.UtcTicks % TimeSpan.TicksPerSecond, TimeSpan.Zero);
+            var sensorIds = readings.Select(r => r.SensorId).ToArray();
+            var values = readings.Select(r => r.Value).ToArray();
+
+            return await _dbContext.Database.ExecuteSqlAsync($"""
+                INSERT INTO "SensorReadings" ("SensorId", "Timestamp", "Value")
+                SELECT reading."SensorId", {timestamp}, reading."Value"
+                FROM unnest({sensorIds}, {values}) AS reading("SensorId", "Value")
+                ON CONFLICT DO NOTHING
+                """, ct);
         }
     }
 }

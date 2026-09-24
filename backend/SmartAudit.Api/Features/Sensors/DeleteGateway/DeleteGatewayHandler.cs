@@ -43,7 +43,7 @@ namespace SmartAudit.Api.Features.Sensors.DeleteGateway
 
             await _dbContext.SaveChangesAsync(ct);
 
-            _auditTrigger.Request();
+            _auditTrigger.RequestFacility(device.FacilityId);
 
             return Response.Success();
         }

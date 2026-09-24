@@ -829,6 +829,8 @@ namespace SmartAudit.Core.Migrations
 
                     b.HasIndex("Timestamp");
 
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Timestamp"), "brin");
+
                     b.ToTable("SensorReadings");
                 });
 
