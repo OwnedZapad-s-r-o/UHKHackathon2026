@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { RadioTower } from "lucide-react";
 import { getHeatmap, getTelemetry } from "@/lib/api";
 import { formatNumber } from "@/lib/facility-meta";
 import type { FacilityDetail, Telemetry, TelemetryPoint } from "@/types/api";
@@ -16,9 +18,26 @@ export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
   const averageTemperature = averageAcrossZones(temperature);
   const dailyEnergy = energy.series[0]?.points ?? [];
   const assessment = facility.assessment;
+  const liveZones = temperature.series.filter((s) => s.live).map((s) => s.name);
 
   return (
     <>
+      {liveZones.length > 0 && (
+        <Link
+          href="/senzory"
+          className="mt-3.5 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 transition-colors hover:bg-emerald-100"
+        >
+          <span className="relative flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            <RadioTower className="size-4" aria-hidden />
+            <span className="absolute -top-0.5 -right-0.5 size-2.5 animate-ping rounded-full bg-emerald-400" aria-hidden />
+          </span>
+          <span className="min-w-0 text-[12.5px]">
+            <span className="block font-bold">Skutečná čidla IQRF</span>
+            <span className="block truncate">{liveZones.join(", ")} — ostatní zóny zatím simulace</span>
+          </span>
+        </Link>
+      )}
+
       <div className="mt-3.5 grid grid-cols-3 gap-2.5">
         <StatTile label="Teplota" value={formatNumber(assessment?.temperature)} note="°C · průměr zón" />
         <StatTile label="CO₂" value={formatNumber(assessment?.co2)} note="ppm · nejhorší zóna" tone={(assessment?.co2 ?? 0) > 1500 ? "warning" : "default"} />

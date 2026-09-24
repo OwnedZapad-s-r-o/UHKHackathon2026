@@ -162,14 +162,15 @@ export type FacilityDetail = {
   sensorCount: number;
 };
 
-export type SensorMetric = "Temperature" | "Co2" | "Power";
+export type SensorMetric = "Temperature" | "Co2" | "Power" | "Humidity" | "Voc" | "Illuminance" | "Pressure" | "Pm25" | "Noise" | "Motion" | "Other";
 
 export type TelemetryPoint = { timestamp: string; value: number };
 
 export type Telemetry = {
   metric: SensorMetric;
   unit: string;
-  series: { zoneId: string | null; name: string; floor: number | null; isHotspot: boolean; points: TelemetryPoint[] }[];
+  // live = zónu měří skutečné čidlo (IQRF), ne simulace
+  series: { zoneId: string | null; name: string; floor: number | null; isHotspot: boolean; live: boolean; points: TelemetryPoint[] }[];
 };
 
 export type Heatmap = {
@@ -184,7 +185,18 @@ export type BuildingSection = {
   floors: number;
   co2Limit: number;
   wings: string[];
-  zones: { id: string; name: string; type: string; floor: number; wing: string; isHotspot: boolean; temperature: number | null; co2: number | null }[];
+  zones: {
+    id: string;
+    name: string;
+    type: string;
+    floor: number;
+    wing: string;
+    isHotspot: boolean;
+    temperature: number | null;
+    co2: number | null;
+    humidity: number | null;
+    live: boolean;
+  }[];
   updatedAt: string | null;
 };
 
@@ -225,4 +237,65 @@ export type AiAnalysis = {
 export type AiAuditState = {
   configured: boolean;
   analysis: AiAnalysis | null;
+};
+
+// Senzory IQRF — GET /api/sensors/gateways(/{id})
+export type Broker = {
+  connected: boolean;
+  error: string | null;
+  publicHost: string | null;
+  publicPort: number;
+  responseTopicFilter: string;
+  requestTopicTemplate: string;
+};
+
+export type GatewayListItem = {
+  id: string;
+  name: string;
+  gatewayId: string;
+  facilityId: string;
+  facilityCode: string;
+  facilityName: string;
+  online: boolean;
+  lastSeenAt: string | null;
+  nodeCount: number;
+  channelCount: number;
+  assignedCount: number;
+};
+
+export type GatewaysResponse = {
+  broker: Broker;
+  gateways: GatewayListItem[];
+  unknown: { gatewayId: string; lastSeenAt: string; messageCount: number }[];
+};
+
+export type GatewayChannel = {
+  id: string;
+  channelKey: string;
+  nodeAddress: number;
+  iqrfType: number;
+  name: string;
+  unit: string;
+  metric: SensorMetric;
+  lastValue: number | null;
+  lastSeenAt: string | null;
+  sensorId: string | null;
+  zoneId: string | null;
+  zoneName: string | null;
+  samples: { timestamp: string; value: number }[];
+};
+
+export type GatewayDetail = {
+  id: string;
+  name: string;
+  gatewayId: string;
+  pollSeconds: number;
+  nodes: number[];
+  online: boolean;
+  lastSeenAt: string | null;
+  facility: { id: string; code: string; name: string };
+  broker: Broker;
+  channels: GatewayChannel[];
+  zones: { id: string; name: string; floor: number }[];
+  messages: { timestamp: string; direction: "Request" | "Response"; messageType: string; payload: string }[];
 };
