@@ -13,7 +13,8 @@ namespace SmartAudit.Api.Services.Sensors
     // - každé gatewayi v databázi posílá v jejím intervalu dotazy na hodnoty: hromadně příkazem FRC (jedna veličina
     //   ze všech uzlů v jednom rádiovém cyklu IQMESH), občas a u nových uzlů čtení po uzlech kvůli objevení senzorů,
     //   a dokud uzly nezná, dotaz na spárované uzly koordinátoru,
-    // - na brokeru drží účty gatewayí (Dynamic Security): gateway v databázi = účet s právy jen na její topicy.
+    // - na brokeru drží účty gatewayí (Dynamic Security): gateway v databázi = účet s právy jen na její topicy,
+    // - odesílá dotazy z HTTP požadavků (IIqrfCommandBus) a sbírá ohlášení nespárovaných gatewayí (IPairingRegistry).
     public class IqrfGatewayService : BackgroundService
     {
         private static readonly TimeSpan DeviceRefresh = TimeSpan.FromSeconds(5);
@@ -30,6 +31,8 @@ namespace SmartAudit.Api.Services.Sensors
         private readonly IPipelineStateService _pipeline;
         private readonly IIqrfGatewayState _state;
         private readonly IqrfSettings _settings;
+        private readonly IIqrfCommandBus _bus;
+        private readonly IPairingRegistry _pairing;
         private readonly ILogger<IqrfGatewayService> _logger;
 
         private readonly Dictionary<Guid, DateTimeOffset> _nextPoll = [];
@@ -38,12 +41,21 @@ namespace SmartAudit.Api.Services.Sensors
         // Gatewaye, kterým už broker v tomto připojení založil účet
         private readonly HashSet<string> _provisioned = [];
 
-        public IqrfGatewayService(IServiceScopeFactory scopeFactory, IPipelineStateService pipeline, IIqrfGatewayState state, IqrfSettings settings, ILogger<IqrfGatewayService> logger)
+        public IqrfGatewayService(
+            IServiceScopeFactory scopeFactory,
+            IPipelineStateService pipeline,
+            IIqrfGatewayState state,
+            IqrfSettings settings,
+            IIqrfCommandBus bus,
+            IPairingRegistry pairing,
+            ILogger<IqrfGatewayService> logger)
         {
             _scopeFactory = scopeFactory;
             _pipeline = pipeline;
             _state = state;
             _settings = settings;
+            _bus = bus;
+            _pairing = pairing;
             _logger = logger;
         }
 
@@ -64,6 +76,12 @@ namespace SmartAudit.Api.Services.Sensors
             var factory = new MqttClientFactory();
             using var client = factory.CreateMqttClient();
             client.ApplicationMessageReceivedAsync += e => HandleMessageAsync(e.ApplicationMessage.Topic, e.ApplicationMessage.ConvertPayloadToString());
+            client.DisconnectedAsync += e =>
+            {
+                if (e.ClientWasConnected)
+                    _logger.LogWarning(e.Exception, "Spojení s MQTT brokerem přerušeno: {Reason} {Detail}", e.Reason, e.ReasonString);
+                return Task.CompletedTask;
+            };
 
             var devices = new List<PolledDevice>();
             var devicesLoadedAt = DateTimeOffset.MinValue;
@@ -86,7 +104,10 @@ namespace SmartAudit.Api.Services.Sensors
                     foreach (var device in devices.Where(d => _nextPoll.GetValueOrDefault(d.Id) <= now))
                         await PollAsync(client, device, now, ct);
 
-                    await Task.Delay(TimeSpan.FromSeconds(1), ct);
+                    while (_bus.TryDequeue(out var outgoing))
+                        await PublishOutgoingAsync(client, outgoing, ct);
+
+                    await _bus.WaitForMessagesAsync(TimeSpan.FromSeconds(1), ct);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
@@ -121,12 +142,21 @@ namespace SmartAudit.Api.Services.Sensors
             var subscription = factory.CreateSubscribeOptionsBuilder()
                 .WithTopicFilter(filter => filter.WithTopic(_settings.ResponseTopicFilter).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce))
                 .WithTopicFilter(filter => filter.WithTopic(DynamicSecurity.ResponseTopic))
+                .WithTopicFilter(filter => filter.WithTopic(PairingProtocol.AnnounceFilter))
+                .WithTopicFilter(filter => filter.WithTopic(PairingProtocol.ResultFilter))
                 .Build();
             await client.SubscribeAsync(subscription, ct);
 
             // Po (novém) připojení broker nemusí účty znát — např. po změně hesla backendu se konfigurace založí znovu
             _provisioned.Clear();
             await client.PublishStringAsync(DynamicSecurity.CommandTopic, DynamicSecurity.GrantBackendRequests(string.Format(_settings.RequestTopicTemplate, "+")), cancellationToken: ct);
+
+            // Párování heslem z nálepky: sdílený účet pro nespárované gatewaye a právo backendu posílat jim nabídky
+            if (!string.IsNullOrEmpty(_settings.ProvisioningPassword))
+            {
+                await client.PublishStringAsync(DynamicSecurity.CommandTopic, DynamicSecurity.GrantBackendRequests(PairingProtocol.OfferFilter), cancellationToken: ct);
+                await client.PublishStringAsync(DynamicSecurity.CommandTopic, DynamicSecurity.ProvisionPairingAccount(_settings.ProvisioningPassword), cancellationToken: ct);
+            }
 
             _state.SetBrokerStatus(true, null);
             _logger.LogInformation("Připojeno k MQTT brokeru {Host}:{Port}, odebírám {Topic}", _settings.Host, _settings.Port, _settings.ResponseTopicFilter);
@@ -237,6 +267,13 @@ namespace SmartAudit.Api.Services.Sensors
             _state.RecordMessage(gatewayId, GatewayMessageDirection.Request, messageType, payload);
         }
 
+        private async Task PublishOutgoingAsync(IMqttClient client, OutgoingMessage message, CancellationToken ct)
+        {
+            await client.PublishStringAsync(message.Topic, message.Payload, cancellationToken: ct);
+            if (message.GatewayId != null && message.MessageType != null)
+                _state.RecordMessage(message.GatewayId, GatewayMessageDirection.Request, message.MessageType, message.Payload);
+        }
+
         // gateway/{id}/iqrf/responses → id gatewaye je druhý segment
         private async Task HandleMessageAsync(string topic, string payload)
         {
@@ -244,6 +281,12 @@ namespace SmartAudit.Api.Services.Sensors
             {
                 foreach (var error in DynamicSecurity.Errors(payload))
                     _logger.LogWarning("Dynamic Security na brokeru hlásí chybu: {Error}", error);
+                return;
+            }
+
+            if (topic.StartsWith("provisioning/", StringComparison.Ordinal))
+            {
+                HandlePairingMessage(topic, payload);
                 return;
             }
 
@@ -260,6 +303,26 @@ namespace SmartAudit.Api.Services.Sensors
             {
                 _logger.LogError(ex, "Zprávu z gatewaye {Topic} se nepodařilo zpracovat", topic);
             }
+
+            // Až po uložení: kdo na odpověď čeká (přidání čidla), uvidí v databázi už nový uzel
+            if (IqrfResponseParser.Parse(payload)?.MessageId is { } messageId)
+                _bus.Complete(IqrfCommandBus.MessageKey(messageId), payload);
+        }
+
+        private void HandlePairingMessage(string topic, string payload)
+        {
+            if (PairingProtocol.AnnouncedSerial(topic) is { } announced)
+            {
+                // Prázdná zpráva = zařízení se právě spárovalo nebo vypnulo
+                if (string.IsNullOrWhiteSpace(payload))
+                    _pairing.Forget(announced);
+                else if (PairingProtocol.ParseAnnouncement(payload) is { } announcement && announcement.Serial == announced)
+                    _pairing.Record(announcement, DateTimeOffset.UtcNow);
+                return;
+            }
+
+            if (PairingProtocol.ResultSerial(topic) is { } serial)
+                _bus.Complete(IqrfCommandBus.PairingKey(serial), payload);
         }
 
         private static string MessageId() => $"sa-{Guid.NewGuid():N}"[..16];

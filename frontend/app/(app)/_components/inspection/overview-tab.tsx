@@ -1,7 +1,7 @@
-import { Activity } from "lucide-react";
+import { Activity, Radio } from "lucide-react";
 import { STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
 import { cn } from "@/lib/utils";
-import type { FacilityDetail } from "@/types/api";
+import type { FacilityDetail, SensorCorrection } from "@/types/api";
 import { AiAuditSection } from "./ai-audit-section";
 import { StatTile } from "./panel-card";
 
@@ -11,7 +11,11 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
   const assessment = facility.assessment;
 
   if (!assessment) {
-    return <p className="mt-4 text-sm text-slate-500">Objekt čeká na první vyhodnocení telemetrie.</p>;
+    return (
+      <>
+        <p className="mt-4 text-sm text-slate-500">Objekt čeká na první vyhodnocení telemetrie.</p>
+      </>
+    );
   }
 
   const status = STATUS_META[assessment.status];
@@ -36,6 +40,10 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
           tone={!moneyHidden && (assessment.annualLossCzk ?? 0) > 0 ? "critical" : "default"}
         />
       </div>
+
+      {assessment.sensorCorrection && assessment.annualLossCzk !== null && (
+        <SensorCorrectionNote correction={assessment.sensorCorrection} lossNow={assessment.annualLossCzk} />
+      )}
 
       <section className={cn("mt-3.5 rounded-2xl border p-4.5", status.pill)}>
         <div className="flex items-center gap-2">
@@ -65,6 +73,29 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
 
       <ContextList facility={facility} />
     </>
+  );
+}
+
+// Ztráta opravená skutečným měřením: kolik byl odhad ze simulace a kolik místností už měří čidla
+function SensorCorrectionNote({ correction, lossNow }: { correction: SensorCorrection; lossNow: number }) {
+  const delta = lossNow - correction.lossBeforeCzk;
+
+  return (
+    <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-hk-blue/20 bg-[#EFF4FA] px-3.5 py-2.5 text-[12.5px] leading-snug text-slate-700">
+      <Radio className="mt-0.5 size-3.5 shrink-0 text-hk-blue" aria-hidden />
+      <span>
+        <b className="text-hk-navy">Opraveno měřením</b> — dříve {formatCzk(correction.lossBeforeCzk)} (odhad ze simulace)
+        {delta !== 0 && (
+          <b className={delta < 0 ? "text-emerald-700" : "text-red-700"}>
+            {" "}
+            · {delta < 0 ? "−" : "+"}
+            {formatCzk(Math.abs(delta))}
+          </b>
+        )}
+        . Čidla teploty měří {correction.measuredZones} z {correction.zoneCount} místností
+        {correction.virtualHistory ? ", virtuální čidlo dodalo naměřený týden." : ", ztráta se upřesňuje 7 dní."}
+      </span>
+    </p>
   );
 }
 

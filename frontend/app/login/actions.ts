@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { apiPost, SESSION_COOKIE } from "@/lib/api";
 import type { AuthResponse, Role, Session } from "@/types/api";
 
-const ROLES: Role[] = ["Kraj", "Spravce", "Verejnost"];
+// Veřejnost se nepřihlašuje — má vlastní portál /objekty bez účtu
+const ROLES: Role[] = ["Kraj", "Spravce"];
 
 export type LoginState = { error: string } | null;
 

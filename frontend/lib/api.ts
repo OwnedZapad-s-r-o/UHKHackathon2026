@@ -7,11 +7,15 @@ import type {
   AuditStatus,
   BuildingSection,
   DataSourcesResponse,
+  DemoOverview,
+  FacilityContracts,
   FacilityDetail,
   FacilityListItem,
   GatewayDetail,
   GatewaysResponse,
   Heatmap,
+  NearbyDevice,
+  NearbyNodes,
   SensorMetric,
   Session,
   Telemetry,
@@ -46,6 +50,23 @@ async function apiGet<T>(path: string): Promise<T> {
   }
 
   return (await response.json()) as T;
+}
+
+// Čtení, u kterého chceme českou hlášku z API místo výjimky (našeptávač, dohledání místa) — pro route handlery
+export async function apiGetResult<T>(path: string): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string }> {
+  const session = await getSession();
+
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: session ? { Authorization: `Bearer ${session.token}` } : undefined,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, status: response.status, message: error?.message ?? "Chyba na straně serveru" };
+  }
+
+  return { ok: true, data: (await response.json()) as T };
 }
 
 // Soubor z API (PDF report) s tokenem ze session — prohlížeč token nemá, je v httpOnly cookie
@@ -91,6 +112,10 @@ export function getHeatmap(id: string, metric: SensorMetric) {
   return apiGet<Heatmap>(`/api/facilities/${id}/heatmap?metric=${metric}`);
 }
 
+export function getContracts(id: string) {
+  return apiGet<FacilityContracts>(`/api/facilities/${id}/contracts`);
+}
+
 export function getAiAudit(id: string) {
   return apiGet<AiAuditState>(`/api/facilities/${id}/ai-audit`);
 }
@@ -113,7 +138,7 @@ export async function apiPostAuthorized<T>(path: string): Promise<{ ok: true; da
 }
 
 // Zápis s tokenem přihlášeného uživatele — vrací data nebo českou hlášku z API
-export async function apiSendAuthorized<T>(method: "POST" | "DELETE", path: string, body?: unknown): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
+export async function apiSendAuthorized<T>(method: "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
   const session = await getSession();
   const headers: Record<string, string> = session ? { Authorization: `Bearer ${session.token}` } : {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -139,6 +164,18 @@ export function getGateways() {
 
 export function getGateway(id: string) {
   return apiGet<GatewayDetail>(`/api/sensors/gateways/${id}`);
+}
+
+export function getNearbyDevices() {
+  return apiGet<NearbyDevice[]>("/api/sensors/nearby");
+}
+
+export function getNearbyNodes(gatewayId: string) {
+  return apiGet<NearbyNodes>(`/api/sensors/gateways/${gatewayId}/nearby`);
+}
+
+export function getDemoOverview() {
+  return apiGet<DemoOverview>("/api/demo");
 }
 
 export function getSection(id: string) {

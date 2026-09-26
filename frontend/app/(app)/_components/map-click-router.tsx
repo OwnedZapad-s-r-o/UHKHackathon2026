@@ -11,6 +11,8 @@ type MapClickRouterProps = {
   onSelectDistrict: (code: string) => void;
   onClearDistrict: () => void;
   onDeselectFacility: () => void;
+  // Editor budov má kliky i Esc pro sebe (výběr budovy, body obrysu) — výběr objektu a okresu se nemění
+  disabled?: boolean;
 };
 
 // Jediné místo, které rozhoduje, co znamená klik do mapy — dřív ho zpracovala vrstva okresů i zrušení výběru
@@ -19,12 +21,12 @@ type MapClickRouterProps = {
 // 2. při pohledu na kraj vybere klik okres pod kurzorem (mimo kraj vrátí celý kraj),
 // 3. přiblížená mapa = klik do ulic a budov zruší výběr objektu.
 // Esc ruší nejdřív objekt, pak okres.
-export function MapClickRouter({ facilitySelected, districtSelected, onSelectDistrict, onClearDistrict, onDeselectFacility }: MapClickRouterProps) {
+export function MapClickRouter({ facilitySelected, districtSelected, onSelectDistrict, onClearDistrict, onDeselectFacility, disabled = false }: MapClickRouterProps) {
   const { map } = useMap();
-  const latest = useRef({ facilitySelected, districtSelected, onSelectDistrict, onClearDistrict, onDeselectFacility });
+  const latest = useRef({ facilitySelected, districtSelected, onSelectDistrict, onClearDistrict, onDeselectFacility, disabled });
 
   useEffect(() => {
-    latest.current = { facilitySelected, districtSelected, onSelectDistrict, onClearDistrict, onDeselectFacility };
+    latest.current = { facilitySelected, districtSelected, onSelectDistrict, onClearDistrict, onDeselectFacility, disabled };
   });
 
   useEffect(() => {
@@ -35,6 +37,7 @@ export function MapClickRouter({ facilitySelected, districtSelected, onSelectDis
       if (target?.closest(".maplibregl-marker")) return;
 
       const state = latest.current;
+      if (state.disabled) return;
 
       if (map!.getZoom() <= DISTRICT_CLICK_MAX_ZOOM && map!.getLayer(DISTRICT_FILL_LAYER)) {
         const code = map!.queryRenderedFeatures(event.point, { layers: [DISTRICT_FILL_LAYER] })[0]?.properties?.code as string | undefined;
@@ -52,6 +55,7 @@ export function MapClickRouter({ facilitySelected, districtSelected, onSelectDis
       if (event.key !== "Escape") return;
 
       const state = latest.current;
+      if (state.disabled) return;
       if (state.facilitySelected) state.onDeselectFacility();
       else if (state.districtSelected) state.onClearDistrict();
     }

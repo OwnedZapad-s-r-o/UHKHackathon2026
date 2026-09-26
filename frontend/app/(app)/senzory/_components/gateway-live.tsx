@@ -8,6 +8,7 @@ import { METRIC_META, METRICS, formatAgo, formatSensorValue } from "@/lib/sensor
 import { cn } from "@/lib/utils";
 import type { GatewayChannel, GatewayDetail, SensorMetric } from "@/types/api";
 import { assignChannel, assignNode, deleteGateway } from "../actions";
+import { NearbyNodesSection } from "./nearby-nodes";
 import { SensorSteps } from "./sensor-steps";
 
 // Průvodce obnovuje stav každé 2 s — hodnoty z gatewaye jsou vidět hned, jak přijdou
@@ -134,6 +135,9 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
           </section>
         </>
       )}
+
+      {/* Až gateway odpovídá, jde se jí ptát na čidla v dosahu a přidávat je do sítě */}
+      {gateway.lastSeenAt !== null && <NearbyNodesSection gatewayId={gateway.id} onBonded={refresh} />}
 
       {/* Po připojení se návod schová, ale heslo a certifikát musí jít najít znovu (výměna gatewaye, nová instalace) */}
       {gateway.channels.length > 0 && (

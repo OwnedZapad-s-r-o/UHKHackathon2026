@@ -1,0 +1,601 @@
+{
+  "00084930": {
+    "syncedAt": "2026-09-24T22:08:48.578531+00:00",
+    "contracts": []
+  },
+  "00084549": {
+    "syncedAt": "2026-09-24T22:08:24.512195+00:00",
+    "contracts": [
+      {
+        "contract": {
+          "contractId": "16261471",
+          "versionId": "17504875",
+          "contractNumber": null,
+          "title": "Smlouva o dílo - servisní činnost a provádění oprav vzduchotechniky",
+          "publisherIco": "00084549",
+          "partnerName": "MSP Air s.r.o.",
+          "partnerIco": "63219565",
+          "amountWithoutVat": 97500.0,
+          "amountWithVat": 117975.0,
+          "dateSigned": "2021-08-03",
+          "publishedOn": "2021-08-19",
+          "attachments": [
+            {
+              "id": "22042179",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/22042179/Smlouva_vzducho%20-%20RS.pdf",
+              "name": "Smlouva_vzducho - RS.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      }
+    ]
+  },
+  "00087751": {
+    "syncedAt": "2026-09-24T22:10:25.01195+00:00",
+    "contracts": [
+      {
+        "contract": {
+          "contractId": "36218384",
+          "versionId": "38545020",
+          "contractNumber": null,
+          "title": "Smlouva o dílo - Snížení energetické náročnosti SŠTŘ Nový Bydžov - dílny SPV Hlušice - stavební práce",
+          "publisherIco": "00087751",
+          "partnerName": "Stavby-Eda s.r.o.",
+          "partnerIco": "08600813",
+          "amountWithoutVat": 29279096.54,
+          "amountWithVat": 35427706.81,
+          "dateSigned": "2026-06-26",
+          "publishedOn": "2026-06-26",
+          "attachments": [
+            {
+              "id": "46544196",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/46544196/smlouva_o_dilo_stp_komplet_final_anon_RS.pdf",
+              "name": "smlouva_o_dilo_stp_komplet_final_anon_RS.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "35871413",
+          "versionId": "38185329",
+          "contractNumber": null,
+          "title": "Příkazní smlouva k VZMR s názvem \"Snížení energetické náročnosti SŠTŘ Nový Bydžov - dílny SPV Hlušice - zajištění TDS a BOZP\"",
+          "publisherIco": "00087751",
+          "partnerName": "J2B inženýring s.r.o.",
+          "partnerIco": "07256337",
+          "amountWithoutVat": 740000.0,
+          "amountWithVat": 895400.0,
+          "dateSigned": "2026-05-20",
+          "publishedOn": "2026-05-29",
+          "attachments": [
+            {
+              "id": "46131733",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/46131733/prikazni_smlouva_SEN_dilny_NB_TDS_RS_final.pdf",
+              "name": "prikazni_smlouva_SEN_dilny_NB_TDS_RS_final.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "29792560",
+          "versionId": "31826016",
+          "contractNumber": null,
+          "title": "Smlouva o dílo \"Rekonstrukce kotelny-Nový Bydžov, Dr. M. Tyrše 112\"",
+          "publisherIco": "00087751",
+          "partnerName": "STAVOTERM NB s.r.o.",
+          "partnerIco": "27486800",
+          "amountWithoutVat": 765389.0,
+          "amountWithVat": 926120.69,
+          "dateSigned": "2024-04-12",
+          "publishedOn": "2025-01-20",
+          "attachments": [
+            {
+              "id": "38837356",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/38837356/SoD_STAVOTERM_kotelnaNB_RegistrSmluv.docx",
+              "name": "SoD_STAVOTERM_kotelnaNB_RegistrSmluv.docx"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "23413411",
+          "versionId": "25087463",
+          "contractNumber": null,
+          "title": "Smlouva o dílo - Snížení energetické náročnosti SŠTŘ Nový Bydžov - dílny SPV Hlušice - zpracování PD, EP, ZCHDŽ, včetně autorského dozoru",
+          "publisherIco": "00087751",
+          "partnerName": "Energy Benefit Centre a.s.",
+          "partnerIco": "29029210",
+          "amountWithoutVat": 874000.0,
+          "amountWithVat": 1057540.0,
+          "dateSigned": "2023-07-03",
+          "publishedOn": "2023-07-11",
+          "attachments": [
+            {
+              "id": "31022147",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/31022147/sod_NB_Hlusice_dilny_%20an%20%287%20files%20merged%29.pdf",
+              "name": "sod_NB_Hlusice_dilny_ an (7 files merged).pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "6249539",
+          "versionId": "10130934",
+          "contractNumber": null,
+          "title": "Smlouva o dílo na akci \"Snížení energetické náročnosti obvodového pláště a střešních konstrukcí dílen odborného výcviku v Novém Bydžově - stavební práce\"",
+          "publisherIco": "00087751",
+          "partnerName": "Martin Kafka",
+          "partnerIco": "62706641",
+          "amountWithoutVat": 11889707.0,
+          "amountWithVat": 14386545.0,
+          "dateSigned": "2018-09-12",
+          "publishedOn": "2019-09-13",
+          "attachments": [
+            {
+              "id": "9087339",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/9087339/SoD_SF%C5%BDP_stavba_2018_09_12.pdf",
+              "name": "SoD_SFŽP_stavba_2018_09_12.pdf"
+            },
+            {
+              "id": "11392815",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/11392815/S%C5%A0T%C5%98NB_SF%C5%BDP_SoDdodatek%C4%8D.1_zateplen%C3%AD%20%C5%A0varcava.pdf",
+              "name": "SŠTŘNB_SFŽP_SoDdodatekč.1_zateplení Švarcava.pdf"
+            },
+            {
+              "id": "12492259",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/12492259/SoDdodatek%C4%8D.2_zateplen%C3%AD%20%C5%A0varcava_SF%C5%BDP_2019_06_21.docx",
+              "name": "SoDdodatekč.2_zateplení Švarcava_SFŽP_2019_06_21.docx"
+            },
+            {
+              "id": "12493711",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/12493711/S%C5%A0T%C5%98NB_SF%C5%BDP_SoDdodatek%C4%8D.2_%C4%8D%C3%A1st1_zateplen%C3%AD%20%C5%A0varcava%20%281%29.pdf",
+              "name": "SŠTŘNB_SFŽP_SoDdodatekč.2_část1_zateplení Švarcava (1).pdf"
+            },
+            {
+              "id": "12493991",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/12493991/S%C5%A0T%C5%98NB_SF%C5%BDP_SoDdodatek%C4%8D.2_%C4%8D%C3%A1st2_zateplen%C3%AD%20%C5%A0varcava.pdf",
+              "name": "SŠTŘNB_SFŽP_SoDdodatekč.2_část2_zateplení Švarcava.pdf"
+            },
+            {
+              "id": "13255858",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/13255858/S%C5%A0T%C5%98NB_SF%C5%BDP_SoDdodatek%C4%8D.3_zateplen%C3%AD%C5%A0varcava.pdf",
+              "name": "SŠTŘNB_SFŽP_SoDdodatekč.3_zatepleníŠvarcava.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      }
+    ]
+  },
+  "00087815": {
+    "syncedAt": "2026-09-24T22:11:55.3794+00:00",
+    "contracts": [
+      {
+        "contract": {
+          "contractId": "36531882",
+          "versionId": "38871170",
+          "contractNumber": null,
+          "title": "Snížení energetické náročnosti budovy tělocvičny Střední školy řemeslné Jaroměř - TDS, BOZP",
+          "publisherIco": "00087815",
+          "partnerName": "INGARA s.r.o.",
+          "partnerIco": "06553044",
+          "amountWithoutVat": null,
+          "amountWithVat": 785048.0,
+          "dateSigned": "2026-07-20",
+          "publishedOn": "2026-07-23",
+          "attachments": [
+            {
+              "id": "46917698",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/46917698/2026_07_20_prikazni_smlouva_SSR_Jaromer_telocvicna_TDS_BOZP_AN.pdf",
+              "name": "2026_07_20_prikazni_smlouva_SSR_Jaromer_telocvicna_TDS_BOZP_AN.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "35742377",
+          "versionId": "38050717",
+          "contractNumber": null,
+          "title": "revize a servis plynového zařízení",
+          "publisherIco": "00087815",
+          "partnerName": "GFE, s.r.o.",
+          "partnerIco": "26007240",
+          "amountWithoutVat": null,
+          "amountWithVat": 57000.0,
+          "dateSigned": "2026-05-13",
+          "publishedOn": "2026-05-21",
+          "attachments": [
+            {
+              "id": "45979597",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/45979597/objedn%C3%A1vka%20-%20revize%20a%20servis%20plynu.pdf",
+              "name": "objednávka - revize a servis plynu.pdf"
+            }
+          ]
+        },
+        "category": "FacilityManagement",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "23437367",
+          "versionId": "36667981",
+          "contractNumber": null,
+          "title": "PD - snížení energetické náročnosti budovy tělocvičny Střední školy řemeslné Jaroměř",
+          "publisherIco": "00087815",
+          "partnerName": "Energy Benefit Centre a.s.",
+          "partnerIco": "29029210",
+          "amountWithoutVat": 1382000.0,
+          "amountWithVat": 1672220.0,
+          "dateSigned": "2023-07-12",
+          "publishedOn": "2026-02-05",
+          "attachments": [
+            {
+              "id": "31051455",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/31051455/SOD_S%C5%A0%C5%98_Jaromer_telocvicna.pdf",
+              "name": "SOD_SŠŘ_Jaromer_telocvicna.pdf"
+            },
+            {
+              "id": "31420191",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/31420191/2023_07_12_sod_S%C5%A0%C5%98_Jaromer_telocvicna_II_AN.PDF",
+              "name": "2023_07_12_sod_SŠŘ_Jaromer_telocvicna_II_AN.PDF"
+            },
+            {
+              "id": "44412541",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/44412541/04-23-63-01_DOD1_S%C5%A0%C5%98_Jarom%C4%9B%C5%99_t%C4%9Blocvi%C4%8Dna_II_%20%28002%29.pdf",
+              "name": "04-23-63-01_DOD1_SŠŘ_Jaroměř_tělocvična_II_ (002).pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "32790357",
+          "versionId": "34966081",
+          "contractNumber": null,
+          "title": "výměna plynového kotle",
+          "publisherIco": "00087815",
+          "partnerName": "Kočí Luděk, plynofikace, topení",
+          "partnerIco": "67472214",
+          "amountWithoutVat": null,
+          "amountWithVat": 211036.1,
+          "dateSigned": "2025-09-22",
+          "publishedOn": "2025-09-26",
+          "attachments": [
+            {
+              "id": "42465697",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/42465697/Objedn%C3%A1vka%20v%C3%BDm%C4%9Bny%20plynov%C3%A9ho%20kotle.pdf",
+              "name": "Objednávka výměny plynového kotle.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "28156656",
+          "versionId": "31198756",
+          "contractNumber": null,
+          "title": "Zateplení štítových stěn domova mládeže",
+          "publisherIco": "00087815",
+          "partnerName": "ELITSTAV s.r.o.",
+          "partnerIco": "06552226",
+          "amountWithoutVat": null,
+          "amountWithVat": 2654847.54,
+          "dateSigned": "2024-08-30",
+          "publishedOn": "2024-11-29",
+          "attachments": [
+            {
+              "id": "36839004",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/36839004/SSR_Jaromer_zatepleni_stitu_smlouva_RS_vc_harmo.pdf",
+              "name": "SSR_Jaromer_zatepleni_stitu_smlouva_RS_vc_harmo.pdf"
+            },
+            {
+              "id": "38117764",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/38117764/Dodatek%20%C4%8D.%2001%20-%20Elitstav.pdf",
+              "name": "Dodatek č. 01 - Elitstav.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "25927607",
+          "versionId": "27757099",
+          "contractNumber": "51/2024",
+          "title": "Objednávka - Projektová dokumentace - zateplení štítových stěn Domova mládeže",
+          "publisherIco": "00087815",
+          "partnerName": "PLANNING ART s.r.o.",
+          "partnerIco": "28815351",
+          "amountWithoutVat": 98000.0,
+          "amountWithVat": 118580.0,
+          "dateSigned": "2024-02-26",
+          "publishedOn": "2024-02-26",
+          "attachments": [
+            {
+              "id": "34144535",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/34144535/Objedn%C3%A1vka%20-%20PD%20zateplen%C3%AD%20%C5%A1t%C3%ADtov%C3%BDch%20st%C4%9Bn%20DM.pdf",
+              "name": "Objednávka - PD zateplení štítových stěn DM.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "9363454",
+          "versionId": "26885735",
+          "contractNumber": null,
+          "title": "Výměna oken na budově školy - PD",
+          "publisherIco": "00087815",
+          "partnerName": "Ing. Miroslav Kaliba",
+          "partnerIco": "12388831",
+          "amountWithoutVat": null,
+          "amountWithVat": null,
+          "dateSigned": "2019-08-28",
+          "publishedOn": "2023-12-13",
+          "attachments": [
+            {
+              "id": "13195578",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/13195578/Smlouva%20o%20dilo%20-%20okna%20Jarom%C4%9B%C5%99.docx",
+              "name": "Smlouva o dilo - okna Jaroměř.docx"
+            },
+            {
+              "id": "33135699",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/33135699/dodatek%20%C4%8D.1.pdf",
+              "name": "dodatek č.1.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "18631475",
+          "versionId": "26404951",
+          "contractNumber": null,
+          "title": "Snížení energetické náročnosti budovy školy Střední školy řemeslná Jaroměř - stavební práce",
+          "publisherIco": "00087815",
+          "partnerName": "Vlčí Stavby s.r.o.",
+          "partnerIco": "06391001",
+          "amountWithoutVat": 10399509.0,
+          "amountWithVat": 12583405.89,
+          "dateSigned": "2022-04-12",
+          "publishedOn": "2023-11-08",
+          "attachments": [
+            {
+              "id": "25025927",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/25025927/Smlouva%20o%20d%C3%ADlo.pdf",
+              "name": "Smlouva o dílo.pdf"
+            },
+            {
+              "id": "32352419",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/32352419/2023_08_24_Jaromer_stp_dodatek_01_AN.PDF",
+              "name": "2023_08_24_Jaromer_stp_dodatek_01_AN.PDF"
+            },
+            {
+              "id": "32564607",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/32564607/2023_10_25_Jaromer_stp_dodatek_02_signed_RS.PDF",
+              "name": "2023_10_25_Jaromer_stp_dodatek_02_signed_RS.PDF"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "18500739",
+          "versionId": "19890243",
+          "contractNumber": null,
+          "title": "Snížení energetické náročnosti budovy školy",
+          "publisherIco": "00087815",
+          "partnerName": "Ing. Aleš Řada",
+          "partnerIco": "74934163",
+          "amountWithoutVat": null,
+          "amountWithVat": null,
+          "dateSigned": "2022-03-30",
+          "publishedOn": "2022-04-04",
+          "attachments": [
+            {
+              "id": "24863191",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/24863191/ssr_jaromer_tds_II_prikazni_smlouva_rs.pdf",
+              "name": "ssr_jaromer_tds_II_prikazni_smlouva_rs.pdf"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "9605862",
+          "versionId": "10338598",
+          "contractNumber": null,
+          "title": "Oprava ohřevu teplé vody",
+          "publisherIco": "00087815",
+          "partnerName": "VK INVESTING s.r.o.",
+          "partnerIco": "49287851",
+          "amountWithoutVat": null,
+          "amountWithVat": null,
+          "dateSigned": "2019-10-03",
+          "publishedOn": "2019-10-04",
+          "attachments": [
+            {
+              "id": "13511646",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/13511646/Objedn%C3%A1vka.pdf",
+              "name": "Objednávka.pdf"
+            }
+          ]
+        },
+        "category": "FacilityManagement",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "8336907",
+          "versionId": "8995447",
+          "contractNumber": null,
+          "title": "objednávka opravy otopné soustavy",
+          "publisherIco": "00087815",
+          "partnerName": "VK INVESTING s.r.o.",
+          "partnerIco": "49287851",
+          "amountWithoutVat": null,
+          "amountWithVat": null,
+          "dateSigned": "2019-05-10",
+          "publishedOn": "2019-05-10",
+          "attachments": [
+            {
+              "id": "11862827",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/11862827/objedn%C3%A1vka%20opravy%20otopn%C3%A9%20soustavy.pdf",
+              "name": "objednávka opravy otopné soustavy.pdf"
+            }
+          ]
+        },
+        "category": "FacilityManagement",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "1198761",
+          "versionId": "1277209",
+          "contractNumber": null,
+          "title": "Výměna kotle - tělocvična",
+          "publisherIco": "00087815",
+          "partnerName": "VK INVESTING s.r.o.",
+          "partnerIco": "49287851",
+          "amountWithoutVat": null,
+          "amountWithVat": null,
+          "dateSigned": "2017-02-15",
+          "publishedOn": "2017-02-17",
+          "attachments": [
+            {
+              "id": "1861833",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/1861833/Smlouva%20o%20d%C3%ADlo%20%C4%8D.217%20003.doc",
+              "name": "Smlouva o dílo č.217 003.doc"
+            }
+          ]
+        },
+        "category": "Reconstruction",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      }
+    ]
+  },
+  "00084018": {
+    "syncedAt": "2026-09-24T22:07:59.952802+00:00",
+    "contracts": [
+      {
+        "contract": {
+          "contractId": "21104853",
+          "versionId": "22651149",
+          "contractNumber": null,
+          "title": "Oprava kotle",
+          "publisherIco": "00084018",
+          "partnerName": "GFE, s.r.o.",
+          "partnerIco": "26007240",
+          "amountWithoutVat": null,
+          "amountWithVat": 73205.0,
+          "dateSigned": "2022-11-11",
+          "publishedOn": "2022-12-08",
+          "attachments": [
+            {
+              "id": "28149897",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/28149897/Oprava%20kotelny.pdf",
+              "name": "Oprava kotelny.pdf"
+            }
+          ]
+        },
+        "category": "FacilityManagement",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      },
+      {
+        "contract": {
+          "contractId": "16795827",
+          "versionId": "18084719",
+          "contractNumber": null,
+          "title": "Výměna ventilů ústředního vytápění",
+          "publisherIco": "00084018",
+          "partnerName": "Pluto - instal s.r.o.",
+          "partnerIco": "04749634",
+          "amountWithoutVat": null,
+          "amountWithVat": 116097.0,
+          "dateSigned": "2021-09-30",
+          "publishedOn": "2021-10-19",
+          "attachments": [
+            {
+              "id": "22736087",
+              "url": "https://smlouvy.gov.cz/smlouva/soubor/22736087/V%C3%BDm%C4%9Bna%20ventil%C5%AF.pdf",
+              "name": "Výměna ventilů.pdf"
+            }
+          ]
+        },
+        "category": "FacilityManagement",
+        "commodity": null,
+        "unitPriceCzkPerMwh": null,
+        "priceSource": null
+      }
+    ]
+  }
+}

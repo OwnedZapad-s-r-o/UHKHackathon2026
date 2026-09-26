@@ -369,8 +369,8 @@ namespace SmartAudit.Api.Services.Import
             var existing = await _dbContext.Facilities.ToDictionaryAsync(f => f.SourceKey, ct);
             var keys = candidates.Select(c => c.SourceKey).ToHashSet();
 
-            // Objekty, které ze zdrojových dat zmizely, se smažou i se senzory
-            foreach (var removed in existing.Values.Where(f => !keys.Contains(f.SourceKey)))
+            // Objekty, které ze zdrojových dat zmizely, se smažou i se senzory — kromě budov, které přidali správci
+            foreach (var removed in existing.Values.Where(f => !keys.Contains(f.SourceKey) && !f.SourceKey.StartsWith(Facility.ManagerSourcePrefix)))
                 _dbContext.Facilities.Remove(removed);
 
             var facilities = new List<Facility>();
@@ -380,7 +380,7 @@ namespace SmartAudit.Api.Services.Import
                 if (!existing.TryGetValue(candidate.SourceKey, out var facility))
                 {
                     facility = new Facility(candidate.SourceKey, candidate.Name, candidate.Category, candidate.Location);
-                    facility.SetSimulationProfile(ProfileFor(candidate.SourceKey, candidate.Category));
+                    facility.SetSimulationProfile(FacilityDefaults.SimulationProfileFor(candidate.SourceKey, candidate.Category));
                     _dbContext.Facilities.Add(facility);
                 }
                 else
@@ -412,7 +412,7 @@ namespace SmartAudit.Api.Services.Import
             {
                 var order = 1;
                 foreach (var facility in group.OrderBy(f => f.SourceKey, StringComparer.Ordinal))
-                    facility.AssignCode($"{CategoryPrefix(facility.Category)}-{facility.OrpCode}-{order++:00}");
+                    facility.AssignCode($"{FacilityDefaults.CodePrefix(facility.Category)}-{facility.OrpCode}-{order++:00}");
             }
 
             return facilities;
@@ -420,54 +420,19 @@ namespace SmartAudit.Api.Services.Import
 
         private async Task<int> ApplyHeritageAsync(List<Facility> facilities, CancellationToken ct)
         {
-            var zones = await PolygonsAsync("pamatkove-zony", ct);
-            var reserves = await PolygonsAsync("pamatkove-rezervace", ct);
-            var monumentAreas = await PolygonsAsync("nkp-plosne", ct);
-            var monumentPoints = (await _importService.LoadAsync("nkp-bodove", ct))
-                .Select(f => (Name: f.Text("nazev") ?? f.Text("objekt"), Point: f.Point(Factory)))
-                .Where(m => m.Point != null)
-                .ToList();
-
+            var heritage = await HeritageIndex.LoadAsync(_importService, ct);
             var protectedCount = 0;
 
             foreach (var facility in facilities)
             {
-                var location = facility.Location;
+                var (status, name) = heritage.Match(facility.Location);
+                facility.SetHeritage(status, name);
 
-                // ~20 m tolerance — adresní bod často leží u vchodu, ne uvnitř obrysu památky
-                var monument = monumentAreas.FirstOrDefault(m => m.Geometry.IsWithinDistance(location, 0.00025)).Name
-                    ?? monumentPoints.FirstOrDefault(m => m.Point!.IsWithinDistance(location, 0.0003)).Name;
-
-                if (monument != null)
-                {
-                    facility.SetHeritage(HeritageStatus.NationalMonument, monument);
-                }
-                else if (reserves.FirstOrDefault(r => r.Geometry.Contains(location)) is { Name: not null } reserve)
-                {
-                    facility.SetHeritage(HeritageStatus.Reserve, reserve.Name);
-                }
-                else if (zones.FirstOrDefault(z => z.Geometry.Contains(location)) is { Name: not null } zone)
-                {
-                    facility.SetHeritage(HeritageStatus.Zone, zone.Name);
-                }
-                else
-                {
-                    facility.SetHeritage(HeritageStatus.None, null);
-                }
-
-                if (facility.HeritageStatus != HeritageStatus.None)
+                if (status != HeritageStatus.None)
                     protectedCount++;
             }
 
             return protectedCount;
-        }
-
-        private async Task<List<(string? Name, Geometry Geometry)>> PolygonsAsync(string key, CancellationToken ct)
-        {
-            return (await _importService.LoadAsync(key, ct))
-                .Where(f => f.Geometry is Polygon or MultiPolygon)
-                .Select(f => (f.Text("nazev") ?? f.Text("objekt"), f.Geometry!))
-                .ToList();
         }
 
         #endregion
@@ -660,38 +625,6 @@ namespace SmartAudit.Api.Services.Import
             var address = string.Join(", ", new[] { line, city }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
             return address.Length == 0 ? null : address;
-        }
-
-        private static string CategoryPrefix(FacilityCategory category)
-        {
-            return category switch
-            {
-                FacilityCategory.School => "SKO",
-                FacilityCategory.Social => "SOC",
-                FacilityCategory.Health => "ZDR",
-                _ => "KUL",
-            };
-        }
-
-        // Rozdělení profilů ~70 / 10 / 10 / 5 / 5 % — stabilní podle klíče objektu
-        private static SimulationProfile ProfileFor(string sourceKey, FacilityCategory category)
-        {
-            var percent = StableHash.Percent(sourceKey);
-
-            var profile = percent switch
-            {
-                < 70 => SimulationProfile.Nominal,
-                < 80 => SimulationProfile.WeekendOverheating,
-                < 90 => SimulationProfile.PoorVentilation,
-                < 95 => SimulationProfile.EarlyHeatingStart,
-                _ => SimulationProfile.NoNightSetback,
-            };
-
-            // Nemocnice jedou 24/7 — víkendový útlum ani ranní náběh u nich nedávají smysl
-            if (category == FacilityCategory.Health && profile is SimulationProfile.WeekendOverheating or SimulationProfile.EarlyHeatingStart)
-                return SimulationProfile.NoNightSetback;
-
-            return profile;
         }
 
         #endregion

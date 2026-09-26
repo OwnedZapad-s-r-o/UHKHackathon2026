@@ -58,8 +58,12 @@ namespace SmartAudit.Api.Features.Sensors.AssignChannel
             }
             else
             {
-                sensor = Sensor.Physical(facility.Id, request.ZoneId, request.Metric, channel.DeviceId, DateTimeOffset.UtcNow);
+                var now = DateTimeOffset.UtcNow;
+                sensor = Sensor.Physical(facility.Id, request.ZoneId, request.Metric, channel.DeviceId, now);
                 _dbContext.Sensors.Add(sensor);
+
+                // Virtuální zařízení dodá týden historie, aby audit opravil ztrátu hned (skutečné čidlo nic nedodá)
+                _dbContext.SensorReadings.AddRange(VirtualHistory.Backfill(channel.Device, channel.NodeAddress, channel.IqrfType, sensor.Id, now));
             }
 
             channel.LinkSensor(sensor.Id, request.Metric);

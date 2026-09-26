@@ -11,7 +11,8 @@ namespace SmartAudit.Api.Services.Sensors
         public const string CommandTopic = "$CONTROL/dynamic-security/v1";
         public const string ResponseTopic = "$CONTROL/dynamic-security/v1/response";
 
-        // Výchozí role administrátora smí všechno číst, ale zapisovat jen na $CONTROL — backend potřebuje posílat dotazy gatewayím.
+        // Výchozí role administrátora smí všechno číst, ale zapisovat jen na $CONTROL — backend potřebuje posílat dotazy gatewayím
+        // (a nabídky párování na provisioning/+/offer).
         // Při prvním přidání broker backend jednou odpojí („administrative action“), aby platila nová práva; pak už jen hlásí „already exists“.
         public static string GrantBackendRequests(string requestTopicFilter)
         {
@@ -29,6 +30,21 @@ namespace SmartAudit.Api.Services.Sensors
                 new { command = "addRoleACL", rolename = role, acltype = "publishClientSend", topic = responseTopic, priority = 0, allow = true },
                 new { command = "createClient", username = credentials.Username, password = credentials.Password, roles = new[] { new { rolename = role } } },
                 new { command = "setClientPassword", username = credentials.Username, password = credentials.Password });
+        }
+
+        // Sdílený účet pro párování: jen ohlásit se a odpovědět na nabídku, převzít nabídku. Telemetrii ani cizí gatewaye nevidí;
+        // nabídky ostatních zařízení sice odebírat může, ale bez hesla z jejich nálepky je nerozšifruje.
+        public static string ProvisionPairingAccount(string password)
+        {
+            const string role = "pairing";
+
+            return Serialize(
+                new { command = "createRole", rolename = role, textdescription = "Párování nových IQRF gatewayí" },
+                new { command = "addRoleACL", rolename = role, acltype = "publishClientSend", topic = PairingProtocol.AnnounceFilter, priority = 0, allow = true },
+                new { command = "addRoleACL", rolename = role, acltype = "publishClientSend", topic = PairingProtocol.ResultFilter, priority = 0, allow = true },
+                new { command = "addRoleACL", rolename = role, acltype = "subscribePattern", topic = PairingProtocol.OfferFilter, priority = 0, allow = true },
+                new { command = "createClient", username = PairingProtocol.AccountName, password, roles = new[] { new { rolename = role } } },
+                new { command = "setClientPassword", username = PairingProtocol.AccountName, password });
         }
 
         // Odpojená gateway z aplikace ztratí i účet na brokeru

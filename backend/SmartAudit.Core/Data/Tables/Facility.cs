@@ -6,6 +6,9 @@ namespace SmartAudit.Core.Data.Tables
     // Objekt portfolia kraje — budova, kterou audit sleduje
     public class Facility
     {
+        // Zdrojový klíč budovy, kterou do mapy přidal správce — v otevřených datech není, import ji nesmí smazat
+        public const string ManagerSourcePrefix = "spravce:";
+
         public Guid Id { get; private set; } = Guid.CreateVersion7();
 
         // Identifikace

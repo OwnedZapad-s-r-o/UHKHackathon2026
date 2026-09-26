@@ -30,7 +30,9 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilities
         double? Co2,
         double? Power,
         decimal? AnnualLossCzk,
-        HeritageStatus HeritageStatus);
+        HeritageStatus HeritageStatus,
+        // Mění se s doplněnými přilehlými budovami — mapa ji přidá k adrese obrysu, který se jinak cachuje 2 dny
+        string FootprintVersion);
 
     // Mapa a tabulka Portfolio — jen data z cache vyhodnocení, bez sahání na miliony měření
     public class GetFacilitiesHandler : IRequestHandler<GetFacilitiesCommand, Response<IReadOnlyCollection<GetFacilityDto>>>
@@ -99,8 +101,32 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilities
                     f.Assessment != null ? f.Assessment.LatestCo2 : null,
                     f.Assessment != null ? f.Assessment.LatestPower : null,
                     canSeeMoney && f.Assessment != null ? f.Assessment.AnnualLossCzk : null,
-                    f.HeritageStatus))
+                    f.HeritageStatus,
+                    "0"))
                 .ToListAsync(ct);
+
+            // Doplněných budov a oprav je málo — verze obrysu jedním dotazem pro všechny objekty:
+            // počet doplněných budov + poslední změna budovy nebo oprava podlaží (mění výšku ve 3D)
+            var parts = await _dbContext.FacilityBuildingParts
+                .AsNoTracking()
+                .GroupBy(p => p.FacilityId)
+                .Select(g => new { FacilityId = g.Key, Count = g.Count(), LastChange = g.Max(p => p.UpdatedAt) })
+                .ToDictionaryAsync(g => g.FacilityId, ct);
+
+            var edits = await _dbContext.FacilityBuildings
+                .AsNoTracking()
+                .Where(b => b.EditedAt != null)
+                .Select(b => new { b.FacilityId, EditedAt = b.EditedAt!.Value })
+                .ToDictionaryAsync(b => b.FacilityId, b => b.EditedAt, ct);
+
+            facilities = facilities
+                .Select(f =>
+                {
+                    var partVersion = parts.TryGetValue(f.Id, out var p) ? $"{p.Count}-{p.LastChange.ToUnixTimeMilliseconds()}" : "0";
+                    var editVersion = edits.TryGetValue(f.Id, out var edited) ? edited.ToUnixTimeMilliseconds().ToString() : "0";
+                    return partVersion == "0" && editVersion == "0" ? f : f with { FootprintVersion = $"{partVersion}-{editVersion}" };
+                })
+                .ToList();
 
             return Response.Success<IReadOnlyCollection<GetFacilityDto>>(facilities);
         }

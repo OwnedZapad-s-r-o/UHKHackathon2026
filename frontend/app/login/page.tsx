@@ -16,7 +16,9 @@ const PROMISES = ["Kde kraj zbytečně topí a kolik to stojí", "Kde se ve tř�
 // Přihlášení = rozcestník: kraj a správce jdou do dema (bez registrace), veřejnost na hledání budov bez přihlášení.
 // Kdo má účet, rozbalí přihlášení e-mailem. Po vstupu do aplikace provede nového uživatele průvodce.
 export default async function LoginPage() {
-  if (await getSession()) redirect("/mapa");
+  // Staré přihlášení veřejnosti (dřív šlo do aplikace) nesmí zablokovat přihlášení jinou rolí
+  const session = await getSession();
+  if (session && session.role !== "Verejnost") redirect("/mapa");
 
   return (
     <main className="flex min-h-0 flex-1 overflow-y-auto bg-white text-hk-navy">
@@ -116,7 +118,6 @@ export default async function LoginPage() {
               <Search className="size-4" aria-hidden />
               Najít svou školu nebo domov
             </Link>
-            <DemoButtons publicOnly />
           </div>
 
           <details className="group mt-6 rounded-2xl border border-slate-200 open:bg-slate-50/60">

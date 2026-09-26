@@ -169,6 +169,64 @@ namespace SmartAudit.Core.Migrations
                     b.ToTable("DataSources");
                 });
 
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.DemoDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Behavior")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int?>("NodeAddress")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ParentGatewayId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Serial")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.PrimitiveCollection<string[]>("Templates")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentGatewayId");
+
+                    b.HasIndex("Serial")
+                        .IsUnique();
+
+                    b.ToTable("DemoDevices");
+                });
+
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.Facility", b =>
                 {
                     b.Property<Guid>("Id")
@@ -340,11 +398,18 @@ namespace SmartAudit.Core.Migrations
                     b.Property<double?>("LatestTemperature")
                         .HasColumnType("double precision");
 
+                    b.Property<decimal?>("LossBeforeSensorsCzk")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
                     b.Property<double?>("NightMeanTemperature")
                         .HasColumnType("double precision");
 
                     b.Property<double>("SavingPercent")
                         .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset?>("SensorsSince")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -375,6 +440,9 @@ namespace SmartAudit.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<double?>("AreaOverride")
+                        .HasColumnType("double precision");
+
                     b.Property<double?>("BuiltUpArea")
                         .HasColumnType("double precision");
 
@@ -388,6 +456,9 @@ namespace SmartAudit.Core.Migrations
                     b.Property<string>("CurrentUse")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EnergyCategory")
                         .IsRequired()
@@ -403,6 +474,9 @@ namespace SmartAudit.Core.Migrations
                     b.Property<DateTimeOffset>("FetchedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("FloorsOverride")
+                        .HasColumnType("integer");
+
                     b.Property<Geometry>("Footprint")
                         .HasColumnType("geometry(Geometry, 4326)");
 
@@ -417,12 +491,133 @@ namespace SmartAudit.Core.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int?>("YearOverride")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FacilityId")
                         .IsUnique();
 
                     b.ToTable("FacilityBuildings");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityBuildingPart", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("AreaSquareMeters")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Polygon>("Footprint")
+                        .IsRequired()
+                        .HasColumnType("geometry(Polygon, 4326)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacilityId");
+
+                    b.ToTable("FacilityBuildingParts");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityContract", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("AmountWithVat")
+                        .HasPrecision(16, 2)
+                        .HasColumnType("numeric(16,2)");
+
+                    b.Property<decimal?>("AmountWithoutVat")
+                        .HasPrecision(16, 2)
+                        .HasColumnType("numeric(16,2)");
+
+                    b.Property<string>("AttachmentsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Commodity")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContractId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContractNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateOnly?>("DateSigned")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PartnerIco")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PartnerName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PriceSource")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("PublishedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<double?>("UnitPriceCzkPerMwh")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("VersionId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContractId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "Category");
+
+                    b.ToTable("FacilityContracts");
                 });
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityMetric", b =>
@@ -550,6 +745,9 @@ namespace SmartAudit.Core.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ContractsSyncedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Department")
                         .HasMaxLength(100)
@@ -999,6 +1197,28 @@ namespace SmartAudit.Core.Migrations
                     b.Navigation("Facility");
                 });
 
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityBuildingPart", b =>
+                {
+                    b.HasOne("SmartAudit.Core.Data.Tables.Facility", "Facility")
+                        .WithMany()
+                        .HasForeignKey("FacilityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Facility");
+                });
+
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityContract", b =>
+                {
+                    b.HasOne("SmartAudit.Core.Data.Tables.Organization", "Organization")
+                        .WithMany("Contracts")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityMetric", b =>
                 {
                     b.HasOne("SmartAudit.Core.Data.Tables.Facility", "Facility")
@@ -1125,6 +1345,8 @@ namespace SmartAudit.Core.Migrations
 
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.Organization", b =>
                 {
+                    b.Navigation("Contracts");
+
                     b.Navigation("Facilities");
                 });
 

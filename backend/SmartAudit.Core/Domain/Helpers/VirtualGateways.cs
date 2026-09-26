@@ -5,8 +5,9 @@ namespace SmartAudit.Core.Domain.Helpers
     // Senzor virtuálního uzlu: typ IQRF Standard Sensor, id a název jako ve skutečném daemonu
     public record VirtualSensor(int Type, string Id, string Name, string Unit);
 
-    // Uzel IQMESH: adresa, co měří a do jakého druhu místnosti patří (pro předem přiřazené sítě)
-    public record VirtualNode(int Address, string Label, ZoneType PreferredZone, IReadOnlyList<VirtualSensor> Sensors);
+    // Uzel IQMESH: adresa, co měří a do jakého druhu místnosti patří (pro předem přiřazené sítě).
+    // Overheats = místnost se topí i mimo provoz (demo zařízení s chováním „přetápí“), jinak drží útlum.
+    public record VirtualNode(int Address, string Label, ZoneType PreferredZone, IReadOnlyList<VirtualSensor> Sensors, bool Overheats = false);
 
     // Provoz budovy určuje průběh hodnot: škola (vyučovací hodiny a přestávky), dílna (směny, hluk)
     public enum VirtualProfile
@@ -68,14 +69,22 @@ namespace SmartAudit.Core.Domain.Helpers
 
         public static VirtualGatewayPreset? Find(string gatewayId) => Network.FirstOrDefault(p => p.GatewayId == gatewayId);
 
-        // Uzly virtuální gatewaye: testovací síť podle katalogu, ostatní virtuální gatewaye (jednoklikové demo) jako učebna
-        public static IReadOnlyList<VirtualNode> NodesOf(string gatewayId) => Find(gatewayId)?.Nodes ?? Classroom;
+        // Uzly virtuální gatewaye: testovací síť podle katalogu, spárovaná gateway z výroby podle svého katalogu,
+        // ostatní (jednoklikové demo) jako učebna. K nim čidla z dosahu, která uživatel přidal do sítě (bonded = adresy v síti).
+        public static IReadOnlyList<VirtualNode> NodesOf(string gatewayId, IReadOnlyCollection<int>? bonded = null)
+        {
+            var nodes = Find(gatewayId)?.Nodes ?? PairableDevices.FindByGatewayId(gatewayId)?.Nodes ?? Classroom;
+            if (bonded == null || bonded.Count == 0)
+                return nodes;
+
+            return [.. nodes, .. PairableDevices.NearbyOf(gatewayId).Where(n => bonded.Contains(n.Node.Address)).Select(n => n.Node)];
+        }
 
         public static VirtualProfile ProfileOf(string gatewayId) => Find(gatewayId)?.Profile ?? VirtualProfile.School;
 
         // Hodnota senzoru v čase: plynulé průběhy podle provozu budovy + mírný šum, deterministické podle gatewaye a uzlu,
         // aby každá budova vypadala jinak. Čas je místní (vyučování, noční útlum).
-        public static double Value(string gatewayId, VirtualProfile profile, int node, int sensorType, DateTimeOffset now)
+        public static double Value(string gatewayId, VirtualProfile profile, int node, int sensorType, DateTimeOffset now, bool overheats = false)
         {
             var local = SchoolCalendar.ToLocal(now);
             var seed = StableHash.Of($"{gatewayId}/{node}");
@@ -94,8 +103,8 @@ namespace SmartAudit.Core.Domain.Helpers
 
             return sensorType switch
             {
-                // Teplota: přes den komfort, v noci a o víkendu útlum
-                1 => Math.Round((occupied ? 21.2 : 18.4) + 0.6 * Math.Sin(minutes / 180.0 + phase) + 0.15 * noise, 2),
+                // Teplota: přes den komfort, v noci a o víkendu útlum — nebo bez útlumu, když místnost přetápí
+                1 => Math.Round((occupied ? 21.2 : overheats ? 22.3 : 18.4) + 0.6 * Math.Sin(minutes / 180.0 + phase) + 0.15 * noise, 2),
                 2 => Math.Round(occupied ? (inLesson ? 620 + lessonMinute * 24 : 560) + 40 * noise : 430 + 20 * noise),
                 3 => Math.Round((occupied ? 0.45 : 0.12) + 0.08 * noise, 2),
                 11 => Math.Round(Math.Max(0, (occupied ? 380 : 20) + 60 * Math.Sin(minutes / 90.0 + phase) + 10 * noise)),

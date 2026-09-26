@@ -6,9 +6,16 @@ import type { AuditStatus, FacilityCategory, FacilityListItem } from "@/types/ap
 const STATUSES: AuditStatus[] = ["Critical", "Warning", "Nominal"];
 const CATEGORIES: FacilityCategory[] = ["School", "Social", "Health", "Culture"];
 
+type MapLegendProps = {
+  facilities: FacilityListItem[];
+  showDistricts: boolean;
+  showCategories?: boolean;
+};
+
 // Legenda mapy: stav (barva špendlíku), okresy (barva výplně), druh (ikona ve špendlíku).
 // Škála okresů jen v pohledu na kraj — u vybraného objektu je výplň okresů vybledlá a škála by jen mátla.
-export function MapLegend({ facilities, showDistricts }: { facilities: FacilityListItem[]; showDistricts: boolean }) {
+// Správce budovy vidí jen stav svých budov — druhy objektů kraje ho nezajímají.
+export function MapLegend({ facilities, showDistricts, showCategories = true }: MapLegendProps) {
   return (
     <div data-tour="legenda" className="absolute bottom-10 left-4 z-10 w-52 rounded-xl border border-slate-200 bg-white p-4 text-hk-navy shadow-[0_8px_20px_rgba(11,25,44,0.12)]">
       <p className="text-xs font-bold">Stav objektů</p>
@@ -37,22 +44,26 @@ export function MapLegend({ facilities, showDistricts }: { facilities: FacilityL
         </>
       )}
 
-      <p className="mt-4 text-xs font-bold">Druh objektu</p>
-      <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
-        {CATEGORIES.map((category) => {
-          const Icon = CATEGORY_META[category].icon;
+      {showCategories && (
+        <>
+          <p className="mt-4 text-xs font-bold">Druh objektu</p>
+          <ul className="mt-2 space-y-1.5 text-xs text-slate-700">
+            {CATEGORIES.map((category) => {
+              const Icon = CATEGORY_META[category].icon;
 
-          return (
-            <li key={category} className="flex items-center gap-2">
-              <span className="flex size-4.5 items-center justify-center rounded-full bg-hk-navy text-white">
-                <Icon className="size-2.5" strokeWidth={2.5} aria-hidden />
-              </span>
-              <span className="flex-1">{CATEGORY_META[category].label}</span>
-              <span className="text-slate-500 tabular-nums">{facilities.filter((f) => f.category === category).length}</span>
-            </li>
-          );
-        })}
-      </ul>
+              return (
+                <li key={category} className="flex items-center gap-2">
+                  <span className="flex size-4.5 items-center justify-center rounded-full bg-hk-navy text-white">
+                    <Icon className="size-2.5" strokeWidth={2.5} aria-hidden />
+                  </span>
+                  <span className="flex-1">{CATEGORY_META[category].label}</span>
+                  <span className="text-slate-500 tabular-nums">{facilities.filter((f) => f.category === category).length}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

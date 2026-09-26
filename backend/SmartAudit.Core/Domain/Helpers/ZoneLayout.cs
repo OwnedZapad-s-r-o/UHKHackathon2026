@@ -19,7 +19,8 @@ namespace SmartAudit.Core.Domain.Helpers
                 FacilityCategory.School => School(kinds, name, floors, seed),
                 FacilityCategory.Social => Social(floors),
                 FacilityCategory.Health => Health(floors),
-                _ => Culture(name, floors),
+                // Druh z formuláře správce („Knihovna“, „Divadlo“) napoví stejně jako název
+                _ => Culture($"{name} {kinds.FirstOrDefault()}", floors),
             };
 
             zones = zones.Take(MaxZones).ToList();
@@ -38,6 +39,34 @@ namespace SmartAudit.Core.Domain.Helpers
                     zones.Add(new ZoneTemplate($"Pokoje {floor}. patro", ZoneType.Dormitory, floor, "hlavní budova", false));
 
                 zones.Add(new ZoneTemplate("Klubovna", ZoneType.CommonRoom, 0, "hlavní budova", false));
+
+                return zones;
+            }
+
+            // Samostatné budovy školy, které přidává správce — bez učeben
+            if (mainKind == "Tělocvična")
+            {
+                zones.Add(new ZoneTemplate("Tělocvična", ZoneType.Gym, 0, "hlavní budova", false));
+                zones.Add(new ZoneTemplate("Šatny", ZoneType.CommonRoom, 0, "hlavní budova", false));
+                if (floors >= 2)
+                    zones.Add(new ZoneTemplate("Posilovna", ZoneType.Gym, 1, "hlavní budova", false));
+
+                return zones;
+            }
+
+            if (mainKind == "Školní jídelna")
+            {
+                zones.Add(new ZoneTemplate("Jídelna", ZoneType.Canteen, 0, "hlavní budova", false));
+                if (floors >= 2)
+                    zones.Add(new ZoneTemplate("Kanceláře", ZoneType.Office, 1, "hlavní budova", false));
+
+                return zones;
+            }
+
+            if (mainKind == "Dílny odborného výcviku")
+            {
+                for (var floor = 0; floor < Math.Min(floors, 3); floor++)
+                    zones.Add(new ZoneTemplate($"Dílna {floor + 1}", ZoneType.Workshop, floor, "hlavní budova", false));
 
                 return zones;
             }

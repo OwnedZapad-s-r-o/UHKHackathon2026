@@ -10,6 +10,7 @@ using SmartAudit.Api.Services;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Data.Tables;
 using SmartAudit.Core.Domain;
+using SmartAudit.Core.Domain.Helpers;
 
 namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
 {
@@ -26,6 +27,9 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
 
         // Jak dlouho platí analýza pro nezměněný stav budovy
         private static readonly TimeSpan CacheWindow = TimeSpan.FromHours(6);
+
+        // Nejnovější smlouvy organizace pro kontext modelu — víc by jen ředilo prompt
+        private const int MaxContractsForModel = 15;
 
         private readonly SmartAuditDbContext _dbContext;
         private readonly IMediator _mediator;
@@ -50,7 +54,9 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
             if (!detail.IsSuccess || detail.Data == null)
                 return Response.Error<GenerateAiAuditDto>(detail.Message ?? "Objekt s tímto id neexistuje", detail.Status);
 
-            var fingerprint = Fingerprint(detail.Data);
+            var contracts = await ContractsAsync(detail.Data.Organization?.Id, ct);
+
+            var fingerprint = Fingerprint(detail.Data, contracts);
             var cached = await _dbContext.AiAnalyses
                 .AsNoTracking()
                 .Where(a => a.FacilityId == request.FacilityId && a.InputFingerprint == fingerprint && a.CreatedAt > DateTimeOffset.UtcNow - CacheWindow)
@@ -66,7 +72,7 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
             AiAuditResult result;
             try
             {
-                result = await _aiService.AnalyzeAsync(detail.Data, ct);
+                result = await _aiService.AnalyzeAsync(detail.Data, contracts, ct);
             }
             // SDK chyby sítě po opakovaných pokusech obalí do AggregateException
             catch (Exception ex) when (IsAiServiceFailure(ex))
@@ -94,9 +100,28 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
             return Response.Success(dto);
         }
 
-        // Co model dostává a co se mezi vyhodnoceními mění: stav, zjištění a ztráta. Průběžné hodnoty (teplota teď) záměrně ne —
+        // Smlouvy organizace z Registru smluv — model podle nich doporučí uplatnit servisní smlouvu místo nové zakázky
+        private async Task<IReadOnlyCollection<AiContractContext>> ContractsAsync(Guid? organizationId, CancellationToken ct)
+        {
+            if (organizationId == null)
+                return [];
+
+            var contracts = await _dbContext.FacilityContracts
+                .AsNoTracking()
+                .Where(c => c.OrganizationId == organizationId)
+                .OrderByDescending(c => c.DateSigned ?? c.PublishedOn)
+                .Take(MaxContractsForModel)
+                .Select(c => new { c.Title, c.Category, c.PartnerName, c.ContractNumber, c.VersionId, c.AmountWithoutVat, c.AmountWithVat, c.DateSigned, c.UnitPriceCzkPerMwh })
+                .ToListAsync(ct);
+
+            return contracts
+                .Select(c => new AiContractContext(c.Title, c.Category, c.PartnerName, c.ContractNumber, ContractRegistryParser.DetailUrl(c.VersionId), c.AmountWithoutVat, c.AmountWithVat, c.DateSigned, c.UnitPriceCzkPerMwh))
+                .ToList();
+        }
+
+        // Co model dostává a co se mezi vyhodnoceními mění: stav, zjištění, ztráta a smlouvy. Průběžné hodnoty (teplota teď) záměrně ne —
         // jinak by se otisk měnil každých 15 minut a mezipaměť by nikdy nezabrala.
-        private static string Fingerprint(GetFacilityDetailDto detail)
+        private static string Fingerprint(GetFacilityDetailDto detail, IReadOnlyCollection<AiContractContext> contracts)
         {
             var assessment = detail.Assessment;
             var input = JsonSerializer.Serialize(new
@@ -105,6 +130,7 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
                 assessment?.Headline,
                 Findings = assessment?.Findings.Select(f => new { f.Title, f.Severity, f.Tag }),
                 assessment?.AnnualLossCzk,
+                Contracts = contracts.Select(c => c.RegistryUrl),
             }, JsonOptions);
 
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(input)));

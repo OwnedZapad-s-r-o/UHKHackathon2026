@@ -65,6 +65,35 @@ export async function createVirtualGateway(facilityId: string | null): Promise<S
   redirect(`/senzory/${result.data.id}`);
 }
 
+const SERIAL_PATTERN = /^[0-9a-f]{8}$/i;
+
+// Párování nové gatewaye heslem z nálepky — po úspěchu rovnou na detail, kde se čeká na první data
+export async function claimGateway(serial: string, password: string, facilityId: string, name: string): Promise<SensorActionState> {
+  if (!(await canManageSensors())) return { error: "Gateway může připojit jen kraj nebo správce budovy." };
+  if (!SERIAL_PATTERN.test(serial)) return { error: "Neplatné sériové číslo zařízení." };
+  if (!ID_PATTERN.test(facilityId)) return { error: "Vyberte objekt, kam gateway patří." };
+  if (password.replace(/[^0-9a-z]/gi, "").length === 0) return { error: "Zadejte heslo z nálepky." };
+
+  const result = await apiSendAuthorized<{ id: string }>("POST", "/api/sensors/claims", { serial, password, facilityId, name: name.trim() || null });
+  if (!result.ok) return { error: result.message };
+
+  revalidatePath("/senzory");
+  redirect(`/senzory/${result.data.id}`);
+}
+
+// Přidání čidla z dosahu do sítě gatewaye kódem z nálepky (IQRF SmartConnect)
+export async function bondNode(gatewayId: string, code: string): Promise<{ error: string } | { address: number }> {
+  if (!(await canManageSensors())) return { error: "Čidlo může přidat jen kraj nebo správce budovy." };
+  if (!ID_PATTERN.test(gatewayId)) return { error: "Neplatné id gatewaye." };
+  if (code.replace(/[^0-9a-z]/gi, "").length < 8) return { error: "Kód z nálepky má 8 znaků." };
+
+  const result = await apiSendAuthorized<{ address: number }>("POST", `/api/sensors/gateways/${gatewayId}/nodes`, { code });
+  if (!result.ok) return { error: result.message };
+
+  revalidatePath(`/senzory/${gatewayId}`);
+  return { address: result.data.address };
+}
+
 export async function assignChannel(gatewayId: string, channelId: string, zoneId: string | null, metric: SensorMetric): Promise<SensorActionState> {
   if (!(await canManageSensors())) return { error: "Kanál může přiřadit jen kraj nebo správce budovy." };
   if (!ID_PATTERN.test(gatewayId) || !ID_PATTERN.test(channelId) || (zoneId !== null && !ID_PATTERN.test(zoneId))) return { error: "Neplatný výběr." };

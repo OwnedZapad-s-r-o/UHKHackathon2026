@@ -31,6 +31,11 @@ namespace SmartAudit.Core.Data.Tables
         public decimal AnnualLossCzk { get; private set; }
         public double SavingPercent { get; private set; }
 
+        // Odhad ztráty těsně před prvním skutečným čidlem teploty (ještě ze simulace) — z něj je vidět, jak měření ztrátu opravilo.
+        // Když budova přijde o všechna skutečná čidla teploty, vynuluje se.
+        public decimal? LossBeforeSensorsCzk { get; private set; }
+        public DateTimeOffset? SensorsSince { get; private set; }
+
 
         // Cizí klíče
         public Guid FacilityId { get; private set; }
@@ -73,6 +78,22 @@ namespace SmartAudit.Core.Data.Tables
             AnnualLossCzk = annualLossCzk;
             SavingPercent = savingPercent;
             EvaluatedAt = DateTimeOffset.UtcNow;
+        }
+
+        // Nastaví se jen poprvé — další čidla v budově výchozí stav „bez měření“ nemění
+        public void MarkSensorsInstalled(DateTimeOffset now)
+        {
+            if (SensorsSince != null)
+                return;
+
+            LossBeforeSensorsCzk = AnnualLossCzk;
+            SensorsSince = now;
+        }
+
+        public void ClearSensorBaseline()
+        {
+            LossBeforeSensorsCzk = null;
+            SensorsSince = null;
         }
     }
 }

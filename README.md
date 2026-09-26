@@ -74,6 +74,7 @@ Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlast
 - **📡 Skutečná čidla IQRF:** IQRF gateway se přes MQTT připojí k aplikaci, ta sama najde uzly a senzory (teplota, CO₂, vlhkost, osvětlení, hluk, pohyb…) a po přiřazení do místnosti nahradí simulaci skutečným měřením. Návod v [docs/SENZORY_IQRF.md](docs/SENZORY_IQRF.md), emulátor gatewaye v `tools/iqrf-emulator/`.
 - **🗺️ Mapa objektů kraje:** Šedý podklad (mapcn) ve dvou úrovních — na celém kraji bubliny okresů (prstenec = složení stavů, uprostřed počet objektů) a malé tečky objektů, okresy obarvené podle podílu objektů se zjištěním; klik na okres ho vybere a teprve pak se ukážou špendlíky jen z něj (barva = stav, ikona = druh). Špendlíky se ukážou i po ručním přiblížení. Na startu není vybraný žádný objekt; po kliknutí mapa přeletí k budově a ukáže ji ve 3D (vybraná budova „vyroste“ v barvě stavu, okolí zprůhlední). Výběr zruší křížek, klik do mapy nebo Esc.
 - **📋 Inspekční panel:** Přehled, telemetrie (grafy a „Místnosti teď“ s odznakem živého čidla), auditní zjištění a karta budovy ČÚZK. Schematický řez budovou je zatím skrytý (`FEATURES.buildingSection`).
+- **📑 Smlouvy z Registru smluv:** záložka „Smlouvy“ (kraj a správce) ukáže smlouvy organizace podle IČO — dodávky tepla a energií, servis kotelen a MaR, zateplení a snížení energetické náročnosti — s originálním PDF z registru. Cena tepla vytažená ze smlouvy nahradí v auditu paušál a AI analýza doporučí uplatnit existující servisní smlouvu místo nové zakázky.
 - **👪 Pro veřejnost (`/objekty`):** bez přihlášení — najdi svou školu nebo domov, přehled kvality vnitřního vzduchu (ne žebříček), veřejná karta objektu s CO₂ po místnostech, grafem za 24 h, radou kdy větrat a tím, co kraj v budově řeší (bez Kč). QR kód k vytištění na dveře třídy.
 - **🏠 Landing page (`/`):** představení aplikace se snímky, živými čísly z otevřeného API a vstupem do dema.
 - **⚡ Portfolio a Anomálie:** Přehledná tabulka a seznam zjištění seřazený podle odhadované roční finanční ztráty v Kč.
@@ -103,7 +104,7 @@ Bez nich aplikace běží normálně a karta AI analýzy informuje, jaké promě
 
 ```
 web (Next.js :3000) ──/api/*──► api (ASP.NET net10 :8080) ──► db (PostgreSQL + PostGIS)
-                                  ├─ DataPipelineService      stažení sad → portfolio → ČÚZK → počasí
+                                  ├─ DataPipelineService      stažení sad → portfolio → ČÚZK → počasí → (na pozadí) Registr smluv
                                   └─ SensorSimulationService  senzory → historie + živá data → audit
 ```
 
@@ -151,6 +152,14 @@ Jakmile místnost měří skutečné čidlo IQRF, simulace pro ni skončí a aud
 (víkend nebo noc bez útlumu) se sečte tepelná ztráta budovy × (naměřená teplota − útlum 18 °C, u domovů a nemocnic 20 °C).
 Tepelná ztráta budovy = podlahová plocha × měrná ztráta podle roku výstavby (ČÚZK). Týden se přepočte na topnou sezónu
 (33 týdnů) a cenu tepla 2,20 Kč/kWh (`AuditSettings`). Ukáže-li skutečné čidlo útlum, ztráta klesne na nulu (test v `SmartAudit.Tests`).
+
+**Cena tepla ze smlouvy:** po startu stáhne `ContractSyncService` na pozadí z [Registru smluv](https://smlouvy.gov.cz) smlouvy
+všech organizací kraje podle IČO (vyhledávání podle předmětu, ~18 dotazů na organizaci s odstupem 1 s; registr nemá
+vyhledávací REST API, čte se HTML podrobného vyhledávání). U smluv na dodávku tepla a plynu přečte PDF a DOCX přílohy
+a najde cenu (Kč/GJ, Kč/MWh). Má-li organizace cenu tepla (nebo plynu, přepočet přes účinnost kotle 90 %), audit ji použije
+místo paušálu; cenu elektřiny ne. Elektřinu a plyn nakupuje kraj centrálně na komoditní burze, takže u většiny škol zůstává
+paušál — silná stránka integrace jsou servisní smlouvy na MaR a kotelny a proběhlé stavby. Poslední stav je
+v `seed/opendata/registr-smluv.json` (start bez sítě), obnova po 7 dnech (`ContractRegistrySettings`).
 
 **Výkon a škálování:**
 - Tabulka měření `SensorReadings` je rozdělená na **měsíční oddíly** (PostgreSQL partitioning) s indexem BRIN nad časem. Dotazy na posledních 7 dní čtou jen poslední oddíly a staré měsíce jde odpojit a archivovat bez mazání řádek po řádku.

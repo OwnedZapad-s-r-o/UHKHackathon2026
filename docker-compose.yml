@@ -54,6 +54,7 @@ services:
       IqrfSettings__Username: smartaudit-backend
       IqrfSettings__Password: ${MQTT_BACKEND_PASSWORD:-local-demo-mqtt-backend-password}
       IqrfSettings__DeviceSecret: ${MQTT_DEVICE_SECRET:-local-demo-mqtt-device-secret-0123456789}
+      IqrfSettings__ProvisioningPassword: ${MQTT_PROVISIONING_PASSWORD:-local-demo-mqtt-provisioning-password}
       IqrfSettings__PublicHost: ${IQRF_BROKER_PUBLIC_HOST:-}
       IqrfSettings__CaCertificatePath: /mqtt-certs/ca.crt
     volumes:
@@ -95,6 +96,7 @@ services:
       - mqtt
 
   # Testovací síť kraje v Pythonu: pět emulovaných gatewayí v pěti okresech (stejné jako tlačítko v aplikaci)
+  # a zařízení k párování (nové gatewaye z výroby, čidla v dosahu) — nálepky s hesly vypíše: docker compose logs emulators
   # docker compose --profile emulators up -d
   # Gatewaye musí být v aplikaci připojené (Senzory → Spustit testovací síť kraje); virtuální gatewaye aplikace pak ustoupí.
   emulators:
@@ -103,6 +105,8 @@ services:
       context: ./tools/iqrf-emulator
     environment:
       MQTT_DEVICE_SECRET: ${MQTT_DEVICE_SECRET:-local-demo-mqtt-device-secret-0123456789}
+      MQTT_PROVISIONING_PASSWORD: ${MQTT_PROVISIONING_PASSWORD:-local-demo-mqtt-provisioning-password}
+      PYTHONUNBUFFERED: "1"
     command: ["python", "multi_emulator.py", "--host", "mqtt"]
     depends_on:
       - mqtt

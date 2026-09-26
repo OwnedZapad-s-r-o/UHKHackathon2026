@@ -4,8 +4,13 @@ Stejné rozložení jako testovací síť v aplikaci (VirtualGateways.cs): budov
 v aplikaci připojené (Senzory → Spustit testovací síť kraje), jinak je broker nepustí. Heslo každé gatewaye se odvodí
 z MQTT_DEVICE_SECRET stejně jako v aplikaci. Když cluster běží, virtuální gatewaye v aplikaci samy ustoupí.
 
+Navíc zařízení, která jsou zapnutá a online, ale nejsou v žádné síti (katalog PairableDevices.cs v aplikaci):
+- dvě nové gatewaye z výroby — v aplikaci se objeví mezi „Nová zařízení online“ a připojí se heslem z nálepky,
+- čidla v dosahu gatewayí gw-rk-sps a gw-hk-tyl — do sítě gatewaye se přidají kódem z nálepky (IQRF SmartConnect).
+Nálepky (serial, heslo, kódy) vypíše konzole po startu. Párování potřebuje MQTT_PROVISIONING_PASSWORD.
+
     pip install -r tools/iqrf-emulator/requirements.txt
-    python tools/iqrf-emulator/multi_emulator.py --device-secret <MQTT_DEVICE_SECRET>
+    python tools/iqrf-emulator/multi_emulator.py --device-secret <MQTT_DEVICE_SECRET> --provisioning-password <MQTT_PROVISIONING_PASSWORD>
 
     # nebo v Dockeru
     docker compose --profile emulators up -d
@@ -16,6 +21,7 @@ import json
 import math
 import os
 import ssl
+import threading
 import time
 import zlib
 from datetime import datetime
@@ -23,6 +29,7 @@ from zoneinfo import ZoneInfo
 
 import paho.mqtt.client as mqtt
 
+import pairing
 from emulator import envelope, gateway_password
 
 LOCAL = ZoneInfo("Europe/Prague")
@@ -43,6 +50,76 @@ NETWORK = {
     "gw-na-jir": ("school", {1: [HUMIDITY, TEMPERATURE, ILLUMINANCE], 2: [CO2, TEMPERATURE]}),
     "gw-rk-sps": ("workshop", {1: [TEMPERATURE, NOISE], 2: [TEMPERATURE, CO2, HUMIDITY]}),
 }
+
+# Nové gatewaye z výroby: serial (MID) → (model, heslo z nálepky, {uzel: [senzory]})
+PAIRABLE = {
+    "81A4F2C0": ("IQD-GW04", "7Q4M-2PXA", {1: [TEMPERATURE, CO2, HUMIDITY], 2: [TEMPERATURE, NOISE]}),
+    "81A4F3D9": ("IQD-GW04", "H3TR-9KLC", {1: [TEMPERATURE, HUMIDITY, ILLUMINANCE]}),
+}
+
+# Čidla v dosahu gatewaye mimo její síť: gateway → [(MID, kód z nálepky, adresa po přidání, [senzory])]
+NEARBY = {
+    "gw-rk-sps": [("5C0E91A7", "RK2B-X8QD", 3, [CO2, TEMPERATURE])],
+    "gw-hk-tyl": [("5C0E92F3", "HK7N-4WZE", 3, [NOISE])],
+}
+
+# Čidla přidaná do sítě kódem: gateway → {adresy}; ukládá se do souboru, aby po restartu zůstala v síti
+BONDED = {}
+BONDED_LOCK = threading.Lock()
+STATE_FILE = None
+
+# Kolikrát po sobě broker gatewayi odmítne, než usoudíme, že ji v aplikaci odebrali (výpadek brokeru se nepočítá)
+REJECTIONS_BEFORE_RESET = 3
+
+
+def stable_hash(value):
+    """FNV-1a jako StableHash v aplikaci — stejná „síla signálu“ ukáže aplikace i emulátor."""
+    h = 2166136261
+    for b in value.encode("utf-8"):
+        h = ((h ^ b) * 16777619) & 0xFFFFFFFF
+    return h - (1 << 32) if h >= 1 << 31 else h
+
+
+def rssi_of(value, base, steps, step):
+    return base - abs(int(math.fmod(stable_hash(value), steps))) * step
+
+
+def nodes_of(gateway):
+    """Uzly v síti gatewaye: základní podle katalogu + čidla z dosahu, která uživatel přidal kódem."""
+    if gateway in NETWORK:
+        nodes = dict(NETWORK[gateway][1])
+    else:
+        nodes = dict(next(p[2] for serial, p in PAIRABLE.items() if pairing.gateway_id_of(serial) == gateway))
+    with BONDED_LOCK:
+        bonded = set(BONDED.get(gateway, ()))
+    for _mid, _code, address, sensors in NEARBY.get(gateway, []):
+        if address in bonded:
+            nodes[address] = sensors
+    return nodes
+
+
+def profile_of(gateway):
+    return NETWORK[gateway][0] if gateway in NETWORK else "school"
+
+
+def bond(gateway, address):
+    with BONDED_LOCK:
+        BONDED.setdefault(gateway, set()).add(address)
+        snapshot = {g: sorted(a) for g, a in BONDED.items()}
+    if STATE_FILE:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(snapshot, f)
+
+
+def load_state(path):
+    if not path or not os.path.exists(path):
+        return
+    try:
+        with open(path, encoding="utf-8") as f:
+            for gateway, addresses in json.load(f).items():
+                BONDED[gateway] = set(addresses)
+    except (OSError, ValueError):
+        print(f"Stav {path} nejde načíst — začínám z výroby")
 
 
 def value(gateway, profile, node, sensor_type, now):
@@ -80,7 +157,7 @@ def sensor_json(gateway, profile, node, sensor, now):
 
 
 def respond(gateway, request):
-    profile, nodes = NETWORK[gateway]
+    profile, nodes = profile_of(gateway), nodes_of(gateway)
     m_type = request.get("mType")
     data = request.get("data", {})
     msg_id = data.get("msgId", "")
@@ -103,19 +180,54 @@ def respond(gateway, request):
             if index < len(of_type):
                 sensors[node] = sensor_json(gateway, profile, node, of_type[index], now)
         return envelope(m_type, msg_id, 0, {"sensors": sensors})
+    if m_type == "iqmeshNetwork_SmartConnect":
+        # Kód z nálepky čidla v dosahu → čidlo dostane adresu v síti (už přidané odpoví stejnou adresou)
+        code = pairing.normalize(req.get("smartConnectCode") or "")
+        match = next((n for n in NEARBY.get(gateway, []) if pairing.normalize(n[1]) == code), None)
+        if match is None:
+            return envelope(m_type, msg_id, 0, None, status=1003, status_str="Bonding se nezdařil — čidlo s tímto kódem neodpovědělo")
+        mid, _code, address, _sensors = match
+        bond(gateway, address)
+        print(f"[{gateway}] čidlo MID {mid} přidáno do sítě jako uzel {address}")
+        reply = envelope(m_type, msg_id, 0, None)
+        reply["data"]["rsp"].update({"assignedAddr": address, "nodesNr": len(nodes_of(gateway))})
+        return reply
+    if m_type == "smartaudit_NearbyNodes":
+        nearby = [
+            {"mid": mid, "sensors": [s[0] for s in sensors], "rssi": rssi_of(mid, -60, 3, 7)}
+            for mid, _code, address, sensors in NEARBY.get(gateway, [])
+            if address not in nodes
+        ]
+        return envelope(m_type, msg_id, 0, {"nodes": nearby})
     return envelope(m_type, msg_id, n_adr, None, status=-1, status_str="Emulátor tento typ zprávy nepodporuje")
 
 
-def start_gateway(gateway, args):
+def configure(client, args):
+    if args.tls:
+        client.tls_set(ca_certs=args.cafile, tls_version=ssl.PROTOCOL_TLS_CLIENT)
+    client.reconnect_delay_set(min_delay=5, max_delay=30)
+
+
+def rejected(reason_code):
+    """Broker nepustil kvůli jménu nebo heslu (účet v aplikaci neexistuje) — ne kvůli výpadku."""
+    return reason_code.value in (134, 135)
+
+
+def start_gateway(gateway, args, username=None, password=None, on_connected=None, on_rejected=None):
     request_topic = f"gateway/{gateway}/iqrf/requests"
     response_topic = f"gateway/{gateway}/iqrf/responses"
 
     def on_connect(client, _userdata, _flags, reason_code, _properties):
         if reason_code.is_failure:
-            print(f"[{gateway}] broker odmítl připojení ({reason_code}) — je gateway v aplikaci připojená? Zkusím znovu.")
+            if on_rejected and rejected(reason_code):
+                on_rejected()
+            else:
+                print(f"[{gateway}] broker odmítl připojení ({reason_code}) — je gateway v aplikaci připojená? Zkusím znovu.")
             return
         print(f"[{gateway}] připojeno, poslouchám {request_topic}")
         client.subscribe(request_topic)
+        if on_connected:
+            on_connected()
 
     def on_message(client, _userdata, message):
         try:
@@ -127,35 +239,167 @@ def start_gateway(gateway, args):
         client.publish(response_topic, json.dumps(reply, ensure_ascii=False), qos=1)
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"multi-emulator-{gateway}")
-    client.username_pw_set(gateway, gateway_password(args.device_secret, gateway))
-    if args.tls:
-        client.tls_set(ca_certs=args.cafile, tls_version=ssl.PROTOCOL_TLS_CLIENT)
+    client.username_pw_set(username or gateway, password or gateway_password(args.device_secret, gateway))
+    configure(client, args)
     client.on_connect = on_connect
     client.on_message = on_message
     # Broker pustí gateway až po jejím připojení v aplikaci — do té doby se připojení opakuje
-    client.reconnect_delay_set(min_delay=5, max_delay=30)
     client.connect_async(args.host, args.port)
     client.loop_start()
     return client
 
 
+class PairableGateway:
+    """Gateway z výroby. Po startu zkusí svůj účet (už spárovaná z dřívějška); když ho broker nezná, ohlašuje se
+    a čeká na nabídku. Po odebrání v aplikaci (broker ji opakovaně odmítne) se vrátí do párování."""
+
+    def __init__(self, serial, args):
+        self.serial = serial
+        self.model, self.password, self.nodes = PAIRABLE[serial]
+        self.gateway_id = pairing.gateway_id_of(serial)
+        self.args = args
+        self.client = None
+        self.mode = None
+        self.rejections = 0
+        self.lock = threading.Lock()
+        self.rssi = rssi_of(serial, -52, 4, 6)
+
+    def start(self):
+        self.to_gateway(self.gateway_id, gateway_password(self.args.device_secret, self.gateway_id), probing=True)
+
+    def stop(self):
+        with self.lock:
+            self.mode = "stopped"
+            self._close()
+
+    def _close(self):
+        if self.client:
+            self.client.disconnect()
+            self.client.loop_stop()
+            self.client = None
+
+    def to_gateway(self, username, password, probing=False):
+        with self.lock:
+            if self.mode == "stopped":
+                return
+            self._close()
+            self.mode = "gateway"
+            self.rejections = 0
+            # Při startu stačí jedno odmítnutí (gateway ještě nikdo nespároval); po spárování chvíli trvá, než aplikace založí účet
+            limit = 1 if probing else REJECTIONS_BEFORE_RESET
+
+            def on_connected():
+                self.rejections = 0
+
+            def on_rejected():
+                self.rejections += 1
+                if self.rejections >= limit:
+                    if not probing:
+                        print(f"[{self.serial}] gateway byla v aplikaci odebrána — zpět do režimu párování")
+                    threading.Thread(target=self.to_pairing, daemon=True).start()
+
+            self.client = start_gateway(self.gateway_id, self.args, username, password, on_connected, on_rejected)
+
+    def to_pairing(self):
+        with self.lock:
+            if self.mode == "stopped":
+                return
+            self._close()
+            self.mode = "pairing"
+
+            def on_connect(client, _userdata, _flags, reason_code, _properties):
+                if reason_code.is_failure:
+                    print(f"[{self.serial}] párovací účet odmítnut ({reason_code}) — sedí MQTT_PROVISIONING_PASSWORD?")
+                    return
+                client.subscribe(pairing.offer_topic(self.serial))
+                print(f"[{self.serial}] online, čekám na spárování (heslo z nálepky {self.password})")
+
+            def on_message(client, _userdata, message):
+                threading.Thread(target=self.answer_offer, args=(client, message.payload.decode("utf-8")), daemon=True).start()
+
+            client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"pairing-{self.serial}")
+            client.username_pw_set(pairing.ACCOUNT, self.args.provisioning_password)
+            configure(client, self.args)
+            client.on_connect = on_connect
+            client.on_message = on_message
+            client.connect_async(self.args.host, self.args.port)
+            client.loop_start()
+            self.client = client
+
+        threading.Thread(target=self.announce_loop, args=(client,), daemon=True).start()
+
+    def announce_loop(self, client):
+        types = {address: [s[0] for s in sensors] for address, sensors in self.nodes.items()}
+        while self.client is client and self.mode == "pairing":
+            if client.is_connected():
+                client.publish(pairing.announce_topic(self.serial), pairing.announcement(self.serial, self.model, types, self.rssi))
+            time.sleep(10)
+
+    def answer_offer(self, client, offer):
+        credentials = pairing.open_offer(self.password, self.serial, offer)
+        if credentials is None:
+            print(f"[{self.serial}] nabídka odmítnuta — špatné heslo")
+            client.publish(pairing.result_topic(self.serial), pairing.result(False)).wait_for_publish(timeout=5)
+            return
+
+        print(f"[{self.serial}] heslo sedí — připojuji se jako {credentials[0]}")
+        client.publish(pairing.announce_topic(self.serial), "").wait_for_publish(timeout=5)
+        client.publish(pairing.result_topic(self.serial), pairing.result(True)).wait_for_publish(timeout=5)
+        self.to_gateway(*credentials)
+
+
+def print_labels():
+    print("\nNálepky zařízení k párování:")
+    for serial, (model, password, nodes) in PAIRABLE.items():
+        print(f"  gateway {model}  MID {serial}  heslo {password}  ({len(nodes)} uzly)")
+    for gateway, nodes in NEARBY.items():
+        for mid, code, _address, sensors in nodes:
+            print(f"  čidlo u {gateway}  MID {mid}  kód {code}  ({', '.join(s[1].lower() for s in sensors)})")
+    print()
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Cluster pěti emulovaných IQRF gatewayí (testovací síť kraje)")
+    global STATE_FILE
+
+    parser = argparse.ArgumentParser(description="Cluster pěti emulovaných IQRF gatewayí (testovací síť kraje) a zařízení k párování")
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=1883)
     parser.add_argument("--device-secret", default=os.environ.get("MQTT_DEVICE_SECRET"), help="MQTT_DEVICE_SECRET z .env")
+    parser.add_argument("--provisioning-password", default=os.environ.get("MQTT_PROVISIONING_PASSWORD"), help="MQTT_PROVISIONING_PASSWORD z .env (párování)")
+    parser.add_argument("--no-pairing", action="store_true", help="Bez nespárovaných gatewayí z výroby")
+    parser.add_argument("--state", default="emulator-state.json", help="Soubor s čidly přidanými do sítě")
+    parser.add_argument("--factory-reset", action="store_true", help="Zapomenout přidaná čidla (gatewaye z výroby vrátí do párování až odebrání v aplikaci)")
     parser.add_argument("--tls", action="store_true")
     parser.add_argument("--cafile")
     args = parser.parse_args()
     if not args.device_secret:
         parser.error("zadejte --device-secret nebo nastavte MQTT_DEVICE_SECRET")
 
+    STATE_FILE = args.state
+    if args.factory_reset and os.path.exists(args.state):
+        os.remove(args.state)
+    load_state(args.state)
+
     clients = [start_gateway(gateway, args) for gateway in NETWORK]
     print(f"Běží {len(clients)} emulovaných gatewayí: {', '.join(NETWORK)}")
+
+    pairable = []
+    if args.no_pairing:
+        pass
+    elif not args.provisioning_password:
+        print("Bez MQTT_PROVISIONING_PASSWORD — gatewaye z výroby k párování nespouštím")
+    else:
+        pairable = [PairableGateway(serial, args) for serial in PAIRABLE]
+        for gateway in pairable:
+            gateway.start()
+        print_labels()
+
     try:
         while True:
             time.sleep(3600)
     except KeyboardInterrupt:
+        for gateway in pairable:
+            gateway.stop()
         for client in clients:
             client.loop_stop()
             client.disconnect()

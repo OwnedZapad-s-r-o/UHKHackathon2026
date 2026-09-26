@@ -89,7 +89,12 @@ const STEPS: Record<Role, TourStep[]> = {
   ],
   Spravce: [
     WELCOME.Spravce,
-    MAP,
+    { target: "moje-budovy", title: "Vaše budovy", body: "Budovy vaší organizace, nahoře ty se zjištěním. Kliknutím otevřete měření, audit a smlouvy budovy." },
+    {
+      target: "pridat-budovu",
+      title: "Chybí vám tu budova?",
+      body: "Tělocvičnu, dílny nebo pobočku přidáte sami: najdete ji adresou nebo kliknutím do mapy, zbytek doplníme z katastru a otevřených dat.",
+    },
     LEGEND,
     { target: "nav-anomalie", title: "Co řešit ve vašich budovách", body: "Zjištění seřazená podle závažnosti, s vysvětlením, proč vznikla, a co s nimi." },
     { target: "nav-reporty", title: "PDF audit", body: "Audit budovy s grafy a doporučením — stáhnete ho pro vedení nebo zřizovatele." },
@@ -151,6 +156,11 @@ const SENSOR_STEPS: TourStep[] = [
     body: "Jedním klikem pět virtuálních gatewayí v pěti okresech. Posílají živá data stejnou cestou jako hardware — hned je uvidíte v mapě.",
   },
   {
+    target: "senzory-nove",
+    title: "Nové zařízení online",
+    body: "Zapnutá gateway, kterou ještě nikdo nepřipojil, se objeví tady. Stačí vybrat budovu a opsat heslo z nálepky — jako u Wi-Fi.",
+  },
+  {
     target: "senzory-demo",
     title: "Nemáte hardware?",
     body: "Virtuální učebna se dvěma uzly se připojí jedním klikem. Přiřazení čidel do místností si na ní vyzkoušíte bez rizika.",
@@ -163,7 +173,7 @@ const SENSOR_STEPS: TourStep[] = [
   {
     target: "senzory-seznam",
     title: "Připojené gatewaye",
-    body: "Zelená tečka znamená, že gateway odpovídá. Vpravo vidíte, kolik čidel už měří v místnostech.",
+    body: "Nahoře jsou gatewaye, které potřebují zásah — offline nebo s čidly mimo místnosti. Ostatní a virtuální demo zařízení jsou sbalené níže.",
   },
   {
     title: "Vyzkoušejte přiřazení čidel",
@@ -183,6 +193,11 @@ const GATEWAY_STEPS: TourStep[] = [
     target: "gateway-uzel",
     title: "Celý uzel jedním kliknutím",
     body: "Uzel je jedna krabička s čidly. Vyberte místnost v záhlaví uzlu a klikněte na Přiřadit vše — teplota, CO₂ i vlhkost se přiřadí naráz.",
+  },
+  {
+    target: "gateway-v-dosahu",
+    title: "Další čidlo do sítě",
+    body: "Čidla v dosahu gatewaye, která ještě nejsou v její síti. Opište kód z nálepky čidla a za chvíli se objeví mezi uzly.",
   },
   {
     target: "gateway-mapa",

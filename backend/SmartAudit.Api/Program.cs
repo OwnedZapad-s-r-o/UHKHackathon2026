@@ -12,6 +12,7 @@ using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Middleware;
 using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
+using SmartAudit.Api.Services.Contracts;
 using SmartAudit.Api.Services.Import;
 using SmartAudit.Api.Services.Maintenance;
 using SmartAudit.Api.Services.Reports;
@@ -20,6 +21,7 @@ using SmartAudit.Api.Services.Sensors;
 using SmartAudit.Api.Services.Simulation;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
+using SmartAudit.Core.Domain.Helpers;
 using SmartAudit.Core.Domain.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +60,11 @@ builder.Services.AddScoped<IAiAuditService, AiAuditService>();
 builder.Services.AddHttpClient<IKhkOpenDataService, KhkOpenDataService>(c => c.Timeout = TimeSpan.FromSeconds(90));
 builder.Services.AddHttpClient<ICuzkBuildingService, CuzkBuildingService>(c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHttpClient<IOpenMeteoService, OpenMeteoService>(c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient<IRuianGeocodingService, RuianGeocodingService>(c => c.Timeout = TimeSpan.FromSeconds(10));
+
+// Přidání budovy správcem — místo v mapě se dohledá v datech, která aplikace už má (hranice, katastr, památky)
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IPlaceLookupService, PlaceLookupService>();
 
 // Import a příprava dat
 builder.Services.AddSingleton<SnapshotStore>();
@@ -68,6 +75,18 @@ builder.Services.AddScoped<IBuildingEnrichmentService, BuildingEnrichmentService
 builder.Services.AddScoped<IWeatherService, WeatherService>();
 builder.Services.AddScoped<IDemoUserService, DemoUserService>();
 builder.Services.AddHostedService<DataPipelineService>();
+
+// Registr smluv (DIA) — vyhledávání drží stav v PHP session, cookie si ContractRegisterService spravuje sám
+builder.Services.AddSingleton(builder.Configuration.GetSection(ContractRegistrySettings.SectionName).Get<ContractRegistrySettings>() ?? new ContractRegistrySettings());
+builder.Services.AddHttpClient<IContractRegisterService, ContractRegisterService>(c =>
+    {
+        c.BaseAddress = new Uri(ContractRegistryParser.BaseUrl);
+        c.Timeout = TimeSpan.FromSeconds(60);
+        c.DefaultRequestHeaders.UserAgent.ParseAdd("SmartAudit-KHK/1.0");
+    })
+    // Krátce žijící spojení — nečinné spojení přes NAT Dockeru může potichu umřít a čtení z něj pak visí
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { UseCookies = false, PooledConnectionIdleTimeout = TimeSpan.FromSeconds(10), PooledConnectionLifetime = TimeSpan.FromMinutes(1) });
+builder.Services.AddScoped<IContractSyncService, ContractSyncService>();
 
 // Simulace telemetrie a audit
 builder.Services.AddScoped<ISensorProvisioningService, SensorProvisioningService>();
@@ -83,6 +102,8 @@ builder.Services.AddHostedService<ReadingPartitionService>();
 var iqrfSettings = builder.Configuration.GetSection(IqrfSettings.SectionName).Get<IqrfSettings>() ?? new IqrfSettings();
 builder.Services.AddSingleton(iqrfSettings);
 builder.Services.AddSingleton<IIqrfGatewayState, IqrfGatewayState>();
+builder.Services.AddSingleton<IIqrfCommandBus, IqrfCommandBus>();
+builder.Services.AddSingleton<IPairingRegistry, PairingRegistry>();
 builder.Services.AddScoped<ISensorIngestService, SensorIngestService>();
 builder.Services.AddHostedService<IqrfGatewayService>();
 

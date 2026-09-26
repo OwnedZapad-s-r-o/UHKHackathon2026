@@ -12,6 +12,8 @@ const SEVERITY: Record<AuditStatus, number> = { Critical: 0, Warning: 1, Nominal
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
   if (!session) redirect("/login");
+  // Aplikace je pracovní nástroj kraje a správců — veřejnost má svůj portál (kvalita vzduchu, bez žebříčků a Kč)
+  if (session.role === "Verejnost") redirect("/objekty");
 
   const facilities = await getFacilities();
   const counts = {

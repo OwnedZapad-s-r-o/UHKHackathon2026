@@ -19,8 +19,13 @@ namespace SmartAudit.Core.Data.Tables
         public string? PhotoUrl { get; private set; }
 
 
+        // Kdy se naposledy stáhly smlouvy z Registru smluv (null = ještě nikdy)
+        public DateTimeOffset? ContractsSyncedAt { get; private set; }
+
+
         // Navigační vlastnosti
         public ICollection<Facility> Facilities { get; private set; } = new List<Facility>();
+        public ICollection<FacilityContract> Contracts { get; private set; } = new List<FacilityContract>();
 
         private Organization() { }
 
@@ -53,6 +58,11 @@ namespace SmartAudit.Core.Data.Tables
             RelationType = relationType;
             Web = web ?? Web;
             PhotoUrl = photoUrl;
+        }
+
+        public void MarkContractsSynced(DateTimeOffset syncedAt)
+        {
+            ContractsSyncedAt = syncedAt;
         }
     }
 }

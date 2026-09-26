@@ -1,11 +1,14 @@
 import { Suspense } from "react";
 import { MousePointerClick } from "lucide-react";
-import { getFacilities } from "@/lib/api";
+import { getFacilities, getSession } from "@/lib/api";
 import { districtStats } from "@/lib/district-shading";
 import { readParam } from "@/lib/search-params";
+import { cn } from "@/lib/utils";
 import { FacilityMap } from "../_components/facility-map";
 import { InspectionPanel, PANEL_TABS, type PanelTab } from "../_components/inspection/inspection-panel";
 import { MapFilterBar } from "../_components/map-filter-bar";
+import { NewBuildingNotice } from "../_components/new-building-notice";
+import { OwnBuildings } from "../_components/own-buildings";
 import { TopBar } from "../_components/top-bar";
 
 export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
@@ -18,12 +21,23 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
   };
   const filtered = Boolean(filter.q || filter.district || filter.onlyIssues);
 
-  // Barvy okresů se počítají z celého kraje — s aktivním filtrem je potřeba i nefiltrovaný seznam
-  const [facilities, allFacilities] = await Promise.all([getFacilities(filter), filtered ? getFacilities() : null]);
-  const stats = districtStats(allFacilities ?? facilities);
+  // Správce budovy vidí jen budovy své organizace (filtruje API) — pohled na kraj po okresech pro něj nemá smysl
+  const session = await getSession();
+  const ownBuildings = session?.role === "Spravce";
 
-  // Na startu není vybraný žádný objekt — výběr vzniká jen kliknutím (nebo odkazem s ?objekt=)
-  const selected = facilities.find((f) => f.id === readParam(params, "objekt")) ?? null;
+  // Barvy okresů se počítají z celého kraje — s aktivním filtrem je potřeba i nefiltrovaný seznam
+  const [facilities, allFacilities] = await Promise.all([getFacilities(filter), filtered && !ownBuildings ? getFacilities() : null]);
+  const stats = ownBuildings ? {} : districtStats(allFacilities ?? facilities);
+
+  // Našeptávač hledání nabízí celý kraj (ne jen výsledek hledání), ale jen objekty, které přepínač „Jen se zjištěním“ ukazuje
+  const suggestions = (allFacilities ?? facilities)
+    .filter((f) => !filter.onlyIssues || f.status !== "Nominal")
+    .map((f) => ({ id: f.id, code: f.code, name: f.name, municipalityName: f.municipalityName, districtName: f.districtName, status: f.status }));
+
+  // Na startu není vybraný žádný objekt — výběr vzniká kliknutím (nebo odkazem s ?objekt=).
+  // Výjimka: správce jediné budovy ji má otevřenou rovnou, nemá co vybírat.
+  const singleBuilding = ownBuildings && facilities.length === 1 ? facilities[0] : null;
+  const selected = facilities.find((f) => f.id === readParam(params, "objekt")) ?? singleBuilding;
   const tab = parseTab(readParam(params, "panel"));
 
   return (
@@ -32,17 +46,32 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
 
       <div className="flex min-h-0 flex-1">
         <section className="@container flex min-w-0 flex-1 flex-col border-r border-slate-200 bg-white">
-          <MapFilterBar selectedFacility={selected && { name: selected.name, districtCode: selected.districtCode, districtName: selected.districtName }} />
+          <MapFilterBar
+            selectedFacility={selected && selected !== singleBuilding ? { name: selected.name, districtCode: selected.districtCode, districtName: selected.districtName } : null}
+            organizationName={ownBuildings ? (session?.organizationName ?? "Moje budovy") : null}
+            suggestions={suggestions}
+          />
           <div className="relative min-h-0 flex-1">
-            <FacilityMap facilities={facilities} selectedId={selected?.id ?? null} selectedDistrict={filter.district ?? null} districtStats={stats} />
+            <FacilityMap
+              facilities={facilities}
+              selectedId={selected?.id ?? null}
+              selectedDistrict={filter.district ?? null}
+              districtStats={stats}
+              ownBuildings={ownBuildings}
+            />
 
-            {facilities.length === 0 && (
+            {/* Správce bez budov nemá co filtrovat — místo hlášky vidí nabídku přidat první budovu */}
+            {facilities.length === 0 && (filtered || !ownBuildings) && (
               <p className="absolute top-1/3 left-1/2 z-10 -translate-x-1/2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
                 Filtru neodpovídá žádný objekt. Zkuste jiný okres nebo název.
               </p>
             )}
 
-            <div className="pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
+            {ownBuildings && !selected && <OwnBuildings facilities={facilities} />}
+
+            {selected && readParam(params, "nova") === "1" && <NewBuildingNotice name={selected.name} waiting={selected.headline === PENDING_HEADLINE} />}
+
+            <div className={cn("pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-2", ownBuildings && "hidden")}>
               <span className="rounded-md border border-slate-200 bg-white/92 px-2 py-1 font-mono text-[10.5px] text-slate-600">
                 {facilities.length} objektů ve výběru
               </span>
@@ -60,7 +89,7 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
           <aside data-tour="panel" className="w-[35%] max-w-130 min-w-90 shrink-0 overflow-x-hidden overflow-y-auto bg-slate-50" aria-label="Inspekční panel">
             {/* Suspense: mapa se ukáže hned, panel s telemetrií dorazí streamem */}
             <Suspense key={`${selected.id}-${tab}`} fallback={<PanelSkeleton />}>
-              <InspectionPanel facilityId={selected.id} tab={tab} searchParams={params} />
+              <InspectionPanel facilityId={selected.id} tab={tab} searchParams={params} closable={selected !== singleBuilding} />
             </Suspense>
           </aside>
         )}
@@ -68,6 +97,9 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
     </>
   );
 }
+
+// Hlavička objektu, který audit ještě nevyhodnotil (GetFacilities v API)
+const PENDING_HEADLINE = "Čeká na první vyhodnocení";
 
 function parseTab(value: string | undefined): PanelTab {
   return PANEL_TABS.find((t) => t.key === value)?.key ?? "telemetrie";

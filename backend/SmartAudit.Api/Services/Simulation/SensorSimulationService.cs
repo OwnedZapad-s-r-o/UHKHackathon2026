@@ -56,8 +56,10 @@ namespace SmartAudit.Api.Services.Simulation
 
                     var audit = provider.GetRequiredService<IFacilityAuditService>();
 
-                    // Simulace má smysl jen na hranici kroku — mezi tím by jen znovu četla databázi a nic nezapsala
+                    // Simulace má smysl jen na hranici kroku — mezi tím by jen znovu četla databázi a nic nezapsala.
+                    // Výjimka: nová budova od správce dostane čidla a týden historie hned, ne až za čtvrt hodiny.
                     var currentStep = new DateTimeOffset(now.UtcTicks - now.UtcTicks % step.Ticks, TimeSpan.Zero);
+                    var newFacilities = _auditTrigger.DrainProvisioning();
                     if (currentStep != lastStep)
                     {
                         await provider.GetRequiredService<ISensorProvisioningService>().ProvisionAsync(now.AddDays(-_settings.BackfillDays), ct);
@@ -67,6 +69,12 @@ namespace SmartAudit.Api.Services.Simulation
                         _auditTrigger.DrainFacilities();
                         await audit.EvaluateAsync(null, now, ct);
                         lastStep = currentStep;
+                    }
+                    else if (newFacilities.Count > 0)
+                    {
+                        await provider.GetRequiredService<ISensorProvisioningService>().ProvisionAsync(now.AddDays(-_settings.BackfillDays), ct);
+                        await provider.GetRequiredService<ISensorDataSource>().SyncAsync(now, ct);
+                        await audit.EvaluateAsync([.. newFacilities, .. _auditTrigger.DrainFacilities()], now, ct);
                     }
                     else
                     {
