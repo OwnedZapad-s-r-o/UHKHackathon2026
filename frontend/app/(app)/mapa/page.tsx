@@ -106,7 +106,7 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
 const PENDING_HEADLINE = "Čeká na první vyhodnocení";
 
 function parseTab(value: string | undefined): PanelTab {
-  return PANEL_TABS.find((t) => t.key === value)?.key ?? "telemetrie";
+  return PANEL_TABS.find((t) => t.key === value)?.key ?? "prehled";
 }
 
 function PanelSkeleton() {

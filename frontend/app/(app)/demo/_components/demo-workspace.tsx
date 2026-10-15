@@ -31,7 +31,7 @@ export function DemoWorkspace({ initial }: { initial: DemoOverview }) {
         <LossCorrections corrections={overview.corrections} />
       </div>
 
-      <div className="h-fit space-y-4 xl:sticky xl:top-0">
+      <div className="h-fit min-w-0 space-y-4 xl:sticky xl:top-0">
         <CreateGatewayForm templates={overview.templates} onCreated={reload} />
         <CreateNodeForm templates={overview.templates} gateways={overview.gateways} onCreated={reload} />
       </div>

@@ -14,7 +14,7 @@ namespace SmartAudit.Core.Domain.Helpers
 
     // Emulovaná zařízení k párování — stejný katalog má Python emulátor (tools/iqrf-emulator/multi_emulator.py).
     // K pevnému katalogu se přidávají zařízení vyrobená v demo správě (tabulka DemoDevices) — ta hraje jen aplikace.
-    // Hesla a kódy jsou veřejné schválně: v demu je porotce „přečte z nálepky“ na obrazovce.
+    // Hesla a kódy jsou veřejné schválně: v demu je uživatel „přečte z nálepky“ na obrazovce.
     public static class PairableDevices
     {
         private sealed record DemoCatalog(IReadOnlyList<PairableGateway> Gateways, IReadOnlyDictionary<string, NearbyNode[]> Nearby);

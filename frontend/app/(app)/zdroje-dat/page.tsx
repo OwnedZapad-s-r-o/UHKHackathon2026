@@ -92,17 +92,20 @@ function SourceLinks({ source }: { source: DataSource }) {
 
   return (
     <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px]">
-      <a href={source.catalogUrl || source.portalUrl || source.serviceUrl} target="_blank" rel="noreferrer" className="text-hk-blue hover:text-hk-red hover:underline">
-        {catalogLabel} ↗
+      <a href={source.catalogUrl || source.portalUrl || source.serviceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-hk-blue hover:text-hk-red hover:underline">
+        {catalogLabel}
+        <ExternalLink className="size-3 shrink-0" aria-hidden />
       </a>
       {source.liveApiUrl && (
-        <a href={source.liveApiUrl} target="_blank" rel="noreferrer" className="text-hk-blue hover:text-hk-red hover:underline">
-          Živé API ↗
+        <a href={source.liveApiUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-hk-blue hover:text-hk-red hover:underline">
+          Živé API
+          <ExternalLink className="size-3 shrink-0" aria-hidden />
         </a>
       )}
       {source.dcatRecordUrl && (
-        <a href={source.dcatRecordUrl} target="_blank" rel="noreferrer" className="text-hk-blue hover:text-hk-red hover:underline">
-          Záznam DCAT-AP-CZ ↗
+        <a href={source.dcatRecordUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-hk-blue hover:text-hk-red hover:underline">
+          Záznam DCAT-AP-CZ
+          <ExternalLink className="size-3 shrink-0" aria-hidden />
         </a>
       )}
     </p>

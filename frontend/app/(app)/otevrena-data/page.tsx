@@ -221,7 +221,7 @@ console.log(objekty.features.length, "objektů");`;
           </dl>
         </section>
 
-        <section aria-labelledby="examples" className="mt-8 grid gap-4 lg:grid-cols-2">
+        <section aria-labelledby="examples" className="relative mt-8 grid gap-4 lg:grid-cols-2">
           <h2 id="examples" className="sr-only">
             Ukázky volání
           </h2>

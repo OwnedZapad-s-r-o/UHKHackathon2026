@@ -68,11 +68,20 @@ export function CreateNodeForm({ templates, gateways, onCreated }: CreateNodeFor
             </label>
             <Select items={options} value={selectedGateway?.id ?? null} onValueChange={(next) => setGatewayId(next as string | null)}>
               <SelectTrigger id="demo-node-gateway" className="h-10 w-full border-slate-300 bg-white text-[13px]">
-                <SelectValue />
+                <SelectValue className="min-w-0 truncate" />
               </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false} className="w-max max-w-[28rem] min-w-(--anchor-width) text-[13px]">
+              <SelectContent
+                alignItemWithTrigger={false}
+                align="start"
+                sideOffset={8}
+                className="max-h-[min(20rem,var(--available-height))] w-(--anchor-width) p-1.5 text-[13px]"
+              >
                 {options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="py-2.5 pl-3 text-[13px] leading-5 [&>div]:min-w-0 [&>div]:shrink [&>div]:whitespace-normal"
+                  >
                     {option.label}
                   </SelectItem>
                 ))}

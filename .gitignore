@@ -1,31 +1,41 @@
-# Soukromé podklady (pravidla soutěže, kontakty, hodnocení poroty) — jen lokálně
+# Local working material
 _private/
 dev/
-
-# Nástroje editorů a agentů
+docs/
+analyza/
+research/
+design/
+dist/
 .claude/
+.codex/
 .vs/
 .vscode/
 .idea/
 
-# .NET
+# Build output
 backend/**/bin/
 backend/**/obj/
-*.user
-
-# Next.js
 frontend/node_modules/
 frontend/.next/
 frontend/next-env.d.ts
 frontend/*.tsbuildinfo
-
-# Python
 __pycache__/
 *.pyc
+*.user
 
-# Prostředí
+# Environment and credentials
 .env
 .env*.local
+*.pfx
+*.key
 
-# Export Docker image (export-docker-images.ps1) — archiv a .env s hesly
-dist/
+# Video and audio exports
+*.mp4
+*.webm
+*.mov
+*.avi
+*.wav
+*.mp3
+*.m4a
+contact_sheet*.png
+cuts_*.jpg

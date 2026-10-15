@@ -5,7 +5,7 @@ using SmartAudit.Api.Services.OpenData;
 namespace SmartAudit.Api.Controllers
 {
     // Živé napojení na otevřená data (Data KHK, ČÚZK, Open-Meteo, Registr smluv) — stav a ruční synchronizace.
-    // Bez přihlášení: tlačítko na stránce Zdroje dat smí zkusit i porotce; souběžné a opakované kontroly
+    // Bez přihlášení: tlačítko na stránce Zdroje dat smí zkusit i návštěvník; souběžné a opakované kontroly
     // (do 15 s) vrátí poslední stav, takže zdroje nejde zahltit.
     [Route("api/opendata")]
     [ApiController]

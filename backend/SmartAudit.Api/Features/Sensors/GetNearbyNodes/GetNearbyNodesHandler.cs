@@ -13,7 +13,7 @@ namespace SmartAudit.Api.Features.Sensors.GetNearbyNodes
 {
     public record GetNearbyNodesCommand(ViewerContext Viewer, Guid GatewayId) : IRequest<Response<NearbyNodesDto>>;
 
-    // Nálepka emulovaného čidla (MID a kód) — v demu z ní porotce opíše kód jako z krabičky
+    // Nálepka emulovaného čidla (MID a kód) — v demu z ní uživatel opíše kód jako z krabičky
     public record NearbyNodeLabelDto(string Mid, string Code);
 
     public record NearbyNodeDto(string Mid, List<SensorMetric> Metrics, int? Rssi, NearbyNodeLabelDto? Label);

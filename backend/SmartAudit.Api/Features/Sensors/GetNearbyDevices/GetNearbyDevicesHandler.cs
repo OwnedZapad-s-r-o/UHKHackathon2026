@@ -13,7 +13,7 @@ namespace SmartAudit.Api.Features.Sensors.GetNearbyDevices
 
     public record NearbyDeviceNodeDto(int Address, List<SensorMetric> Metrics);
 
-    // Nálepka emulovaného zařízení — v demu si z ní porotce „přečte“ heslo jako z krabičky
+    // Nálepka emulovaného zařízení — v demu si z ní uživatel „přečte“ heslo jako z krabičky
     public record DeviceLabelDto(string Serial, string Model, string Password);
 
     public record NearbyDeviceDto(string Serial, string Model, List<NearbyDeviceNodeDto> Nodes, int? Rssi, bool Emulated, DateTimeOffset LastSeenAt, DeviceLabelDto? Label);

@@ -124,7 +124,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
               longitude={facility.longitude}
               latitude={facility.latitude}
               anchor="bottom"
-              onClick={() => navigate({ objekt: facility.id })}
+              onClick={() => navigate({ objekt: facility.id, panel: "prehled" })}
             >
               <MarkerContent>
                 <FacilityPin category={facility.category} status={facility.status} selected={isSelected} dropDelay={Math.min(index * 14, 450)} />
