@@ -80,6 +80,7 @@ Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlast
 - **📄 PDF reporty:** Audit jednoho objektu (s grafy a lokalizační mapkou), souhrnný přehled portfolia s mapou okresů a **souhrn pro Radu kraje na jednu stranu A4** (ztráta kraje, pět priorit, pilot IQRF s návratností, návrh usnesení).
 - **🤖 AI analýza (Azure OpenAI):** Navrhne konkrétní opatření s vyčíslenou návratností a dopis správci. Výsledek se propisuje i do PDF auditního protokolu.
 - **🌐 Otevřené API (`/api/open/v1`):** JSON, GeoJSON a CSV exporty pro vývojáře bez nutnosti přihlášení a API klíčů (licence CC BY 4.0).
+  Lokální katalog **DCAT-AP-CZ** (`/api/open/v1/catalog`, JSON-LD podle OFN 2024-05-28) — adresu stačí zaregistrovat v Národním katalogu otevřených dat.
 
 ---
 

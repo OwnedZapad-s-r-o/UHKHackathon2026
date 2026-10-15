@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BookOpen, Braces, ExternalLink, FileSpreadsheet, Map as MapIcon } from "lucide-react";
+import { BookOpen, Braces, ExternalLink, FileSpreadsheet, Library, Map as MapIcon } from "lucide-react";
 import { getFacilities } from "@/lib/api";
 import { requestOrigin } from "@/lib/request-origin";
 import { CATEGORY_META, DISTRICTS, STATUS_META } from "@/lib/facility-meta";
@@ -30,7 +30,11 @@ const ENDPOINTS = [
   { path: "/facilities/{id}/footprint", description: "Půdorys budovy z ČÚZK jako GeoJSON Feature s odhadem výšky", cache: "2 dny" },
   { path: "/facilities/{id}/telemetry", description: "Časová řada měření po zónách — metric, from, to, bucket (nejvýš 31 dní)", cache: "5 min" },
   { path: "/datasets", description: "Použité zdroje dat a stav jejich posledního stažení", cache: "5 min" },
+  { path: "/catalog", description: "Lokální katalog otevřených dat DCAT-AP-CZ (JSON-LD) pro Národní katalog otevřených dat", cache: "—" },
 ];
+
+// Lokální katalog DCAT-AP-CZ — adresu stačí zaregistrovat v NKOD (data.gov.cz), ten si metadata sklízí sám
+const CATALOG_PATH = `${BASE_PATH}/catalog`;
 
 const STATUSES: AuditStatus[] = ["Nominal", "Warning", "Critical"];
 
@@ -108,6 +112,27 @@ console.log(objekty.features.length, "objektů");`;
               </a>
             ))}
           </div>
+
+          <a
+            href={CATALOG_PATH}
+            target="_blank"
+            rel="noreferrer"
+            className="group mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition-colors hover:border-hk-red/40"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-hk-navy group-hover:bg-hk-red/10 group-hover:text-hk-red">
+              <Library className="size-4.5" strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-bold">Katalog pro NKOD (DCAT-AP-CZ)</span>
+              <span className="block text-xs text-slate-500">
+                Metadata sady a distribucí v JSON-LD podle otevřené formální normy — adresu stačí zaregistrovat v Národním katalogu otevřených dat
+              </span>
+            </span>
+            <code className="hidden shrink-0 font-mono text-[11.5px] text-slate-500 sm:block">
+              {origin}
+              {CATALOG_PATH}
+            </code>
+          </a>
         </section>
 
         <section aria-labelledby="endpoints" className="mt-8">
