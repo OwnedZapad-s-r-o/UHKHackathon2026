@@ -25,7 +25,7 @@ namespace SmartAudit.Api.Services.Simulation
         {
             var facilities = await _dbContext.Facilities
                 .Include(f => f.Building)
-                .Where(f => !f.Sensors.Any())
+                .Where(f => !f.Sensors.Any(s => s.Source == SensorSource.Simulated))
                 .ToListAsync(ct);
 
             foreach (var facility in facilities)

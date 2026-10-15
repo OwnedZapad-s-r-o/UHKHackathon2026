@@ -74,6 +74,7 @@ docker compose up --build
 | **API Backend (ASP.NET)** | [http://localhost:8080](http://localhost:8080) | REST API backend |
 | **Otevřené API Docs** | [http://localhost:3000/api/open/docs/](http://localhost:3000/api/open/docs/) | Interaktivní OpenAPI (Scalar) |
 | **PostgreSQL / PostGIS** | `localhost:5432` | Databáze (`smartaudit` / `smartaudit`) |
+| **MQTT broker (Mosquitto)** | `localhost:1883` | Připojení IQRF gateway (skutečná čidla) |
 
 > ℹ️ **První spuštění:** Při prvním startu API automaticky stáhne otevřená data, sestaví portfolio objektů, dotáhne katastrální karty z ČÚZK, počasí z Open-Meteo a dopočítá 7 dní telemetrie. Trvá to zhruba 1 minutu, stav je vidět na `GET /health`.
 
@@ -85,10 +86,11 @@ Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlast
 
 ## ✨ Hlavní Funkce
 
-- **🗺️ Mapa objektů kraje:** Šedý podklad (mapcn), piny podle stavu a druhu budovy, filtry okresů a vyhledávání. Po kliknutí mapa přeletí k budově a ukáže ji ve 3D (zástavba OSM CARTO, budova ČÚZK s odhadem výšky podle podlaží).
+- **📡 Skutečná čidla IQRF:** IQRF gateway se přes MQTT připojí k aplikaci, ta sama najde uzly a senzory (teplota, CO₂, vlhkost, osvětlení, hluk, pohyb…) a po přiřazení do místnosti nahradí simulaci skutečným měřením. Návod v [docs/SENZORY_IQRF.md](docs/SENZORY_IQRF.md), emulátor gatewaye v `tools/iqrf-emulator/`.
+- **🗺️ Mapa objektů kraje:** Šedý podklad (mapcn), okresy obarvené podle podílu objektů se zjištěním (klik vybere okres), piny podle stavu a druhu budovy a vyhledávání. Na startu není vybraný žádný objekt; po kliknutí mapa přeletí k budově a ukáže ji ve 3D (vybraná budova „vyroste“ v barvě stavu, okolí zprůhlední). Výběr zruší křížek, klik do mapy nebo Esc.
 - **📋 Inspekční panel:** Přehled, telemetrie (živé grafy), auditní zjištění, karta budovy ČÚZK a unikátní schematický řez budovou podle zón.
 - **⚡ Portfolio a Anomálie:** Přehledná tabulka a seznam zjištění seřazený podle odhadované roční finanční ztráty v Kč.
-- **📄 PDF reporty:** Audit jednoho objektu (s grafy) i souhrnný přehled celého portfolia kraje.
+- **📄 PDF reporty:** Audit jednoho objektu (s grafy a lokalizační mapkou) i souhrnný přehled portfolia s mapou okresů.
 - **🤖 AI analýza (Azure OpenAI):** Navrhne konkrétní opatření s vyčíslenou návratností a dopis správci. Výsledek se propisuje i do PDF auditního protokolu.
 - **🌐 Otevřené API (`/api/open/v1`):** JSON, GeoJSON a CSV exporty pro vývojáře bez nutnosti přihlášení a API klíčů (licence CC BY 4.0).
 
@@ -147,3 +149,5 @@ dotnet ef migrations add <Nazev> --project backend/SmartAudit.Core --startup-pro
 ## 📡 Simulace telemetrie
 
 Senzory jsou generovány deterministickým modelem `SensorSimulator`. Vstupy bere z reálné venkovní teploty (Open-Meteo), stáří a plochy budovy (ČÚZK), počtu žáků/klientů (Data KHK) a kalendáře svátků. Zhruba 30 % objektů má simulační profil s problémem (víkendové přetápění, špatné větrání, nefunkční noční útlum). Audit (`FacilityStatusEvaluator`) tyto problémy detekuje pravidly nad naměřenými daty.
+
+Jakmile místnost měří skutečné čidlo IQRF, simulace pro ni skončí a audit počítá se skutečnými hodnotami — viz [docs/SENZORY_IQRF.md](docs/SENZORY_IQRF.md).
