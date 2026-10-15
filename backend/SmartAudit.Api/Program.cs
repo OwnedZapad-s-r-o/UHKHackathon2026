@@ -13,6 +13,7 @@ using SmartAudit.Api.Middleware;
 using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Import;
+using SmartAudit.Api.Services.Maintenance;
 using SmartAudit.Api.Services.Reports;
 using SmartAudit.Api.Services.Security;
 using SmartAudit.Api.Services.Sensors;
@@ -74,6 +75,9 @@ builder.Services.AddScoped<ISensorDataSource, SimulatedSensorDataSource>();
 builder.Services.AddScoped<IFacilityAuditService, FacilityAuditService>();
 builder.Services.AddSingleton<IAuditTrigger, AuditTrigger>();
 builder.Services.AddHostedService<SensorSimulationService>();
+
+// Měsíční oddíly tabulky měření — zakládá je dopředu
+builder.Services.AddHostedService<ReadingPartitionService>();
 
 // Skutečná čidla — IQRF Gateway Daemon přes MQTT broker (služba mqtt v docker-compose)
 var iqrfSettings = builder.Configuration.GetSection(IqrfSettings.SectionName).Get<IqrfSettings>() ?? new IqrfSettings();

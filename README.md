@@ -138,3 +138,8 @@ dotnet ef migrations add <Nazev> --project backend/SmartAudit.Core --startup-pro
 Senzory jsou generovány deterministickým modelem `SensorSimulator`. Vstupy bere z reálné venkovní teploty (Open-Meteo), stáří a plochy budovy (ČÚZK), počtu žáků/klientů (Data KHK) a kalendáře svátků. Zhruba 30 % objektů má simulační profil s problémem (víkendové přetápění, špatné větrání, nefunkční noční útlum). Audit (`FacilityStatusEvaluator`) tyto problémy detekuje pravidly nad naměřenými daty.
 
 Jakmile místnost měří skutečné čidlo IQRF, simulace pro ni skončí a audit počítá se skutečnými hodnotami — viz [docs/SENZORY_IQRF.md](docs/SENZORY_IQRF.md).
+
+**Výkon a škálování:**
+- Tabulka měření `SensorReadings` je rozdělená na **měsíční oddíly** (PostgreSQL partitioning) s indexem BRIN nad časem. Dotazy na posledních 7 dní čtou jen poslední oddíly a staré měsíce jde odpojit a archivovat bez mazání řádek po řádku.
+- Audit se přepočítává **inkrementálně**: nový krok simulace (15 min) přepočte kraj, měření ze skutečného čidla jen jeho budovu (řádově desítky ms místo stovek).
+- Měření z jedné odpovědi gatewaye se ukládají **jedním příkazem** (`INSERT … SELECT FROM unnest(…)`), simulace hromadně přes binární `COPY`.
