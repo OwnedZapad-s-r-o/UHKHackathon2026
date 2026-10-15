@@ -13,6 +13,21 @@ type MapToolbarProps = {
 export function MapToolbar({ home }: MapToolbarProps) {
   const { map } = useMap();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [is3d, setIs3d] = useState(false);
+
+  // Náklon mění i přelet na budovu nebo gesto myší — tlačítko 2D/3D se podle něj přepíná
+  useEffect(() => {
+    if (!map) return;
+
+    function handlePitch() {
+      setIs3d((map?.getPitch() ?? 0) > 10);
+    }
+
+    map.on("pitchend", handlePitch);
+    return () => {
+      map.off("pitchend", handlePitch);
+    };
+  }, [map]);
 
   // Synchronizace s prohlížečem — celou obrazovku lze opustit i klávesou Esc
   useEffect(() => {
@@ -34,6 +49,17 @@ export function MapToolbar({ home }: MapToolbarProps) {
 
   function resetNorth() {
     map?.resetNorthPitch({ duration: 300 });
+  }
+
+  // 3D budovy jsou vidět až od přiblížení ~15, proto se při zapnutí 3D mapa zároveň přiblíží
+  function toggle3d() {
+    if (!map) return;
+
+    if (is3d) {
+      map.easeTo({ pitch: 0, bearing: 0, duration: 600 });
+    } else {
+      map.easeTo({ pitch: 60, bearing: -20, zoom: Math.max(map.getZoom(), 16), duration: 800 });
+    }
   }
 
   function toggleFullscreen() {
@@ -63,6 +89,10 @@ export function MapToolbar({ home }: MapToolbarProps) {
       <ToolbarGroup>
         <ToolbarButton label="Zobrazit celý kraj" onClick={flyHome}>
           <Crosshair />
+        </ToolbarButton>
+        <ToolbarDivider />
+        <ToolbarButton label={is3d ? "Přepnout na 2D" : "Zobrazit budovy ve 3D"} onClick={toggle3d}>
+          <span className="text-[11px] font-bold">{is3d ? "2D" : "3D"}</span>
         </ToolbarButton>
         <ToolbarDivider />
         <ToolbarButton label="Natočit na sever" onClick={resetNorth}>
