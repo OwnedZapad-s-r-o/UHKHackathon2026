@@ -28,6 +28,9 @@ services:
       ConnectionStrings__Postgres: "Host=db;Port=5432;Database=smartaudit;Username=smartaudit;Password=${POSTGRES_PASSWORD:-smartaudit}"
       JwtSettings__Secret: ${JWT_SECRET:-change-me-please-this-is-only-a-local-demo-secret-0123456789}
       OpenDataSettings__SnapshotPath: /seed/opendata
+      AzureOpenAiSettings__Endpoint: ${AZURE_OPENAI_ENDPOINT:-}
+      AzureOpenAiSettings__ApiKey: ${AZURE_OPENAI_API_KEY:-}
+      AzureOpenAiSettings__Deployment: ${AZURE_OPENAI_DEPLOYMENT:-}
     volumes:
       - ./seed:/seed
     ports:

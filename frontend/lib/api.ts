@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import type {
+  AiAuditState,
   ApiStatus,
   AuditStatus,
   BuildingSection,
@@ -87,6 +88,27 @@ export function getTelemetry(id: string, metric: SensorMetric, options: { bucket
 
 export function getHeatmap(id: string, metric: SensorMetric) {
   return apiGet<Heatmap>(`/api/facilities/${id}/heatmap?metric=${metric}`);
+}
+
+export function getAiAudit(id: string) {
+  return apiGet<AiAuditState>(`/api/facilities/${id}/ai-audit`);
+}
+
+export async function apiPostAuthorized<T>(path: string): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
+  const session = await getSession();
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: session ? { Authorization: `Bearer ${session.token}` } : undefined,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false, message: error?.message ?? "Chyba na straně serveru" };
+  }
+
+  return { ok: true, data: (await response.json()) as T };
 }
 
 export function getFootprint(id: string) {
