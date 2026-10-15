@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Contracts;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain.Enums;
@@ -8,7 +9,8 @@ using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Services.Import
 {
-    // Start aplikace: migrace → katalog zdrojů → stažení sad → portfolio → ČÚZK → počasí → demo uživatelé → (na pozadí) smlouvy
+    // Start aplikace: migrace → katalog zdrojů → stažení sad → portfolio → ČÚZK → počasí → pre-audit z otevřených dat → demo uživatelé
+    // → (na pozadí) smlouvy a znovu pre-audit (ceny tepla a investice ze smluv)
     public class DataPipelineService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -50,6 +52,11 @@ namespace SmartAudit.Api.Services.Import
                     _state.SetPhase("Sestavení portfolia objektů");
                     await provider.GetRequiredService<IPortfolioService>().BuildAsync(ct);
                 }
+                else
+                {
+                    // Sady přidané do konfigurace později (např. silnice a IZS pro okolí objektu) se stáhnou i do hotového portfolia
+                    await importService.ImportMissingAsync(ct);
+                }
 
                 _state.SetPhase("Karty budov z ČÚZK");
                 await provider.GetRequiredService<IBuildingEnrichmentService>().EnrichAsync(_openDataSettings.RefreshOnStartup, ct);
@@ -58,6 +65,10 @@ namespace SmartAudit.Api.Services.Import
                 await provider.GetRequiredService<IWeatherService>().RefreshAsync(_simulationSettings.BackfillDays + 1, ct);
 
                 await importService.RecordExternalImportAsync("msmt-kalendar", ImportStatus.Live, SchoolCalendar.DefinitionCount, null, ct);
+
+                // Stav budov, pořadí anomálií i ztráty v Kč vychází z otevřených dat — pre-audit nastaví profil fyzikálního modelu
+                _state.SetPhase("Pre-audit z otevřených dat");
+                await provider.GetRequiredService<IPreAuditService>().ApplyAsync(null, ct);
 
                 await provider.GetRequiredService<IDemoUserService>().SeedAsync(ct);
 
@@ -82,6 +93,9 @@ namespace SmartAudit.Api.Services.Import
             try
             {
                 await provider.GetRequiredService<IContractSyncService>().SyncAsync(ct);
+
+                // Smlouvy přinesly ceny tepla, zateplení a servis MaR — pre-audit se přepočítá
+                await provider.GetRequiredService<IPreAuditService>().ApplyAsync(null, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

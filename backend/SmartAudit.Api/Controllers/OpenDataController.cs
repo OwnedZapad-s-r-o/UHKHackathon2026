@@ -9,6 +9,7 @@ using SmartAudit.Api.Features.Facilities.GetFacilityDetail;
 using SmartAudit.Api.Features.Facilities.GetFootprint;
 using SmartAudit.Api.Features.Facilities.GetTelemetry;
 using SmartAudit.Api.Features.OpenData.GetOpenFacilities;
+using SmartAudit.Api.Features.OpenData.GetOpenPreAudits;
 using SmartAudit.Api.Services.OpenData;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Domain.Enums;
@@ -61,15 +62,20 @@ namespace SmartAudit.Api.Controllers
         [Produces(DcatCatalog.ContentType)]
         public IActionResult GetCatalogDataset(string dataset)
         {
-            if (dataset != DcatCatalog.BuildingsDataset)
-                return NotFound(new { Message = "Datová sada s tímto identifikátorem v katalogu není" });
-
-            return Content(DcatCatalog.BuildingsDatasetRecord(PublicBaseUrl(), _settings.CatalogProviderIri), DcatCatalog.ContentType);
+            return dataset switch
+            {
+                DcatCatalog.BuildingsDataset => Content(DcatCatalog.BuildingsDatasetRecord(PublicBaseUrl(), _settings.CatalogProviderIri), DcatCatalog.ContentType),
+                DcatCatalog.PreAuditDataset => Content(DcatCatalog.PreAuditDatasetRecord(PublicBaseUrl(), _settings.CatalogProviderIri), DcatCatalog.ContentType),
+                _ => NotFound(new { Message = "Datová sada s tímto identifikátorem v katalogu není" }),
+            };
         }
 
         // IRI v katalogu musí být veřejné adresy — za proxy Next.js je API na interní adrese, veřejnou nese X-Forwarded-*
         private string PublicBaseUrl()
         {
+            if (!string.IsNullOrWhiteSpace(_settings.PublicBaseUrl))
+                return _settings.PublicBaseUrl.TrimEnd('/');
+
             var host = Request.Headers["X-Forwarded-Host"].FirstOrDefault()?.Split(',')[0].Trim() ?? Request.Host.Value;
             var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault()?.Split(',')[0].Trim() ?? Request.Scheme;
 
@@ -174,6 +180,37 @@ namespace SmartAudit.Api.Controllers
             var result = await _mediator.Send(new GetTelemetryCommand(id, Public, metric, from, to, bucket ?? TelemetryBucket.Hour), ct);
 
             return result.ToActionResult();
+        }
+
+        /// <summary>Pre-audit budov z otevřených dat (JSON) — skóre, parametry A–E se zdroji, fyzika budovy, sada IQRF</summary>
+        /// <param name="category">Druh objektu</param>
+        /// <param name="district">Kód okresu</param>
+        [HttpGet]
+        [Route("preaudit")]
+        [OutputCache(PolicyName = ListCachePolicy)]
+        [ResponseCache(Duration = ListCacheSeconds, Location = ResponseCacheLocation.Any)]
+        [ProducesResponseType<IReadOnlyCollection<OpenPreAuditDto>>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPreAudits([FromQuery] FacilityCategory? category, [FromQuery] string? district, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new GetOpenPreAuditsCommand(category, district), ct);
+
+            return result.ToActionResult();
+        }
+
+        /// <summary>Pre-audit budov jako CSV (RFC 4180, UTF-8)</summary>
+        [HttpGet]
+        [Route("preaudit.csv")]
+        [OutputCache(PolicyName = ListCachePolicy)]
+        [ResponseCache(Duration = ListCacheSeconds, Location = ResponseCacheLocation.Any)]
+        [Produces("text/csv")]
+        [ProducesResponseType<string>(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPreAuditsCsv([FromQuery] FacilityCategory? category, [FromQuery] string? district, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new GetOpenPreAuditsCommand(category, district), ct);
+
+            return result.IsSuccess && result.Data != null
+                ? File(OpenPreAuditFormats.ToCsv(result.Data), "text/csv; charset=utf-8", "smartaudit-predaudit.csv")
+                : result.ToActionResult();
         }
 
         /// <summary>Použité zdroje dat — sady Data KHK, ČÚZK, Open-Meteo, MŠMT, stav posledního stažení</summary>

@@ -10,7 +10,7 @@ import { SensorTourLink } from "../_components/sensor-tour-link";
 import { SetupGuide } from "../_components/setup-guide";
 
 export const metadata: Metadata = {
-  title: "Gateway · Senzory · SmartAudit KHK",
+  title: "Gateway · Senzory · SmartAudit",
 };
 
 export default async function GatewayPage({ params }: PageProps<"/senzory/[id]">) {

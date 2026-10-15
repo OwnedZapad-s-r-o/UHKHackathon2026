@@ -5,7 +5,8 @@ namespace SmartAudit.Core.Domain.Helpers
 {
     public record HourlyValue(Guid? ZoneId, SensorMetric Metric, DateTimeOffset Hour, double Value);
 
-    public record AuditFinding(string Title, string Detail, string Tag, AuditStatus Severity);
+    // Source = odkud zjištění pochází (citace zdrojů dat), aby bylo vidět, že nevzniklo z ničeho
+    public record AuditFinding(string Title, string Detail, string Tag, AuditStatus Severity, string? Source = null);
 
     public record AuditEvaluation(
         AuditStatus Status,
@@ -24,12 +25,16 @@ namespace SmartAudit.Core.Domain.Helpers
         bool FreeDayOverheating,
         bool NightSetbackMissing);
 
-    // Vysvětlitelná pravidla nad hodinovými průměry posledních 7 dní — žádné ML (F39, F24)
+    // Vysvětlitelná pravidla nad hodinovými průměry posledních 7 dní — žádné ML (F39, F24).
+    // Hodnoty jsou buď živé měření IQRF, nebo fyzikální model z otevřených dat (profil z pre-auditu) — dataOrigin to cituje.
     public static class FacilityStatusEvaluator
     {
+        public const string ModelOrigin = "Fyzikální model z otevřených dat (ČÚZK + Data KHK + Registr smluv + Open-Meteo) + kalendář MŠMT";
+        public const string LiveOrigin = "Živé měření IQRF (MQTT Standard Sensor) + Open-Meteo + kalendář MŠMT";
+
         private static readonly CultureInfo Czech = CultureInfo.GetCultureInfo("cs-CZ");
 
-        public static AuditEvaluation Evaluate(FacilityCategory category, IReadOnlyList<HourlyValue> values, IReadOnlyDictionary<Guid, string> zoneNames, double co2Limit)
+        public static AuditEvaluation Evaluate(FacilityCategory category, IReadOnlyList<HourlyValue> values, IReadOnlyDictionary<Guid, string> zoneNames, double co2Limit, string dataOrigin = ModelOrigin)
         {
             var findings = new List<AuditFinding>();
 
@@ -54,7 +59,8 @@ namespace SmartAudit.Core.Domain.Helpers
                     "Přetápění mimo provoz",
                     $"Objekt držel {freeDayLabel} průměrně {Format(freeDayMean!.Value)} °C, přestože měl být v útlumu na 18 °C. Pravděpodobně chybný týdenní program ekvitermní regulace.",
                     "Vytápění",
-                    AuditStatus.Critical));
+                    AuditStatus.Critical,
+                    dataOrigin));
             }
 
             // Noční útlum v provozní dny: v noci se topí (příkon nad základní spotřebou) a zóny drží komfortní teplotu.
@@ -76,7 +82,8 @@ namespace SmartAudit.Core.Domain.Helpers
                     "Nefunguje noční útlum",
                     $"Ve 2 hodiny ráno se topí a objekt drží průměrně {Format(nightMean!.Value)} °C. Noční útlum o 2–3 °C ušetří bez investice několik procent tepla.",
                     "Regulace",
-                    AuditStatus.Warning));
+                    AuditStatus.Warning,
+                    dataOrigin));
             }
 
             // Ranní náběh — příkon mezi 4. a 5. hodinou výrazně nad nočním minimem
@@ -91,7 +98,8 @@ namespace SmartAudit.Core.Domain.Helpers
                         "Ranní náběh vytápění příliš brzy",
                         "Vytápění se rozbíhá už před 4. hodinou, přestože výuka začíná v 8:00. Posunutí náběhu v časovém programu je úspora bez investice.",
                         "Regulace",
-                        AuditStatus.Nominal));
+                        AuditStatus.Nominal,
+                    dataOrigin));
                 }
             }
 
@@ -114,7 +122,8 @@ namespace SmartAudit.Core.Domain.Helpers
                     "Zvýšené CO₂",
                     $"Za posledních 7 dní bylo CO₂ {hoursOverLimit} h nad limitem {co2Limit:0} ppm, nejvíc v zóně {zoneName} (špička {worst.Peak:0} ppm). Nad ~1 000 ppm klesá soustředění — větrání o přestávkách nebo seřízení rekuperace.",
                     "Vnitřní prostředí",
-                    AuditStatus.Warning));
+                    AuditStatus.Warning,
+                    dataOrigin));
             }
 
             // Aktuální hodnoty — poslední hodina s daty

@@ -15,6 +15,10 @@ namespace SmartAudit.Core.Domain.Settings
 
         public int CuzkParallelism { get; set; } = 4;
 
+        // Veřejná adresa aplikace (např. https://smartaudit.nasedomena.cz) pro IRI v katalogu DCAT-AP-CZ;
+        // prázdná = podle hlaviček X-Forwarded-Host / X-Forwarded-Proto
+        public string? PublicBaseUrl { get; set; }
+
         // Poskytovatel v katalogu DCAT-AP-CZ (NKOD) — orgán veřejné moci z registru práv a povinností, výchozí Královéhradecký kraj (IČO 70889546)
         public string CatalogProviderIri { get; set; } = "https://rpp-opendata.egon.gov.cz/odrpp/zdroj/orgán-veřejné-moci/70889546";
 
@@ -30,6 +34,9 @@ namespace SmartAudit.Core.Domain.Settings
         public string ServiceUrl { get; set; } = string.Empty;
         public string? PortalUrl { get; set; }
         public string Group { get; set; } = string.Empty;
+
+        // Tematická kategorie jako na portálu Data KHK (Školství a výzkum, Doprava…); prázdná = odvodí se z klíče sady
+        public string? Category { get; set; }
         public string Purpose { get; set; } = string.Empty;
         public string Where { get; set; } = "1=1";
     }

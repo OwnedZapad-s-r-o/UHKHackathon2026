@@ -100,7 +100,7 @@ export function SchoolSearch({ items, defaultValue = "", placeholder, fieldClass
           {suggestions.length === 0 ? (
             <p className="px-4 py-3.5 text-[14px] text-slate-500">Žádná škola ani domov neodpovídá. Zkuste obec nebo část názvu.</p>
           ) : (
-            <ul id={listId} role="listbox" aria-label="Návrhy objektů" className="scrollbar-hk scrollbar-hk-thin max-h-80 overflow-y-auto overscroll-contain py-1.5">
+            <ul id={listId} role="listbox" aria-label="Návrhy objektů" className="max-h-80 overflow-y-auto overscroll-contain py-1.5">
               {suggestions.map((item, index) => (
                 <Suggestion
                   key={item.code}

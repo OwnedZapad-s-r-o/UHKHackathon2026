@@ -3,12 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Search, Users } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 import { getSession } from "@/lib/api";
 import { DemoButtons } from "./_components/demo-buttons";
 import { LoginForm } from "./_components/login-form";
 
 export const metadata: Metadata = {
-  title: "Přihlášení · SmartAudit KHK",
+  title: "Přihlášení · SmartAudit",
 };
 
 const PROMISES = ["Kde kraj zbytečně topí a kolik to stojí", "Kde se ve třídách špatně dýchá", "Co s tím udělat — PDF a návrh opatření"];
@@ -28,13 +29,7 @@ export default async function LoginPage() {
           <ArrowLeft className="size-3.5" aria-hidden />
           Zpět na úvod
         </Link>
-        <div className="mt-10 flex items-center gap-4">
-          <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-11 w-auto" />
-          <span className="leading-tight">
-            <span className="block text-[17px] font-bold">SmartAudit</span>
-            <span className="block text-[12px] text-white/60">Královéhradecký kraj</span>
-          </span>
-        </div>
+        <Logo tone="dark" className="mt-10 h-10 w-auto" />
         <h1 className="mt-10 max-w-[18ch] text-[clamp(30px,2.6vw,40px)] leading-[1.1] font-bold tracking-[-0.03em]">
           Energetický audit budov kraje na jedné mapě
         </h1>
@@ -70,7 +65,7 @@ export default async function LoginPage() {
             <div className="relative overflow-hidden bg-slate-950">
               <Image
                 src="/landing/mapa-okresy.webp"
-                alt="Ukázka aplikace SmartAudit KHK"
+                alt="Ukázka aplikace SmartAudit"
                 width={1440}
                 height={900}
                 sizes="520px"
@@ -85,13 +80,9 @@ export default async function LoginPage() {
       {/* Pravá strana: jak začít */}
       <div className="flex flex-1 items-start justify-center px-5 py-10 sm:px-8 lg:items-center">
         <div className="w-full max-w-md">
-          <div className="flex items-center gap-3 lg:hidden">
-            <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-9 w-auto invert" />
-            <span className="leading-tight">
-              <span className="block text-[15px] font-bold">SmartAudit</span>
-              <span className="block text-[11px] text-slate-500">Královéhradecký kraj</span>
-            </span>
-          </div>
+          <Link href="/" className="block w-fit lg:hidden" aria-label="SmartAudit — úvodní stránka">
+            <Logo className="h-8 w-auto" />
+          </Link>
 
           <h2 className="mt-8 text-[28px] leading-tight font-bold tracking-[-0.02em] lg:mt-0">Vyberte, kdo jste</h2>
           <p className="mt-1.5 text-[14px] leading-relaxed text-slate-600">

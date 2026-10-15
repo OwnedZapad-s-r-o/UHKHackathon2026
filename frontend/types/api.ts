@@ -32,6 +32,14 @@ export type FacilityListItem = {
   heritageStatus: HeritageStatus;
   // Mění se s doplněnými přilehlými budovami — mapa ji přidá k adrese obrysu (ten se jinak cachuje 2 dny)
   footprintVersion: string;
+  // Pre-audit z otevřených dat (0–100) a jeho hlavní příčina
+  preAuditScore: number | null;
+  preAuditDriver: string | null;
+  // Sada čidel MICRORISC IQRF pro budovu (Kč, ceník) a návratnost v měsících (jen kraj a správce)
+  iqrfHardwareCostCzk: number | null;
+  iqrfPaybackMonths: number | null;
+  // Teplotu měří skutečné čidlo IQRF (jinak fyzikální model z otevřených dat)
+  liveMeasurement: boolean;
 };
 
 // Hranice okresů z GET /api/map/regions?type=Okres (GeoJSON, zjednodušené)
@@ -69,6 +77,50 @@ export type DataSource = {
   lastImportedAt: string | null;
   lastRecordCount: number | null;
   lastStatus: ImportStatus | null;
+  // Čl. 7.3 — záznam v katalogu poskytovatele a živý endpoint, ze kterého aplikace čte
+  category: string;
+  catalogUrl: string;
+  liveApiUrl: string;
+  dcatRecordUrl: string | null;
+  // Poslední živá kontrola (POST /api/opendata/sync)
+  lastSyncedAt: string | null;
+  liveAvailable: boolean | null;
+  liveRecordCount: number | null;
+};
+
+// GET /api/opendata/status a POST /api/opendata/sync
+export type SourceSync = {
+  key: string;
+  title: string;
+  provider: string;
+  category: string;
+  group: string;
+  catalogUrl: string;
+  liveApiUrl: string;
+  dcatRecordUrl: string | null;
+  syncMode: string;
+  status: string;
+  liveAvailable: boolean | null;
+  liveRecordCount: number | null;
+  localRecordCount: number | null;
+  version: string | null;
+  responseMs: number | null;
+  error: string | null;
+  changed: boolean;
+  lastSyncedAt: string | null;
+  lastImportedAt: string | null;
+  lastImportStatus: ImportStatus | null;
+};
+
+export type OpenDataSync = {
+  syncedAt: string | null;
+  durationMs: number | null;
+  syncMode: string;
+  catalog: { url: string; available: boolean | null; datasetCount: number | null; eTag: string | null; lastModified: string | null; responseMs: number | null; error: string | null };
+  summary: { total: number; live: number; cache: number; changed: number };
+  reimportRunning: boolean;
+  reimportedKeys: string[];
+  sources: SourceSync[];
 };
 
 export type DataSourcesResponse = {
@@ -91,7 +143,59 @@ export type Finding = {
   detail: string;
   tag: string;
   severity: AuditStatus;
+  // Odkud zjištění pochází (citace zdrojů dat)
+  source: string | null;
 };
+
+// Odkaz na zdrojovou sadu (Čl. 7.3) — katalog poskytovatele, živé API, záznam DCAT-AP-CZ
+export type DatasetLink = {
+  key: string;
+  title: string;
+  provider: string;
+  category: string;
+  catalogUrl: string;
+  liveApiUrl: string;
+  dcatRecordUrl: string | null;
+};
+
+export type PreAuditParameter = {
+  key: "A" | "B" | "C" | "D" | "E";
+  name: string;
+  score: number;
+  maxScore: number;
+  value: string;
+  explanation: string;
+  sources: DatasetLink[];
+};
+
+export type PreAudit = {
+  score: number;
+  status: AuditStatus;
+  dominantDriver: string;
+  parameters: PreAuditParameter[];
+  specificHeatLoss: number;
+  heatLossWattsPerKelvin: number;
+  degreeDays: number;
+  annualHeatDemandKwh: number;
+  annualHeatCostCzk: number | null;
+  heatPriceCzkPerMwh: number | null;
+  heatPriceFromContract: boolean;
+  regulationSavingPercent: number;
+  computedAt: string;
+};
+
+export type IqrfRoi = {
+  gateways: number;
+  sensors: number;
+  gatewayUnitCzk: number;
+  sensorUnitCzk: number;
+  estimatedHardwareCostCzk: number;
+  estimatedAnnualSavingsCzk: number | null;
+  paybackMonths: number | null;
+  savingsBasis: string;
+};
+
+export type DataMode = "LiveIqrf" | "OpenDataModel";
 
 export type FacilityDetail = {
   id: string;
@@ -174,6 +278,13 @@ export type FacilityDetail = {
   addedByManager: boolean;
   // Přilehlé budovy, které katastr k objektu nevede a doplnil je správce — jejich plocha vstupuje do výpočtu ztráty
   addedBuildingParts: BuildingPart[];
+  // Živé měření IQRF, nebo fyzikální model z otevřených dat
+  dataMode: DataMode;
+  preAudit: PreAudit | null;
+  iqrfRoi: IqrfRoi | null;
+  // Sady otevřených dat propojené s objektem a přímé odkazy na záznam objektu ve zdrojích
+  linkedDatasets: DatasetLink[];
+  objectLinks: { label: string; url: string; provider: string }[];
 };
 
 export type BuildingPart = { id: string; areaSquareMeters: number; source: string; addedAt: string };
@@ -377,6 +488,10 @@ export type OpenFacility = {
   co2HoursOverLimit: number | null;
   hasLiveSensors: boolean;
   evaluatedAt: string | null;
+  dataMode: DataMode;
+  preAuditScore: number | null;
+  preAuditStatus: AuditStatus | null;
+  preAuditDriver: string | null;
 };
 
 // Smlouvy organizace z Registru smluv — GET /api/facilities/{id}/contracts (jen kraj a správce)
@@ -495,4 +610,86 @@ export type Place = {
   heritageStatus: HeritageStatus;
   heritageName: string | null;
   neighbors: { id: string; code: string; name: string; distanceMeters: number; sameBuilding: boolean; own: boolean }[];
+};
+
+// Průvodce SmartAuditu — POST /api/guide/ask (přes /pruvodce na serveru Next, kvůli tokenu z httpOnly cookie)
+export type GuidePage = "mapa" | "objekty" | "karta" | "uvod";
+
+export type GuideContext = {
+  page: GuidePage;
+  facilityId: string | null;
+  districtCode: string | null;
+};
+
+export type GuideMode = "Ai" | "Offline" | "Blocked";
+
+export type GuideFocus = "None" | "Facility" | "Facilities" | "District" | "Region";
+
+export type GuideFacilityCard = {
+  rank: number;
+  id: string;
+  code: string;
+  name: string;
+  category: FacilityCategory;
+  kind: string;
+  municipalityName: string;
+  districtCode: string;
+  districtName: string;
+  latitude: number;
+  longitude: number;
+  status: AuditStatus;
+  headline: string;
+  co2: number | null;
+  co2HoursOverLimit: number | null;
+  temperature: number | null;
+  annualLossCzk: number | null;
+  hasLiveSensors: boolean;
+};
+
+export type GuideDistrictCard = {
+  code: string;
+  name: string;
+  facilities: number;
+  withIssues: number;
+  critical: number;
+  annualLossCzk: number | null;
+  averageCo2: number | null;
+};
+
+export type GuideSource = { title: string; snippet: string; kind: string; url: string | null };
+
+export type GuideMapAction = {
+  type: GuideFocus;
+  facilityIds: string[];
+  districtCode: string | null;
+  panel: string | null;
+};
+
+export type GuideLink = { label: string; href: string };
+
+export type GuideChartBar = { rank: number; facilityId: string; label: string; value: number; status: AuditStatus };
+
+export type GuideChartLine = { label: string; primary: boolean; points: { time: string; value: number }[] };
+
+// Graf v odpovědi průvodce — čísla doplňuje API z dat, model jen vybírá druh grafu
+export type GuideChart = {
+  kind: "Ranking" | "Series";
+  title: string;
+  unit: string;
+  bars: GuideChartBar[];
+  lines: GuideChartLine[];
+  thresholds: { value: number; label: string; tone: "warning" | "critical" | "neutral" }[];
+  note: string | null;
+};
+
+export type GuideAnswer = {
+  answer: string;
+  mode: GuideMode;
+  facilities: GuideFacilityCard[];
+  districts: GuideDistrictCard[];
+  sources: GuideSource[];
+  mapAction: GuideMapAction | null;
+  links: GuideLink[];
+  suggestions: string[];
+  charts: GuideChart[];
 };

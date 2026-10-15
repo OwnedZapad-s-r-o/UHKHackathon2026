@@ -143,8 +143,17 @@ namespace SmartAudit.Core.Domain.Helpers
         // Problém profilu se projeví v jedné konkrétní zóně — tak, jak by to ukázal reálný senzor
         private static List<ZoneTemplate> MarkHotspot(List<ZoneTemplate> zones, FacilityCategory category, SimulationProfile profile)
         {
+            var index = HotspotIndex(zones.Select(z => (z.Type, z.Wing, z.Floor)).ToList(), category, profile);
+
+            return zones.Select((z, i) => i == index ? z with { IsHotspot = true } : z).ToList();
+        }
+
+        // Index zóny, ve které se projeví špatné větrání (-1 = profil žádnou problémovou zónu nemá).
+        // Sdílí ho založení zón i přepočet pre-auditu, když se profil objektu změní.
+        public static int HotspotIndex(IReadOnlyList<(ZoneType Type, string Wing, int Floor)> zones, FacilityCategory category, SimulationProfile profile)
+        {
             if (profile != SimulationProfile.PoorVentilation || zones.Count == 0)
-                return zones;
+                return -1;
 
             var preferredType = category switch
             {
@@ -155,12 +164,14 @@ namespace SmartAudit.Core.Domain.Helpers
             };
 
             var hotspot = zones
-                .Where(z => z.Type == preferredType || z.Type == ZoneType.Dormitory)
-                .OrderByDescending(z => z.Wing == "jižní křídlo")
-                .ThenByDescending(z => z.Floor)
-                .FirstOrDefault() ?? zones[0];
+                .Select((z, i) => (Zone: z, Index: i))
+                .Where(z => z.Zone.Type == preferredType || z.Zone.Type == ZoneType.Dormitory)
+                .OrderByDescending(z => z.Zone.Wing == "jižní křídlo")
+                .ThenByDescending(z => z.Zone.Floor)
+                .Select(z => (int?)z.Index)
+                .FirstOrDefault();
 
-            return zones.Select(z => z == hotspot ? z with { IsHotspot = true } : z).ToList();
+            return hotspot ?? 0;
         }
     }
 }

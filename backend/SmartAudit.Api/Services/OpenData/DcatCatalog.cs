@@ -20,6 +20,9 @@ namespace SmartAudit.Api.Services.OpenData
         private const string Theme = "http://publications.europa.eu/resource/authority/data-theme/";
 
         public const string BuildingsDataset = "budovy-a-energeticky-audit";
+        public const string PreAuditDataset = "predaudit-budov-a-navratnost-iqrf";
+
+        public static readonly string[] Datasets = [BuildingsDataset, PreAuditDataset];
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -39,7 +42,7 @@ namespace SmartAudit.Api.Services.OpenData
                 ["@context"] = Context,
                 ["iri"] = CatalogIri(baseUrl),
                 ["typ"] = "Katalog",
-                ["název"] = new { cs = "Otevřená data SmartAudit KHK", en = "SmartAudit KHK open data" },
+                ["název"] = new { cs = "Otevřená data SmartAudit", en = "SmartAudit open data" },
                 ["popis"] = new
                 {
                     cs = "Budovy, které zřizuje Královéhradecký kraj, jejich údaje z katastru a stav energetického auditu z měření vnitřního prostředí.",
@@ -47,7 +50,7 @@ namespace SmartAudit.Api.Services.OpenData
                 },
                 ["poskytovatel"] = providerIri,
                 ["domovská_stránka"] = $"{baseUrl}/otevrena-data",
-                ["datová_sada"] = new[] { DatasetIri(baseUrl, BuildingsDataset) },
+                ["datová_sada"] = Datasets.Select(d => DatasetIri(baseUrl, d)).ToArray(),
             });
         }
 
@@ -79,6 +82,40 @@ namespace SmartAudit.Api.Services.OpenData
                     Distribution($"{iri}/distribuce/csv", $"{api}/facilities.csv", "CSV", "text/csv"),
                     Distribution($"{iri}/distribuce/geojson", $"{api}/facilities.geojson", "GEOJSON", "application/geo+json"),
                     Distribution($"{iri}/distribuce/json", $"{api}/facilities", "JSON", "application/json"),
+                },
+            });
+        }
+
+        // Pre-audit z 30+ sad otevřených dat: spojení ČÚZK (rok výstavby, plocha), Data KHK (kapacity, silnice, IZS, HSOO),
+        // Registru smluv (investice, servis MaR, ceny tepla) a Open-Meteo (výška, teplota, ovzduší) — vypočtená data kraje
+        public static string PreAuditDatasetRecord(string baseUrl, string providerIri)
+        {
+            var iri = DatasetIri(baseUrl, PreAuditDataset);
+            var api = $"{baseUrl}/api/open/v1";
+
+            return Serialize(new Dictionary<string, object>
+            {
+                ["@context"] = Context,
+                ["iri"] = iri,
+                ["typ"] = "Datová sada",
+                ["název"] = new { cs = "Pre-audit budov kraje z otevřených dat a návratnost monitoringu IQRF" },
+                ["popis"] = new
+                {
+                    cs = "Vícekriteriální stavebně-energetický pre-audit budov zřizovaných Královéhradeckým krajem, deterministicky spočtený ze spojených otevřených dat: "
+                        + "A — tepelná obálka (ČÚZK INSPIRE rok výstavby a plocha, Registr smluv zateplení a servis MaR), B — klima lokality (Open-Meteo nadmořská výška a teplota), "
+                        + "C — ekonomika energií (Registr smluv), D — hustota osob (Data KHK počty žáků a lůžek / plocha ČÚZK), E — okolí (Data KHK silnice II./III. třídy, IZS, HSOO, památky; Open-Meteo ovzduší). "
+                        + "Obsahuje skóre 0–100, body parametrů s vysvětlením a klíči zdrojových sad, měrnou tepelnou ztrátu, denostupně, roční potřebu tepla a velikost a ceníkovou cenu sady čidel MICRORISC IQRF. Bez částek úspor.",
+                },
+                ["poskytovatel"] = providerIri,
+                ["téma"] = new[] { $"{Theme}ENER", $"{Theme}REGI", $"{Theme}ENVI" },
+                ["periodicita_aktualizace"] = "http://publications.europa.eu/resource/authority/frequency/DAILY",
+                ["klíčové_slovo"] = new { cs = new[] { "energetický audit", "pre-audit", "tepelná ztráta", "denostupně", "IQRF", "otevřená data", "Královéhradecký kraj" } },
+                ["prvek_rúian"] = new[] { RegionRuian },
+                ["dokumentace"] = $"{api}/docs/",
+                ["distribuce"] = new[]
+                {
+                    Distribution($"{iri}/distribuce/csv", $"{api}/preaudit.csv", "CSV", "text/csv"),
+                    Distribution($"{iri}/distribuce/json", $"{api}/preaudit", "JSON", "application/json"),
                 },
             });
         }

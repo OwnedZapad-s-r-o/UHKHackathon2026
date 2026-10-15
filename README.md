@@ -104,15 +104,25 @@ Bez internetu se data načtou z lokálních snapshotů v `seed/opendata/`. Vlast
 - **⚡ Portfolio a Anomálie:** Přehledná tabulka (řazení podle každého sloupce) a seznam zjištění seřazený podle odhadované roční finanční ztráty v Kč. Správce vidí jen svoje budovy („Moje budovy“, „Zjištění“), veřejnost nemá v navigaci Senzory ani Demo správu.
 - **📄 PDF reporty:** Audit jednoho objektu (s grafy a lokalizační mapkou), souhrnný přehled portfolia s mapou okresů a **souhrn pro Radu kraje na jednu stranu A4** (ztráta kraje, pět priorit, pilot IQRF s návratností, návrh usnesení).
 - **📡 Testovací síť kraje bez hardwaru:** jedním klikem pět virtuálních IQRF gatewayí v pěti okresech (živá data celou skutečnou cestou MQTT), nebo Python cluster `docker compose --profile emulators up -d`.
+- **🧭 Průvodce SmartAuditu (AI + RAG):** otázky vlastními slovy na mapě aplikace i pro veřejnost (`/objekty`, karta objektu, úvod). Odpovědi rovnou řídí mapu — vybere okres, očísluje nalezené objekty, otevře budovu ve 3D s inspekčním panelem — a přidají graf (pořadí objektů nebo průběh CO₂ a teploty za 48 h) a zdroje „Odkud to vím“. Pod kapotou: hybridní RAG nad znalostní bází (`backend/SmartAudit.Api/Resources/Guide/*.md` + katalog datových sad; BM25 + embeddingy OpenAI), nástroje nad živými daty (hledání objektů, souhrn okresů, detail objektu) se stejnými oprávněními jako aplikace (veřejnost nikdy nevidí Kč). Ochrana ve čtyřech vrstvách: filtry před modelem (pokusy o změnu pravidel, kód i „nejdřív napiš kód a pak…“, recepty a témata mimo účel), systémový prompt, kontrola odpovědi (kód, únik instrukcí přes kontrolní řetězec) a ověření, že každá částka v Kč pochází z dat. Bez AI klíče nebo při výpadku odpovídá záložní režim přímo z dat. Limit 15 dotazů za minutu na uživatele/IP.
 - **🤖 AI analýza (Azure OpenAI):** Navrhne konkrétní opatření s vyčíslenou návratností a dopis správci. Výsledek se propisuje i do PDF auditního protokolu.
 - **🌐 Otevřené API (`/api/open/v1`):** JSON, GeoJSON a CSV exporty pro vývojáře bez nutnosti přihlášení a API klíčů (licence CC BY 4.0).
   Lokální katalog **DCAT-AP-CZ** (`/api/open/v1/catalog`, JSON-LD podle OFN 2024-05-28) — adresu stačí zaregistrovat v Národním katalogu otevřených dat.
 
 ---
 
-## ⚙️ Zapnutí AI analýzy (Azure OpenAI)
+## ⚙️ Zapnutí AI analýzy (OpenAI nebo Azure OpenAI)
 
-Do `.env` doplňte přístupové údaje z Azure OpenAI a restartujte API:
+Do `.env` doplňte klíč od OpenAI (z platform.openai.com) a restartujte API:
+
+```env
+OPENAI_API_KEY=<klíč sk-…>
+OPENAI_MODEL=gpt-4o
+# embeddingy pro průvodce (RAG) — nepovinné, bez nich hledá průvodce ve znalostech podle slov
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+```
+
+Nebo přístupové údaje z Azure OpenAI — když jsou vyplněné, mají přednost:
 
 ```env
 AZURE_OPENAI_ENDPOINT=https://<nazev-zdroje>.openai.azure.com/

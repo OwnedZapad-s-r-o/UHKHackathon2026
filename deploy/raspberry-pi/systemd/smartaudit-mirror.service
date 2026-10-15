@@ -1,0 +1,22 @@
+[Unit]
+Description=SmartAudit KHK — statický mirror otevřených dat (Varianta B)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=smartaudit
+Group=smartaudit
+WorkingDirectory=/opt/smartaudit-mirror
+ExecStart=/usr/bin/python3 /opt/smartaudit-mirror/opendata-mirror.py --data /opt/smartaudit-mirror/data --host 127.0.0.1 --port 8090 --base-url __BASE_URL__
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/smartaudit-mirror
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

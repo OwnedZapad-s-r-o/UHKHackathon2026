@@ -30,7 +30,7 @@ namespace SmartAudit.Api.Services.Reports
         public DocumentMetadata GetMetadata() => new()
         {
             Title = "Souhrn pro Radu Královéhradeckého kraje — energetická efektivita budov",
-            Author = "SmartAudit KHK",
+            Author = "SmartAudit",
             Language = "cs-CZ",
         };
 
@@ -42,11 +42,11 @@ namespace SmartAudit.Api.Services.Reports
                 page.Margin(30);
                 page.DefaultTextStyle(style => style.FontFamily(ReportStyles.FontFamily).FontSize(8.5f).FontColor(ReportStyles.Navy));
 
-                page.Header().Element(header => ReportStyles.Header(header, "Souhrn pro Radu kraje", $"SmartAudit KHK · {_data.GeneratedAt.ToLocalTime().ToString("d. M. yyyy", Cs)}"));
+                page.Header().Element(header => ReportStyles.Header(header, "Souhrn pro Radu kraje", $"SmartAudit · {_data.GeneratedAt.ToLocalTime().ToString("d. M. yyyy", Cs)}"));
                 // Vždy jedna strana: kdyby obsah (dlouhé názvy budov) přetekl, zmenší se, místo aby pokračoval na další straně
                 page.Content().PaddingTop(10).ScaleToFit().Column(Content);
                 page.Footer().PaddingTop(6).Text("Ztráty jsou odhad z naměřené vnitřní teploty (kde čidlo zatím chybí, ze simulace) × tepelná ztráta budovy z ČÚZK × cena tepla. "
-                    + "Zdroje: Data KHK, ČÚZK, Open-Meteo, MŠMT. Podrobnosti: přehled portfolia a PDF audit budovy v aplikaci SmartAudit KHK.")
+                    + "Zdroje: Data KHK, ČÚZK, Open-Meteo, MŠMT. Podrobnosti: přehled portfolia a PDF audit budovy v aplikaci SmartAudit.")
                     .FontSize(6.5f).FontColor(ReportStyles.Muted);
             });
         }
@@ -58,8 +58,9 @@ namespace SmartAudit.Api.Services.Reports
             var totalLoss = facilities.Sum(f => f.AnnualLossCzk ?? 0);
             var priorities = facilities.Where(f => f.AnnualLossCzk > 0).OrderByDescending(f => f.AnnualLossCzk).Take(_data.PilotSize).ToList();
             var priorityLoss = priorities.Sum(f => f.AnnualLossCzk ?? 0);
-            var pilotCost = _data.SensorKitCzkPerBuilding * priorities.Count;
-            var payback = priorityLoss > 0 ? (double)(pilotCost / priorityLoss) : (double?)null;
+            // Cena pilotu = součet sad IQRF spočtených pro každou budovu z plochy ČÚZK (gateway + čidla), jinak paušál z konfigurace
+            var pilotCost = priorities.Sum(f => f.IqrfHardwareCostCzk ?? _data.SensorKitCzkPerBuilding);
+            var paybackMonths = priorityLoss > 0 ? (double)(pilotCost / (priorityLoss / 12m)) : (double?)null;
             var topFinding = withIssues.GroupBy(f => f.Headline).OrderByDescending(g => g.Count()).FirstOrDefault();
 
             column.Item().Text("Kde kraj přichází o teplo a co s tím").FontSize(17).Bold();
@@ -74,7 +75,7 @@ namespace SmartAudit.Api.Services.Reports
                 Kpi(row.RelativeItem(), "Budovy se zjištěním", $"{withIssues.Count} z {facilities.Count}", "#92400E",
                     $"{withIssues.Count(f => f.Status == AuditStatus.Critical)} kritických, {withIssues.Count(f => f.Status == AuditStatus.Warning)} varování");
                 Kpi(row.RelativeItem(), "Nejčastější zjištění", topFinding?.Key ?? "—", ReportStyles.Navy, topFinding == null ? null : $"{topFinding.Count()} budov");
-                Kpi(row.RelativeItem(), $"Pilot IQRF na {priorities.Count} budovách", payback == null ? "—" : $"návratnost {payback.Value.ToString("0.0", Cs)} roku", "#065F46",
+                Kpi(row.RelativeItem(), $"Pilot IQRF na {priorities.Count} budovách", paybackMonths == null ? "—" : $"návratnost {paybackMonths.Value.ToString("0.0", Cs)} měs.", "#065F46",
                     $"investice {Czk(pilotCost)}");
             });
 
@@ -106,11 +107,12 @@ namespace SmartAudit.Api.Services.Reports
                             columns.RelativeColumn(5);
                             columns.RelativeColumn(3);
                             columns.ConstantColumn(62);
+                            columns.ConstantColumn(44);
                         });
 
                         table.Header(header =>
                         {
-                            foreach (var label in new[] { "#", "Budova", "Zjištění", "Ztráta / rok" })
+                            foreach (var label in new[] { "#", "Budova", "Zjištění", "Ztráta / rok", "IQRF návr." })
                                 header.Cell().BorderBottom(1).BorderColor(ReportStyles.Border).PaddingBottom(3).Text(label).FontSize(7).FontColor(ReportStyles.Muted);
                         });
 
@@ -125,6 +127,7 @@ namespace SmartAudit.Api.Services.Reports
                             });
                             Cell(table, facility.Headline, ReportStyles.Status(facility.Status).Foreground);
                             Cell(table, Czk(facility.AnnualLossCzk ?? 0), "#991B1B", alignRight: true, bold: true);
+                            Cell(table, facility.IqrfPaybackMonths is { } months ? $"{months.ToString("0.#", Cs)} měs." : "—", "#065F46", alignRight: true, bold: true);
                         }
                     });
                 });
@@ -168,7 +171,8 @@ namespace SmartAudit.Api.Services.Reports
                 resolution.Item().PaddingTop(2).Text("4. Souhlasí se zveřejněním výsledků jako otevřených dat (CC BY 4.0) na portálu Data KHK.");
             });
 
-            column.Item().PaddingTop(6).Text($"Návratnost pilotu předpokládá, že se zjištěná ztráta odstraní seřízením regulace (bez stavebních úprav). Cena sady čidel: {Czk(_data.SensorKitCzkPerBuilding)} bez DPH na budovu (gateway, 15 čidel do tříd, 3 do společných prostor, montáž).")
+            column.Item().PaddingTop(6).Text("Stav budov a ztráty vychází deterministicky z otevřených dat (ČÚZK INSPIRE, Data KHK, Registr smluv, Open-Meteo); budovy s čidly IQRF z živého měření. "
+                    + "Návratnost pilotu předpokládá, že se zjištěná ztráta odstraní seřízením regulace (bez stavebních úprav). Sada IQRF pro každou budovu: brána IQD-GW04 (8 500 Kč) + bezdrátová čidla teploty/CO₂ (2 400 Kč/ks) podle podlahové plochy, bez sekání kabelů.")
                 .FontSize(7).FontColor(ReportStyles.Muted);
         }
 

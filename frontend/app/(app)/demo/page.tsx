@@ -5,7 +5,7 @@ import { TopBar } from "../_components/top-bar";
 import { DemoWorkspace } from "./_components/demo-workspace";
 
 export const metadata: Metadata = {
-  title: "Demo správa · SmartAudit KHK",
+  title: "Demo správa · SmartAudit",
   description: "Výroba virtuálních gatewayí a čidel, živé párování a oprava odhadu ztráty měřením.",
 };
 

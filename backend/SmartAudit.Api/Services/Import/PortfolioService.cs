@@ -380,7 +380,8 @@ namespace SmartAudit.Api.Services.Import
                 if (!existing.TryGetValue(candidate.SourceKey, out var facility))
                 {
                     facility = new Facility(candidate.SourceKey, candidate.Name, candidate.Category, candidate.Location);
-                    facility.SetSimulationProfile(FacilityDefaults.SimulationProfileFor(candidate.SourceKey, candidate.Category));
+                    // Profil fyzikálního modelu nastaví až pre-audit z otevřených dat (PreAuditService) — do té doby bez problému
+                    facility.SetSimulationProfile(SimulationProfile.Nominal);
                     _dbContext.Facilities.Add(facility);
                 }
                 else

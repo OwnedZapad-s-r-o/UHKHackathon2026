@@ -1,8 +1,11 @@
 import { Activity, Radio } from "lucide-react";
+import { MODEL_EXPLANATION } from "@/components/data-mode-badge";
 import { STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
 import { cn } from "@/lib/utils";
 import type { FacilityDetail, SensorCorrection } from "@/types/api";
 import { AiAuditSection } from "./ai-audit-section";
+import { IqrfRoiCard } from "./iqrf-roi-card";
+import { LinkedDatasetsCard } from "./linked-datasets-card";
 import { StatTile } from "./panel-card";
 
 const CO2_LIMIT = 1500;
@@ -41,6 +44,8 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
         />
       </div>
 
+      {facility.dataMode === "OpenDataModel" && <p className="mt-2.5 text-[11.5px] leading-snug text-slate-500">{MODEL_EXPLANATION}</p>}
+
       {assessment.sensorCorrection && assessment.annualLossCzk !== null && (
         <SensorCorrectionNote correction={assessment.sensorCorrection} lossNow={assessment.annualLossCzk} />
       )}
@@ -51,7 +56,7 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
           <h3 className="text-sm font-bold">{assessment.headline}</h3>
           <span className="ml-auto flex items-center gap-1 font-mono text-[10px] opacity-70">
             <Activity className="size-3" aria-hidden />
-            pravidla nad 7 dny telemetrie
+            {facility.dataMode === "LiveIqrf" ? "pravidla nad 7 dny živého měření" : "pravidla nad 7 dny modelu + pre-audit"}
           </span>
         </div>
         <p className="mt-3 text-[13px] leading-normal">{assessment.summary}</p>
@@ -69,6 +74,10 @@ export function OverviewTab({ facility }: { facility: FacilityDetail }) {
         )}
       </section>
 
+      <h3 className="mt-5 text-[11px] font-bold tracking-wide text-slate-500 uppercase">Kalkulace nasazení IQRF &amp; fúze otevřených dat</h3>
+      {facility.iqrfRoi && <IqrfRoiCard roi={facility.iqrfRoi} />}
+      <LinkedDatasetsCard facility={facility} />
+
       <AiAuditSection facilityId={facility.id} />
 
       <ContextList facility={facility} />
@@ -84,7 +93,7 @@ function SensorCorrectionNote({ correction, lossNow }: { correction: SensorCorre
     <p className="mt-2.5 flex items-start gap-2 rounded-xl border border-hk-blue/20 bg-[#EFF4FA] px-3.5 py-2.5 text-[12.5px] leading-snug text-slate-700">
       <Radio className="mt-0.5 size-3.5 shrink-0 text-hk-blue" aria-hidden />
       <span>
-        <b className="text-hk-navy">Opraveno měřením</b> — dříve {formatCzk(correction.lossBeforeCzk)} (odhad ze simulace)
+        <b className="text-hk-navy">Opraveno měřením</b> — dříve {formatCzk(correction.lossBeforeCzk)} (odhad z fyzikálního modelu)
         {delta !== 0 && (
           <b className={delta < 0 ? "text-emerald-700" : "text-red-700"}>
             {" "}

@@ -43,7 +43,7 @@ namespace SmartAudit.Api.Services.Reports
         public DocumentMetadata GetMetadata() => new()
         {
             Title = $"Energetický audit — {_data.Facility.Name}",
-            Author = "SmartAudit KHK",
+            Author = "SmartAudit",
             Language = "cs-CZ",
         };
 
@@ -55,7 +55,7 @@ namespace SmartAudit.Api.Services.Reports
                 page.Margin(36);
                 page.DefaultTextStyle(style => style.FontFamily(ReportStyles.FontFamily).FontSize(9.5f).FontColor(ReportStyles.Navy));
 
-                page.Header().Element(header => ReportStyles.Header(header, "Energetický audit objektu", $"SmartAudit KHK · vygenerováno {_data.GeneratedAt.ToLocalTime().ToString("d. M. yyyy H:mm", Cs)}"));
+                page.Header().Element(header => ReportStyles.Header(header, "Energetický audit objektu", $"SmartAudit · vygenerováno {_data.GeneratedAt.ToLocalTime().ToString("d. M. yyyy H:mm", Cs)}"));
                 page.Content().PaddingTop(12).Column(Content);
                 page.Footer().PaddingTop(8).Element(ReportStyles.Footer);
             });
@@ -111,8 +111,13 @@ namespace SmartAudit.Api.Services.Reports
                 Kpi(row.RelativeItem(), "Odhad roční ztráty", assessment?.AnnualLossCzk is { } loss ? loss.ToString("C0", Cs) : "jen pro kraj", assessment?.AnnualLossCzk > 0);
             });
 
-            // Vyhodnocení
-            column.Item().SectionTitle("Vyhodnocení telemetrie");
+            // Vyhodnocení — režim dat musí být v reportu pro Radu kraje vidět stejně jako ve webu
+            var live = facility.DataMode == "LiveIqrf";
+            column.Item().SectionTitle(live ? "Vyhodnocení — živé měření IQRF (MQTT)" : "Vyhodnocení — fyzikální model z otevřených dat");
+            column.Item().PaddingBottom(4).Text(live
+                    ? "Teplotu měří čidla MICRORISC IQRF přes bránu a MQTT; zjištění pre-auditu z otevřených dat jsou hypotézy, které měření ověřuje."
+                    : "Hodnoty jsou deterministicky počítány z reálné podlahové plochy a stáří budovy (ČÚZK INSPIRE), kapacity osob a investic (Data KHK), cen energií (Registr smluv) a živého počasí (Open-Meteo). Po spárování brány MICRORISC IQRF se model automaticky přepne na živou telemetrii.")
+                .FontSize(7.5f).FontColor(ReportStyles.Muted);
             column.Item().Background(status.Background).Border(1).BorderColor(status.Foreground).CornerRadius(8).Padding(10).Column(evaluation =>
             {
                 // Bez zjištění shrnutí, jinak jednotlivá zjištění (shrnutí je jen jejich spojení — neopakovat)
@@ -131,11 +136,19 @@ namespace SmartAudit.Api.Services.Reports
                         {
                             item.Item().Text(finding.Title).Bold().FontColor(status.Foreground);
                             item.Item().Text(finding.Detail).FontSize(8.5f).FontColor(status.Foreground);
+                            if (finding.Source != null)
+                                item.Item().Text($"Zdroj: {finding.Source}").FontSize(7.5f).Italic().FontColor(status.Foreground);
                         });
                         row.ConstantItem(80).AlignRight().Text(finding.Tag).FontSize(8).FontColor(status.Foreground);
                     });
                 }
             });
+
+            if (facility.PreAudit != null)
+                column.Item().Element(PreAuditSection);
+
+            if (facility.IqrfRoi != null)
+                column.Item().Element(IqrfSection);
 
             // Grafy
             column.Item().SectionTitle("Teplota za 48 h (průměr zón)");
@@ -183,6 +196,97 @@ namespace SmartAudit.Api.Services.Reports
 
             if (_data.AiAnalysis != null)
                 column.Item().Element(AiSection);
+
+            column.Item().Element(SourcesSection);
+        }
+
+        // Pět parametrů pre-auditu se zdroji — z čeho stav objektu vznikl
+        private void PreAuditSection(IContainer container)
+        {
+            var preAudit = _data.Facility.PreAudit!;
+
+            container.ShowEntire().Column(column =>
+            {
+                column.Item().SectionTitle($"Pre-audit z otevřených dat — {preAudit.Score}/100 bodů");
+                column.Item().Text($"Hlavní příčina: {preAudit.DominantDriver} · měrná ztráta {preAudit.SpecificHeatLoss.ToString("0.0#", Cs)} W/m²K · {preAudit.DegreeDays.ToString("N0", Cs)} denostupňů · potřeba tepla {(preAudit.AnnualHeatDemandKwh / 1000).ToString("N0", Cs)} MWh/rok")
+                    .FontSize(8).FontColor(ReportStyles.Muted);
+                column.Item().PaddingTop(4).Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.ConstantColumn(22);
+                        columns.RelativeColumn(3);
+                        columns.ConstantColumn(40);
+                        columns.RelativeColumn(6);
+                    });
+
+                    foreach (var parameter in preAudit.Parameters)
+                    {
+                        table.Cell().BorderBottom(0.5f).BorderColor(ReportStyles.Border).PaddingVertical(4).Text(parameter.Key).Bold();
+                        table.Cell().BorderBottom(0.5f).BorderColor(ReportStyles.Border).PaddingVertical(4).Column(name =>
+                        {
+                            name.Item().Text(parameter.Name).FontSize(8.5f).Bold();
+                            name.Item().Text(parameter.Value).FontSize(8).FontColor(ReportStyles.Muted);
+                        });
+                        table.Cell().BorderBottom(0.5f).BorderColor(ReportStyles.Border).PaddingVertical(4).Text($"{parameter.Score}/{parameter.MaxScore}").FontSize(8.5f).Bold();
+                        table.Cell().BorderBottom(0.5f).BorderColor(ReportStyles.Border).PaddingVertical(4).Column(text =>
+                        {
+                            text.Item().Text(parameter.Explanation).FontSize(8);
+                            text.Item().Text($"Zdroje: {string.Join(", ", parameter.Sources.Select(s => s.Title))}").FontSize(7).FontColor(ReportStyles.Muted);
+                        });
+                    }
+                });
+            });
+        }
+
+        // Návratnost osazení budovy čidly MICRORISC IQRF — pro Radu kraje: kolik to stojí a za kolik měsíců se to vrátí
+        private void IqrfSection(IContainer container)
+        {
+            var roi = _data.Facility.IqrfRoi!;
+
+            container.ShowEntire().Column(column =>
+            {
+                column.Item().SectionTitle("Návratnost nasazení čidel MICRORISC IQRF");
+                column.Item().Row(row =>
+                {
+                    row.Spacing(8);
+                    Kpi(row.RelativeItem(), "Sada IQRF (bez sekání kabelů)", $"{roi.EstimatedHardwareCostCzk.ToString("C0", Cs)}");
+                    Kpi(row.RelativeItem(), "Roční úspora", roi.EstimatedAnnualSavingsCzk is { } savings ? savings.ToString("C0", Cs) : "jen pro kraj");
+                    Kpi(row.RelativeItem(), "Návratnost", roi.PaybackMonths is { } months ? $"{months.ToString("0.#", Cs)} měs." : "—", roi.PaybackMonths is <= 6);
+                });
+                column.Item().PaddingTop(4).Text($"{roi.Gateways}× IQRF Gateway IQD-GW04 à {roi.GatewayUnitCzk.ToString("C0", Cs)} + {roi.Sensors}× bezdrátové čidlo teploty/CO₂ à {roi.SensorUnitCzk.ToString("C0", Cs)} podle podlahové plochy z ČÚZK. Úspora: {roi.SavingsBasis}.")
+                    .FontSize(7.5f).FontColor(ReportStyles.Muted);
+            });
+        }
+
+        // Čl. 7.3 pravidel — klikací odkazy na zdrojové datové sady
+        private void SourcesSection(IContainer container)
+        {
+            var facility = _data.Facility;
+
+            container.ShowEntire().Column(column =>
+            {
+                column.Item().SectionTitle("Zdroje otevřených dat u tohoto objektu");
+                foreach (var dataset in facility.LinkedDatasets)
+                {
+                    column.Item().PaddingBottom(2).Text(text =>
+                    {
+                        text.DefaultTextStyle(style => style.FontSize(7.5f));
+                        text.Span($"{dataset.Provider} · ").FontColor(ReportStyles.Muted);
+                        text.Hyperlink(dataset.Title, dataset.CatalogUrl).FontColor(ReportStyles.Blue).Underline();
+                    });
+                }
+
+                foreach (var link in facility.ObjectLinks)
+                {
+                    column.Item().PaddingBottom(2).Text(text =>
+                    {
+                        text.DefaultTextStyle(style => style.FontSize(7.5f));
+                        text.Span($"{link.Provider} · ").FontColor(ReportStyles.Muted);
+                        text.Hyperlink(link.Label, link.Url).FontColor(ReportStyles.Blue).Underline();
+                    });
+                }
+            });
         }
 
         private void AiSection(IContainer container)

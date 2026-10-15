@@ -12,6 +12,9 @@ namespace SmartAudit.Core.Domain.Settings
         // Název nasazení modelu v Azure AI Foundry (např. gpt-4o)
         public string Deployment { get; set; } = string.Empty;
 
+        // Nasazení embeddingového modelu (např. text-embedding-3-small) pro znalosti průvodce — nepovinné
+        public string EmbeddingDeployment { get; set; } = string.Empty;
+
         public bool IsConfigured =>
             Uri.TryCreate(Endpoint, UriKind.Absolute, out _)
             && !string.IsNullOrWhiteSpace(ApiKey)

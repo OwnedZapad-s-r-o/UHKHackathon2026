@@ -39,7 +39,17 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
         double? Co2HoursOverLimit,
         // Objekt měří aspoň jedno skutečné čidlo IQRF (jinak modelová data)
         bool HasLiveSensors,
-        DateTimeOffset? EvaluatedAt);
+        DateTimeOffset? EvaluatedAt,
+        // Pre-audit z otevřených dat (ČÚZK + Data KHK + Registr smluv + Open-Meteo) a velikost sady IQRF
+        string DataMode = "OpenDataModel",
+        int? PreAuditScore = null,
+        AuditStatus? PreAuditStatus = null,
+        string? PreAuditDriver = null,
+        double? SpecificHeatLoss = null,
+        double? DegreeDays = null,
+        double? AnnualHeatDemandKwh = null,
+        int? IqrfSensors = null,
+        decimal? IqrfHardwareCostCzk = null);
 
     // Seznam objektů pro otevřené API — JSON, GeoJSON i CSV staví nad stejným výsledkem
     public class GetOpenFacilitiesHandler : IRequestHandler<GetOpenFacilitiesCommand, Response<IReadOnlyCollection<OpenFacilityDto>>>
@@ -101,7 +111,16 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
                     f.Assessment != null ? f.Assessment.LatestPower : null,
                     f.Assessment != null ? f.Assessment.Co2HoursOverLimit : null,
                     f.Sensors.Any(s => s.Source == SensorSource.Physical && s.IsActive),
-                    f.Assessment != null ? f.Assessment.EvaluatedAt : null))
+                    f.Assessment != null ? f.Assessment.EvaluatedAt : null,
+                    f.Sensors.Any(s => s.Source == SensorSource.Physical && s.IsActive) ? "LiveIqrf" : "OpenDataModel",
+                    f.PreAudit != null ? f.PreAudit.Score : null,
+                    f.PreAudit != null ? f.PreAudit.Status : null,
+                    f.PreAudit != null ? f.PreAudit.DominantDriver : null,
+                    f.PreAudit != null ? f.PreAudit.SpecificHeatLoss : null,
+                    f.PreAudit != null ? f.PreAudit.DegreeDays : null,
+                    f.PreAudit != null ? f.PreAudit.AnnualHeatDemandKwh : null,
+                    f.PreAudit != null ? f.PreAudit.IqrfSensors : null,
+                    f.PreAudit != null ? f.PreAudit.IqrfHardwareCostCzk : null))
                 .ToListAsync(ct);
 
             return Response.Success<IReadOnlyCollection<OpenFacilityDto>>(facilities);

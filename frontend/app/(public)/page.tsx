@@ -24,9 +24,10 @@ import { getPublicDatasets, getPublicFacilities } from "@/lib/public-api";
 import { cn } from "@/lib/utils";
 import { SchoolSearch } from "./_components/school-search";
 import { toSearchItems } from "./_components/search-items";
+import { PublicGuide } from "./_components/public-guide";
 
 export const metadata: Metadata = {
-  title: "SmartAudit KHK · energetický audit budov kraje",
+  title: "SmartAudit · energetický audit budov kraje",
   description:
     "Kraj topí ve stovkách budov a neví, kde plýtvá. SmartAudit to zjistí z otevřených dat a čidel IQRF — pro kraj, správce budov i veřejnost.",
 };
@@ -122,7 +123,7 @@ export default async function LandingPage() {
             <BigFigure value={datasetCount} label="otevřených datových sad, každá s konkrétní úlohou" />
             <BigFigure value={liveCount} label={`${buildings(liveCount)} se živým čidlem IQRF, ostatní počítá model`} />
             <p className="col-span-full bg-slate-50 px-6 py-4.5 text-[13px] leading-normal text-slate-600">
-              Kde čidla zatím nejsou, aplikace ukazuje modelová data a vždy je tak označí.
+              Kde čidla zatím nejsou, počítá hodnoty fyzikální model z otevřených dat (ČÚZK + Data KHK + Open-Meteo) a aplikace to vždy označí.
             </p>
           </div>
         </div>
@@ -191,7 +192,7 @@ export default async function LandingPage() {
               image={{ src: "/landing/senzory.webp", alt: "Obrazovka Senzory s živými hodnotami a přiřazením do místností" }}
             >
               IQRF gateway se přes MQTT připojí k aplikaci. Ta sama najde uzly a jejich senzory, správce jen vybere místnost. Skutečné čidlo
-              nahradí v místnosti simulaci.
+              nahradí v místnosti fyzikální model.
             </FeatureCard>
           </div>
 
@@ -362,6 +363,8 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      <PublicGuide page="uvod" />
     </main>
   );
 }
@@ -372,7 +375,7 @@ const SOURCES = [
   { title: "Open-Meteo a MŠMT", text: "Venkovní teplota, školní kalendář a prázdniny, počty žáků" },
   { title: "IQRF · MICRORISC", text: "Skutečná čidla českého výrobce z Jičína, připojená přes MQTT" },
   { title: "Azure OpenAI", text: "Návrh opatření a dopisu zřizovateli z výsledků auditu" },
-  { title: "Modelová data", text: "Kde čidlo chybí, hodnoty počítá model a aplikace to vždy uvádí" },
+  { title: "Fyzikální model z otevřených dat", text: "Kde čidlo chybí, hodnoty počítá model z ČÚZK, Data KHK a Open-Meteo a aplikace to vždy uvádí" },
 ];
 
 const FEATURE_TITLE = "mt-3.5 text-[clamp(28px,3.4vw,40px)] leading-[1.1] font-bold tracking-[-0.03em]";

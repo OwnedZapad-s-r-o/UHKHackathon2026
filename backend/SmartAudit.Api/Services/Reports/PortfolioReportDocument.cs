@@ -32,7 +32,7 @@ namespace SmartAudit.Api.Services.Reports
         public DocumentMetadata GetMetadata() => new()
         {
             Title = "Přehled portfolia objektů Královéhradeckého kraje",
-            Author = "SmartAudit KHK",
+            Author = "SmartAudit",
             Language = "cs-CZ",
         };
 
@@ -44,7 +44,7 @@ namespace SmartAudit.Api.Services.Reports
                 page.Margin(36);
                 page.DefaultTextStyle(style => style.FontFamily(ReportStyles.FontFamily).FontSize(9).FontColor(ReportStyles.Navy));
 
-                page.Header().Element(header => ReportStyles.Header(header, "Přehled portfolia objektů", $"SmartAudit KHK · vygenerováno {_data.GeneratedAt.ToLocalTime().ToString("d. M. yyyy H:mm", Cs)}"));
+                page.Header().Element(header => ReportStyles.Header(header, "Přehled portfolia objektů", $"SmartAudit · vygenerováno {_data.GeneratedAt.ToLocalTime().ToString("d. M. yyyy H:mm", Cs)}"));
                 page.Content().PaddingTop(12).Column(Content);
                 page.Footer().PaddingTop(8).Element(ReportStyles.Footer);
             });
@@ -125,13 +125,18 @@ namespace SmartAudit.Api.Services.Reports
                     columns.RelativeColumn(4);
                     columns.RelativeColumn(2);
                     columns.RelativeColumn(3);
+                    columns.ConstantColumn(30);
                     if (_data.MoneyVisible)
+                    {
                         columns.ConstantColumn(70);
+                        columns.ConstantColumn(46);
+                    }
                 });
 
                 table.Header(header =>
                 {
-                    string[] labels = _data.MoneyVisible ? ["#", "Kód", "Objekt", "Okres", "Stav", "Ztráta / rok"] : ["#", "Kód", "Objekt", "Okres", "Stav"];
+                    // Pre-audit = skóre 0–100 z otevřených dat; IQRF = návratnost sady čidel v měsících
+                    string[] labels = _data.MoneyVisible ? ["#", "Kód", "Objekt", "Okres", "Stav", "Pre-audit", "Ztráta / rok", "IQRF návr."] : ["#", "Kód", "Objekt", "Okres", "Stav", "Pre-audit"];
                     foreach (var label in labels)
                         header.Cell().BorderBottom(1).BorderColor(ReportStyles.Border).PaddingVertical(4).Text(label).FontSize(7.5f).FontColor(ReportStyles.Muted);
                 });
@@ -152,8 +157,12 @@ namespace SmartAudit.Api.Services.Reports
                     Cell(table, facility.Name, ReportStyles.Navy, bold: true);
                     Cell(table, facility.DistrictName, ReportStyles.Navy);
                     Cell(table, facility.Status == AuditStatus.Nominal ? status.Label : facility.Headline, status.Foreground);
+                    Cell(table, facility.PreAuditScore?.ToString() ?? "—", ReportStyles.Navy, alignRight: true);
                     if (_data.MoneyVisible)
+                    {
                         Cell(table, facility.AnnualLossCzk is > 0 ? facility.AnnualLossCzk.Value.ToString("C0", Cs) : "—", ReportStyles.Navy, alignRight: true);
+                        Cell(table, facility.IqrfPaybackMonths is { } months ? $"{months.ToString("0.#", Cs)} m" : "—", "#065F46", alignRight: true);
+                    }
                 }
             });
         }

@@ -1,12 +1,9 @@
-using System.ClientModel;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Azure.AI.OpenAI;
 using OpenAI.Chat;
 using SmartAudit.Api.Features.Facilities.GetFacilityDetail;
 using SmartAudit.Core.Domain.Enums;
-using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Services
 {
@@ -87,22 +84,21 @@ namespace SmartAudit.Api.Services
             }
             """;
 
-        private readonly AzureOpenAiSettings _settings;
+        private readonly IAiClientFactory _clients;
 
-        public AiAuditService(AzureOpenAiSettings settings)
+        public AiAuditService(IAiClientFactory clients)
         {
-            _settings = settings;
+            _clients = clients;
         }
 
-        public bool IsConfigured => _settings.IsConfigured;
+        public bool IsConfigured => _clients.IsChatConfigured;
 
         public async Task<AiAuditResult> AnalyzeAsync(GetFacilityDetailDto facility, IReadOnlyCollection<AiContractContext> contracts, CancellationToken ct)
         {
             if (!IsConfigured)
-                throw new InvalidOperationException("Azure OpenAI není nastavené");
+                throw new InvalidOperationException("AI analýza není nastavená");
 
-            var client = new AzureOpenAIClient(new Uri(_settings.Endpoint), new ApiKeyCredential(_settings.ApiKey));
-            var chat = client.GetChatClient(_settings.Deployment);
+            var (chat, model) = _clients.CreateChatClient();
 
             var options = new ChatCompletionOptions
             {
@@ -119,7 +115,7 @@ namespace SmartAudit.Api.Services
                 ?? throw new InvalidOperationException("Model vrátil prázdnou odpověď");
 
             return new AiAuditResult(
-                _settings.Deployment,
+                model,
                 output.Summary,
                 output.RootCause,
                 output.Recommendations.Select(r => new AiRecommendation(r.Title, r.Detail, r.Cost, r.Saving, r.Payback, r.HeritageSafe)).ToList(),

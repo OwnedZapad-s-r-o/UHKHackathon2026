@@ -11,11 +11,14 @@ import type {
   FacilityContracts,
   FacilityDetail,
   FacilityListItem,
+  GuideAnswer,
+  GuideContext,
   GatewayDetail,
   GatewaysResponse,
   Heatmap,
   NearbyDevice,
   NearbyNodes,
+  OpenDataSync,
   SensorMetric,
   Session,
   Telemetry,
@@ -186,6 +189,10 @@ export function getDataSources() {
   return apiGet<DataSourcesResponse>("/api/data-sources");
 }
 
+export function getOpenDataStatus() {
+  return apiGet<OpenDataSync>("/api/opendata/status");
+}
+
 export function getApiStatus() {
   return apiGet<ApiStatus>("/api/status");
 }
@@ -204,4 +211,22 @@ export async function apiPost<T>(path: string, body: unknown): Promise<{ ok: tru
   }
 
   return { ok: true, data: (await response.json()) as T };
+}
+
+// Dotaz na průvodce — s tokenem, když je uživatel přihlášený (jinak jako veřejnost).
+// Adresu návštěvníka posíláme dál, aby limit dotazů platil na člověka, ne na celý server Next.js.
+export async function askGuide(body: { question: string; context: GuideContext; history: string[] }, clientIp: string | null) {
+  const session = await getSession();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (session) headers.Authorization = `Bearer ${session.token}`;
+  if (clientIp) headers["X-Forwarded-For"] = clientIp;
+
+  const response = await fetch(`${API_URL}/api/guide/ask`, { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    return { ok: false as const, status: response.status, message: error?.message ?? "Průvodce teď neodpovídá, zkuste to prosím za chvíli." };
+  }
+
+  return { ok: true as const, data: (await response.json()) as GuideAnswer };
 }

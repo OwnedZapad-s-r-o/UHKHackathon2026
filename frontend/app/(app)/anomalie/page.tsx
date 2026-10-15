@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import { DataModeBadge } from "@/components/data-mode-badge";
 import { getFacilities, getSession } from "@/lib/api";
-import { STATUS_META, formatCzk } from "@/lib/facility-meta";
+import { STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
 import { facilityMapHref, readParam, withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { FacilityListItem } from "@/types/api";
@@ -11,7 +12,7 @@ import { PortfolioReportLink } from "../_components/portfolio-report-link";
 import { TopBar } from "../_components/top-bar";
 
 export const metadata: Metadata = {
-  title: "Anomálie · SmartAudit KHK",
+  title: "Anomálie · SmartAudit",
 };
 
 // Nejdřív kritické, v rámci stavu podle odhadované ztráty
@@ -39,7 +40,9 @@ export default async function AnomaliesPage({ searchParams }: PageProps<"/anomal
         <div className="flex flex-wrap items-end gap-4">
           <div>
             <h1 className="text-[32px] leading-tight font-bold tracking-tight">{title}</h1>
-            <p className="mt-1.5 text-sm text-slate-600">Zjištění z telemetrie seřazená podle odhadovaného finančního dopadu.</p>
+            <p className="mt-1.5 text-sm text-slate-600">
+              Zjištění z pre-auditu otevřených dat a telemetrie (živé IQRF nebo fyzikální model) seřazená podle odhadovaného finančního dopadu.
+            </p>
           </div>
           <Link
             href={withParams("/anomalie", params, { kriticke: onlyCritical ? null : "1" })}
@@ -62,7 +65,7 @@ export default async function AnomaliesPage({ searchParams }: PageProps<"/anomal
         </ol>
 
         <p className="mt-4 text-xs text-slate-500">
-          Ostatní objekty ({nominalCount}) jsou v normě. Telemetrie se vyhodnocuje průběžně po každém kroku měření.
+          Ostatní objekty ({nominalCount}) jsou v normě. Stav vychází deterministicky z otevřených dat (ČÚZK, Data KHK, Registr smluv, Open-Meteo) a z měření; vyhodnocuje se průběžně po každém kroku.
         </p>
       </main>
     </>
@@ -88,12 +91,25 @@ function AnomalyCard({ facility, index }: { facility: FacilityListItem; index: n
         </div>
         <h2 className="mt-2 text-lg font-bold tracking-tight">{facility.name}</h2>
         <p className="mt-1 text-[13px] text-slate-600">{facility.headline}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <DataModeBadge mode={facility.liveMeasurement ? "LiveIqrf" : "OpenDataModel"} compact />
+          {facility.preAuditScore !== null && (
+            <span className="font-mono text-[11px] text-slate-500">
+              pre-audit {facility.preAuditScore}/100{facility.preAuditDriver && ` · ${facility.preAuditDriver.toLowerCase()}`}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex shrink-0 flex-col items-end justify-between gap-3">
         {facility.annualLossCzk !== null && (
           <div className="text-right">
             <p className="text-[10.5px] text-slate-500">Dopad na rok</p>
             <p className="font-mono text-base font-bold text-red-800">{facility.annualLossCzk > 0 ? formatCzk(facility.annualLossCzk) : "—"}</p>
+            {facility.iqrfPaybackMonths !== null && (
+              <p className="mt-0.5 font-mono text-[11px] font-bold text-emerald-700" title="Návratnost sady čidel MICRORISC IQRF">
+                IQRF návratnost {formatNumber(facility.iqrfPaybackMonths)} měs.
+              </p>
+            )}
           </div>
         )}
         <Link

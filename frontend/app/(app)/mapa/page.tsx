@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { FacilityMap } from "../_components/facility-map";
 import { InspectionPanel, PANEL_TABS, type PanelTab } from "../_components/inspection/inspection-panel";
 import { MapFilterBar } from "../_components/map-filter-bar";
+import { MapGuide } from "../_components/map-guide";
 import { NewBuildingNotice } from "../_components/new-building-notice";
 import { OwnBuildings } from "../_components/own-buildings";
 import { TopBar } from "../_components/top-bar";
@@ -68,6 +69,9 @@ export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
             )}
 
             {ownBuildings && !selected && <OwnBuildings facilities={facilities} />}
+
+            {/* Průvodce: otázky vlastními slovy, odpovědi řídí mapu (okres, objekt, očíslované špendlíky) */}
+            {session && <MapGuide role={session.role} selectedName={selected?.name ?? null} belowBreadcrumb={!ownBuildings} />}
 
             {selected && readParam(params, "nova") === "1" && <NewBuildingNotice name={selected.name} waiting={selected.headline === PENDING_HEADLINE} />}
 

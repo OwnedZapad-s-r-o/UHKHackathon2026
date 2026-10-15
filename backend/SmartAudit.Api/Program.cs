@@ -13,8 +13,10 @@ using SmartAudit.Api.Middleware;
 using SmartAudit.Api.Services;
 using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Contracts;
+using SmartAudit.Api.Services.Guide;
 using SmartAudit.Api.Services.Import;
 using SmartAudit.Api.Services.Maintenance;
+using SmartAudit.Api.Services.OpenData;
 using SmartAudit.Api.Services.Reports;
 using SmartAudit.Api.Services.Security;
 using SmartAudit.Api.Services.Sensors;
@@ -52,9 +54,18 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(AuditSettings.Sec
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 
-// AI analýza přes Azure OpenAI — bez klíče aplikace funguje, jen AI vrací „není nastavená“
+// AI analýza přes Azure OpenAI nebo OpenAI — bez klíče aplikace funguje, jen AI vrací „není nastavená“
 builder.Services.AddSingleton(builder.Configuration.GetSection(AzureOpenAiSettings.SectionName).Get<AzureOpenAiSettings>() ?? new AzureOpenAiSettings());
+builder.Services.AddSingleton(builder.Configuration.GetSection(OpenAiSettings.SectionName).Get<OpenAiSettings>() ?? new OpenAiSettings());
+builder.Services.AddSingleton<IAiClientFactory, AiClientFactory>();
 builder.Services.AddScoped<IAiAuditService, AiAuditService>();
+
+// Průvodce (RAG): znalosti v paměti (embeddingy se spočítají při prvním dotazu), nástroje nad daty, záložní režim bez modelu
+builder.Services.AddSingleton<IGuideKnowledgeBase, GuideKnowledgeBase>();
+builder.Services.AddScoped<IGuideDataService, GuideDataService>();
+builder.Services.AddScoped<IGuideAgent, GuideAgent>();
+builder.Services.AddScoped<IGuideFallback, GuideFallback>();
+builder.Services.AddScoped<IGuideChartBuilder, GuideChartBuilder>();
 
 // Externí zdroje dat
 builder.Services.AddHttpClient<IKhkOpenDataService, KhkOpenDataService>(c => c.Timeout = TimeSpan.FromSeconds(90));
@@ -92,6 +103,15 @@ builder.Services.AddScoped<IContractSyncService, ContractSyncService>();
 builder.Services.AddScoped<ISensorProvisioningService, SensorProvisioningService>();
 builder.Services.AddScoped<ISensorDataSource, SimulatedSensorDataSource>();
 builder.Services.AddScoped<IFacilityAuditService, FacilityAuditService>();
+builder.Services.AddScoped<IPreAuditService, PreAuditService>();
+builder.Services.AddSingleton<OpenDataLinks>();
+builder.Services.AddSingleton<OpenDataSyncState>();
+// Živá kontrola zdrojů: 5 s na zdroj hlídá CancellationToken ve službě, klient má rezervu
+builder.Services.AddHttpClient<IOpenDataSyncService, OpenDataSyncService>(c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(8);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("SmartAudit-KHK/1.0 (+https://www.datakhk.cz)");
+});
 builder.Services.AddSingleton<IAuditTrigger, AuditTrigger>();
 builder.Services.AddHostedService<SensorSimulationService>();
 
@@ -164,8 +184,30 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
         });
     });
+    // Průvodce: krátké okno na uživatele (nebo IP adresu veřejnosti) — chrání rozpočet modelu před zahlcením.
+    // Veřejnost chodí přes server Next.js — skutečnou adresu návštěvníka posílá v X-Forwarded-For (API je dostupné jen z tohoto počítače)
+    options.AddPolicy(GuideController.RateLimitPolicy, context =>
+    {
+        var forwarded = context.Request.Headers["X-Forwarded-For"].ToString().Split(',')[0].Trim();
+        var ip = forwarded.Length > 0 ? forwarded : context.Connection.RemoteIpAddress?.ToString();
+        var partition = context.User.TryGetUserId(out var userId) ? $"user:{userId}" : $"ip:{ip}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = GuideController.RateLimitRequests,
+            Window = GuideController.RateLimitWindow,
+            QueueLimit = 0,
+        });
+    });
     options.OnRejected = async (context, ct) =>
     {
+        if (context.HttpContext.Request.Path.StartsWithSegments("/api/guide"))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = ((int)GuideController.RateLimitWindow.TotalSeconds).ToString();
+            await context.HttpContext.Response.WriteAsJsonAsync(new { Message = "Průvodce dostal moc dotazů najednou. Zkuste to prosím znovu za minutu." }, ct);
+            return;
+        }
+
         var minutes = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter) ? (int)Math.Ceiling(retryAfter.TotalMinutes) : (int)AiAuditController.RateLimitWindow.TotalMinutes;
         context.HttpContext.Response.Headers.RetryAfter = (minutes * 60).ToString();
         await context.HttpContext.Response.WriteAsJsonAsync(new { Message = $"AI analýzu lze spustit nejvýš {AiAuditController.RateLimitRequests}× za {AiAuditController.RateLimitWindow.TotalMinutes:0} minut. Zkuste to znovu za {minutes} min." }, ct);
@@ -190,7 +232,7 @@ builder.Services.AddOpenApi(OpenDataController.DocumentName, options =>
     {
         document.Info = new OpenApiInfo
         {
-            Title = "SmartAudit KHK — otevřená data",
+            Title = "SmartAudit — otevřená data",
             Version = "v1",
             Description = "Objekty, které zřizuje Královéhradecký kraj: poloha, budova z ČÚZK, stav energetického auditu "
                 + "a měření ze senzorů (zatím simulovaná). Bez přihlášení a bez klíče, jen čtení (GET). "
@@ -216,7 +258,7 @@ app.UseExceptionHandler();
 app.MapOpenApi("/api/open/{documentName}/openapi.json");
 app.MapScalarApiReference("/api/open/docs", options =>
 {
-    options.WithTitle("SmartAudit KHK — otevřené API")
+    options.WithTitle("SmartAudit — otevřené API")
         .WithOpenApiRoutePattern("/api/open/{documentName}/openapi.json")
         .AddDocument(OpenDataController.DocumentName, "Otevřená data v1", isDefault: true);
 

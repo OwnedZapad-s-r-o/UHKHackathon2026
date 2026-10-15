@@ -1,0 +1,7 @@
+# Skripty a konfigurace pro Raspberry Pi musí mít LF i po checkoutu na Windows
+*.sh      text eol=lf
+*.py      text eol=lf
+*.conf    text eol=lf
+*.service text eol=lf
+*.yml     text eol=lf
+*.ps1     text eol=crlf

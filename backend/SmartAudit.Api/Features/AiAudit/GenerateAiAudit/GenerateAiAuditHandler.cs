@@ -21,7 +21,7 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
 
     public class GenerateAiAuditHandler : IRequestHandler<GenerateAiAuditCommand, Response<GenerateAiAuditDto>>
     {
-        public const string NotConfiguredMessage = "AI analýza není nastavená — doplňte AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY a AZURE_OPENAI_DEPLOYMENT.";
+        public const string NotConfiguredMessage = "AI analýza není nastavená — doplňte OPENAI_API_KEY, nebo AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY a AZURE_OPENAI_DEPLOYMENT.";
 
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -77,7 +77,7 @@ namespace SmartAudit.Api.Features.AiAudit.GenerateAiAudit
             // SDK chyby sítě po opakovaných pokusech obalí do AggregateException
             catch (Exception ex) when (IsAiServiceFailure(ex))
             {
-                _logger.LogWarning(ex, "Azure OpenAI nevrátilo použitelnou odpověď pro objekt {FacilityId}", request.FacilityId);
+                _logger.LogWarning(ex, "AI model nevrátil použitelnou odpověď pro objekt {FacilityId}", request.FacilityId);
                 return Response.Unavailable<GenerateAiAuditDto>("AI služba teď neodpověděla, zkuste to prosím za chvíli.");
             }
 

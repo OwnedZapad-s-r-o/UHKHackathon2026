@@ -13,7 +13,7 @@ export function LossCorrections({ corrections }: { corrections: LossCorrection[]
           Jak čidla opravila odhad ztráty
         </h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          Bez čidla počítá audit ztrátu ze simulace. Místnost, kterou změří čidlo teploty, se počítá jen ze skutečných hodnot.
+          Bez čidla počítá audit ztrátu z fyzikálního modelu z otevřených dat. Místnost, kterou změří čidlo teploty, se počítá jen ze skutečných hodnot.
         </p>
       </div>
 
@@ -56,7 +56,7 @@ function CorrectionRow({ correction }: { correction: LossCorrection }) {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-center">
         <div>
-          <p className="text-[11px] text-slate-500">Před čidlem (odhad ze simulace)</p>
+          <p className="text-[11px] text-slate-500">Před čidlem (odhad z modelu otevřených dat)</p>
           <p className="font-mono text-[15px] font-bold text-slate-500 line-through decoration-slate-400/60">{formatCzk(before)}</p>
         </div>
         <ArrowRight className="hidden size-4 text-slate-400 sm:block" aria-hidden />
@@ -84,7 +84,7 @@ function CorrectionRow({ correction }: { correction: LossCorrection }) {
           <span>
             Čidla teploty měří {correction.measuredZones} z {correction.zoneCount} místností
           </span>
-          <span>zbytek budovy zatím simulace</span>
+          <span>zbytek budovy zatím fyzikální model</span>
         </div>
         <div className="mt-1 h-1.5 rounded-full bg-slate-100">
           <div className="h-full rounded-full bg-hk-blue" style={{ width: `${coverage}%` }} />

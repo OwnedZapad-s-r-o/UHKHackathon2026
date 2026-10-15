@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SmartAudit.Api.Services.Import;
 using SmartAudit.Core.Data;
@@ -16,6 +17,7 @@ namespace SmartAudit.Api.Services
     {
         public const string TemperatureSourceKey = "open-meteo-pocasi";
         public const string AirQualitySourceKey = "open-meteo-ovzdusi";
+        public const string ElevationSourceKey = "open-meteo-vyska";
 
         private readonly SmartAuditDbContext _dbContext;
         private readonly IOpenMeteoService _openMeteoService;
@@ -45,6 +47,8 @@ namespace SmartAudit.Api.Services
 
             if (points.Count == 0)
                 return 0;
+
+            await RefreshElevationAsync(points, ct);
 
             IReadOnlyList<HourlyWeather> temperatures;
             try
@@ -98,6 +102,32 @@ namespace SmartAudit.Api.Services
             await _importService.RecordExternalImportAsync(TemperatureSourceKey, ImportStatus.Live, rows.Count, null, ct);
 
             return rows.Count;
+        }
+
+        // Výška těžiště ORP se nemění — stačí ji načíst jednou (po přestavbě regionů znovu)
+        private async Task RefreshElevationAsync(IReadOnlyList<WeatherPoint> points, CancellationToken ct)
+        {
+            var orps = await _dbContext.Regions.Where(r => r.Type == RegionType.Orp).ToListAsync(ct);
+            if (orps.Count == 0 || orps.All(o => o.Elevation != null))
+                return;
+
+            try
+            {
+                var elevations = await _openMeteoService.GetElevationAsync(points, ct);
+
+                foreach (var orp in orps)
+                    if (elevations.TryGetValue(orp.Code, out var elevation))
+                        orp.SetElevation(Math.Round(elevation));
+
+                await _dbContext.SaveChangesAsync(ct);
+                _dbContext.ChangeTracker.Clear();
+                await _importService.RecordExternalImportAsync(ElevationSourceKey, ImportStatus.Live, elevations.Count, null, ct);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException)
+            {
+                _logger.LogWarning(ex, "Open-Meteo Elevation nedostupné, pre-audit použije výšku správních center ORP");
+                await _importService.RecordExternalImportAsync(ElevationSourceKey, ImportStatus.Snapshot, orps.Count, ex.Message, ct);
+            }
         }
 
         public async Task<OutdoorTemperatureLookup> GetLookupAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct)

@@ -5,6 +5,7 @@ using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain;
 using SmartAudit.Core.Domain.Enums;
+using SmartAudit.Core.Domain.Helpers;
 
 namespace SmartAudit.Api.Features.Facilities.GetFacilities
 {
@@ -32,7 +33,14 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilities
         decimal? AnnualLossCzk,
         HeritageStatus HeritageStatus,
         // Mění se s doplněnými přilehlými budovami — mapa ji přidá k adrese obrysu, který se jinak cachuje 2 dny
-        string FootprintVersion);
+        string FootprintVersion,
+        // Pre-audit z otevřených dat (0–100) a návratnost sady IQRF v měsících (jen pro ty, kdo vidí peníze)
+        int? PreAuditScore = null,
+        string? PreAuditDriver = null,
+        decimal? IqrfHardwareCostCzk = null,
+        double? IqrfPaybackMonths = null,
+        // Teplotu měří skutečné čidlo IQRF (jinak fyzikální model z otevřených dat)
+        bool LiveMeasurement = false);
 
     // Mapa a tabulka Portfolio — jen data z cache vyhodnocení, bez sahání na miliony měření
     public class GetFacilitiesHandler : IRequestHandler<GetFacilitiesCommand, Response<IReadOnlyCollection<GetFacilityDto>>>
@@ -102,8 +110,38 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilities
                     f.Assessment != null ? f.Assessment.LatestPower : null,
                     canSeeMoney && f.Assessment != null ? f.Assessment.AnnualLossCzk : null,
                     f.HeritageStatus,
-                    "0"))
+                    "0",
+                    f.PreAudit != null ? f.PreAudit.Score : null,
+                    f.PreAudit != null ? f.PreAudit.DominantDriver : null,
+                    f.PreAudit != null ? f.PreAudit.IqrfHardwareCostCzk : null,
+                    null,
+                    false))
                 .ToListAsync(ct);
+
+            // Návratnost IQRF = cena sady / (větší z ztráty a potenciálu regulace) — z cache pre-auditu a vyhodnocení
+            var roiInputs = await _dbContext.FacilityPreAudits
+                .AsNoTracking()
+                .Select(p => new { p.FacilityId, p.IqrfGateways, p.IqrfSensors, p.IqrfHardwareCostCzk, p.RegulationPotentialCzk, Loss = p.Facility.Assessment != null ? p.Facility.Assessment.AnnualLossCzk : 0 })
+                .ToDictionaryAsync(p => p.FacilityId, ct);
+
+            var liveFacilities = (await _dbContext.Sensors
+                .AsNoTracking()
+                .Where(s => s.Source == SensorSource.Physical && s.IsActive && s.Metric == SensorMetric.Temperature)
+                .Select(s => s.FacilityId)
+                .Distinct()
+                .ToListAsync(ct))
+                .ToHashSet();
+
+            facilities = facilities
+                .Select(f =>
+                {
+                    double? payback = null;
+                    if (canSeeMoney && roiInputs.TryGetValue(f.Id, out var r))
+                        payback = IqrfRoiCalculator.Calculate(new IqrfKit(r.IqrfGateways, r.IqrfSensors, r.IqrfHardwareCostCzk), r.Loss, r.RegulationPotentialCzk).PaybackMonths;
+
+                    return f with { IqrfPaybackMonths = payback, LiveMeasurement = liveFacilities.Contains(f.Id) };
+                })
+                .ToList();
 
             // Doplněných budov a oprav je málo — verze obrysu jedním dotazem pro všechny objekty:
             // počet doplněných budov + poslední změna budovy nebo oprava podlaží (mění výšku ve 3D)

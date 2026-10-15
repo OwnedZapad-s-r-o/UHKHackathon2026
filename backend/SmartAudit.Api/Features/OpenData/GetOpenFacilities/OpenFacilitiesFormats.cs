@@ -18,6 +18,8 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
             "id", "kod", "nazev", "kategorie", "druh", "ico", "ulice", "cislo_domu", "psc",
             "obec_kod", "obec", "orp_kod", "orp", "okres_kod", "okres", "lat", "lon",
             "pamatkova_ochrana", "ma_pudorys", "stav", "zjisteni", "teplota_c", "co2_ppm", "prikon_kw", "co2_hodin_nad_limitem_7d", "zive_cidlo", "vyhodnoceno",
+            "rezim_dat", "predaudit_skore", "predaudit_stav", "predaudit_hlavni_pricina", "merna_ztrata_w_m2k", "denostupne", "potreba_tepla_kwh_rok",
+            "iqrf_cidla", "iqrf_cena_sady_czk",
         ];
 
         public static OpenFeatureCollectionDto ToGeoJson(IReadOnlyCollection<OpenFacilityDto> facilities)
@@ -45,6 +47,9 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
                     f.HeritageStatus.ToString(), f.HasFootprint ? "true" : "false", f.Status.ToString(), f.Headline,
                     Number(f.Temperature), Number(f.Co2), Number(f.Power), Number(f.Co2HoursOverLimit), f.HasLiveSensors ? "true" : "false",
                     f.EvaluatedAt?.ToString("O", CultureInfo.InvariantCulture),
+                    f.DataMode, f.PreAuditScore?.ToString(CultureInfo.InvariantCulture), f.PreAuditStatus?.ToString(), f.PreAuditDriver,
+                    Number(f.SpecificHeatLoss), Number(f.DegreeDays), Number(f.AnnualHeatDemandKwh),
+                    f.IqrfSensors?.ToString(CultureInfo.InvariantCulture), f.IqrfHardwareCostCzk?.ToString("0", CultureInfo.InvariantCulture),
                 ];
 
                 csv.AppendJoin(',', row.Select(Escape)).Append("\r\n");

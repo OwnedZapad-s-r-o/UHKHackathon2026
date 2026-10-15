@@ -1,0 +1,22 @@
+# Varianta A2 — Cloudflare Tunnel místo SSH (doména spravovaná v Cloudflare, bez otevřených portů na Pi i notebooku).
+# Běží NA NOTEBOOKU (cloudflared pro Windows/macOS/Linux):
+#   cloudflared tunnel login
+#   cloudflared tunnel create smartaudit
+#   cloudflared tunnel route dns smartaudit smartaudit.nasedomena.cz
+#   cloudflared tunnel --config deploy/raspberry-pi/cloudflared/config.yml run smartaudit
+# Nejrychlejší pokus bez domény (dočasná adresa *.trycloudflare.com):
+#   cloudflared tunnel --url http://localhost:3000
+tunnel: smartaudit
+credentials-file: ~/.cloudflared/smartaudit.json
+
+ingress:
+  # Otevřené API přímo na ASP.NET (IRI katalogu DCAT-AP-CZ podle PUBLIC_URL)
+  - hostname: smartaudit.nasedomena.cz
+    path: ^/api/open/v1/
+    service: http://localhost:8080
+  # Web, QR karty a zbytek API přes Next.js
+  - hostname: smartaudit.nasedomena.cz
+    service: http://localhost:3000
+    originRequest:
+      httpHostHeader: smartaudit.nasedomena.cz
+  - service: http_status:404

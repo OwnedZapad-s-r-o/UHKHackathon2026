@@ -87,7 +87,7 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
         <>
           {step === 4 ? (
             <NextStep tone="active" title={`Poslední krok: vyberte místnost u ${unassigned === 1 ? "1 čidla" : `${unassigned} čidel`}`}>
-              U každého čidla níže zvolte místnost a klikněte na Přiřadit. Od té chvíle se hodnoty ukládají a nahradí v místnosti simulaci.
+              U každého čidla níže zvolte místnost a klikněte na Přiřadit. Od té chvíle se hodnoty ukládají a nahradí v místnosti fyzikální model z otevřených dat.
             </NextStep>
           ) : (
             <NextStep
@@ -103,7 +103,7 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
               <h2 id="channels" className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
                 Senzory na uzlech
               </h2>
-              <p className="text-xs text-slate-500">Přiřazený kanál se ukládá a nahradí simulaci v dané místnosti.</p>
+              <p className="text-xs text-slate-500">Přiřazený kanál se ukládá a nahradí fyzikální model v dané místnosti.</p>
             </div>
             {nodes.map((node, index) => (
               <div key={node} className="border-b border-slate-100 last:border-b-0">

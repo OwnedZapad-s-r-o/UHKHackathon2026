@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using SmartAudit.Api.Extentions;
+using SmartAudit.Api.Services.OpenData;
 using SmartAudit.Api.Services.Sensors;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
@@ -37,7 +38,38 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
         int SensorCount,
         // Budovu přidal do mapy správce (není v otevřených datech) — jen takovou může také odebrat
         bool AddedByManager,
-        IReadOnlyCollection<BuildingPartDto> AddedBuildingParts);
+        IReadOnlyCollection<BuildingPartDto> AddedBuildingParts,
+        // LiveIqrf = teplotu měří aspoň jedno skutečné čidlo IQRF (MQTT), OpenDataModel = fyzikální model z otevřených dat
+        string DataMode,
+        PreAuditDto? PreAudit,
+        IqrfRoiDto? IqrfRoi,
+        // Sady otevřených dat propojené s tímto objektem — proklik do katalogu i na živé API (Čl. 7.3)
+        IReadOnlyCollection<DatasetLinkDto> LinkedDatasets,
+        IReadOnlyCollection<ObjectLinkDto> ObjectLinks);
+
+    // Pre-audit z otevřených dat — 5 parametrů (A obálka, B klima, C ekonomika, D hustota osob, E okolí) se zdroji
+    public record PreAuditDto(
+        int Score,
+        AuditStatus Status,
+        string DominantDriver,
+        IReadOnlyCollection<PreAuditParameterDto> Parameters,
+        double SpecificHeatLoss,
+        double HeatLossWattsPerKelvin,
+        double DegreeDays,
+        double AnnualHeatDemandKwh,
+        decimal? AnnualHeatCostCzk,
+        decimal? HeatPriceCzkPerMwh,
+        bool HeatPriceFromContract,
+        double RegulationSavingPercent,
+        DateTimeOffset ComputedAt);
+
+    public record PreAuditParameterDto(string Key, string Name, int Score, int MaxScore, string Value, string Explanation, IReadOnlyCollection<DatasetLinkDto> Sources);
+
+    // Návratnost osazení budovy sítí MICRORISC IQRF; úspora a návratnost jen pro ty, kdo vidí peníze
+    public record IqrfRoiDto(int Gateways, int Sensors, decimal GatewayUnitCzk, decimal SensorUnitCzk, decimal EstimatedHardwareCostCzk, decimal? EstimatedAnnualSavingsCzk, double? PaybackMonths, string SavingsBasis);
+
+    // Odkazy přímo na záznam objektu ve zdroji (RÚIAN, smlouvy organizace, počasí v místě)
+    public record ObjectLinkDto(string Label, string Url, string Provider);
 
     // Přilehlá budova doplněná správcem (katastr ji k objektu nevede) — její plocha vstupuje do výpočtu ztráty
     public record BuildingPartDto(Guid Id, double AreaSquareMeters, string Source, DateTimeOffset AddedAt);
@@ -96,7 +128,7 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
     // VirtualHistory = aspoň jedno čidlo je virtuální a dodalo týden historie; skutečné čidlo ztrátu upřesňuje postupně 7 dní.
     public record SensorCorrectionDto(decimal LossBeforeCzk, int MeasuredZones, int ZoneCount, bool VirtualHistory, DateTimeOffset Since);
 
-    public record FindingDto(string Title, string Detail, string Tag, string Severity);
+    public record FindingDto(string Title, string Detail, string Tag, string Severity, string? Source = null);
 
     // Inspekční panel — spojuje objekt s daty z dalších sad (organizace, ČÚZK, obsazenost, HSOO, dotace, památky, kontakt obce)
     public class GetFacilityDetailHandler : IRequestHandler<GetFacilityDetailCommand, Response<GetFacilityDetailDto>>
@@ -104,11 +136,26 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
         private readonly SmartAuditDbContext _dbContext;
+        private readonly OpenDataLinks _links;
 
-        public GetFacilityDetailHandler(SmartAuditDbContext dbContext)
+        public GetFacilityDetailHandler(SmartAuditDbContext dbContext, OpenDataLinks links)
         {
             _dbContext = dbContext;
+            _links = links;
         }
+
+        private record ParameterJson(string Key, string Name, int Score, int MaxScore, string Value, string Explanation, string[] Sources);
+
+        // Sady, ze kterých objekt vznikl a které pre-audit použil — v pořadí podle konfigurace
+        private static readonly string[] BaseDatasets = ["cuzk-budovy", "organizace-khk", "hranice-orp", "hsoo", "dotace-orp", "adresar-obci", "msmt-kalendar"];
+
+        private static string[] PortfolioDatasets(FacilityCategory category) => category switch
+        {
+            FacilityCategory.School => ["skoly", "pravni-subjekty-skol", "zaci-ss-kraj", "zaci-ss-historie", "studenti-vos-kraj", "ubytovani-dm", "prijimacky-ss"],
+            FacilityCategory.Social => ["socialni-sluzby"],
+            FacilityCategory.Health => ["nemocnice", "nasledna-pece", "lecebne-ustavy"],
+            _ => ["organizace-khk"],
+        };
 
         public async Task<Response<GetFacilityDetailDto>> Handle(GetFacilityDetailCommand request, CancellationToken ct)
         {
@@ -117,6 +164,7 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 .Include(f => f.Organization)
                 .Include(f => f.Building)
                 .Include(f => f.Assessment)
+                .Include(f => f.PreAudit)
                 .Include(f => f.Metrics)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(f => f.Id == request.FacilityId, ct);
@@ -239,6 +287,59 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 facility.Assessment.EvaluatedAt,
                 correction);
 
+            var live = await _dbContext.Sensors.AnyAsync(s => s.FacilityId == facility.Id && s.Source == SensorSource.Physical && s.IsActive && s.Metric == SensorMetric.Temperature, ct);
+
+            var parameters = facility.PreAudit == null ? [] : JsonSerializer.Deserialize<List<ParameterJson>>(facility.PreAudit.ParametersJson, JsonOptions) ?? [];
+
+            var preAudit = facility.PreAudit == null ? null : new PreAuditDto(
+                facility.PreAudit.Score,
+                facility.PreAudit.Status,
+                facility.PreAudit.DominantDriver,
+                parameters.Select(p => new PreAuditParameterDto(p.Key, p.Name, p.Score, p.MaxScore, p.Value, p.Explanation, _links.For(p.Sources))).ToList(),
+                facility.PreAudit.SpecificHeatLoss,
+                facility.PreAudit.HeatLossWattsPerKelvin,
+                facility.PreAudit.DegreeDays,
+                facility.PreAudit.AnnualHeatDemandKwh,
+                canSeeMoney ? facility.PreAudit.AnnualHeatCostCzk : null,
+                canSeeMoney ? facility.PreAudit.HeatPriceCzkPerKwh * 1000 : null,
+                facility.PreAudit.HeatPriceFromContract,
+                facility.PreAudit.RegulationSavingPercent,
+                facility.PreAudit.ComputedAt);
+
+            IqrfRoiDto? iqrfRoi = null;
+            if (facility.PreAudit != null)
+            {
+                var kit = new IqrfKit(facility.PreAudit.IqrfGateways, facility.PreAudit.IqrfSensors, facility.PreAudit.IqrfHardwareCostCzk);
+                var roi = IqrfRoiCalculator.Calculate(kit, facility.Assessment?.AnnualLossCzk ?? 0, facility.PreAudit.RegulationPotentialCzk);
+                iqrfRoi = new IqrfRoiDto(
+                    roi.Gateways,
+                    roi.Sensors,
+                    IqrfRoiCalculator.GatewayCzk,
+                    IqrfRoiCalculator.SensorCzk,
+                    roi.HardwareCostCzk,
+                    canSeeMoney ? roi.AnnualSavingsCzk : null,
+                    canSeeMoney ? roi.PaybackMonths : null,
+                    roi.SavingsBasis);
+            }
+
+            var linkedKeys = BaseDatasets
+                .Concat(PortfolioDatasets(facility.Category))
+                .Concat(parameters.SelectMany(p => p.Sources))
+                .Concat(facility.HeritageStatus == HeritageStatus.None ? [] : new[] { "pamatkove-zony", "pamatkove-rezervace", "nkp-plosne", "nkp-bodove" });
+
+            var linkedDatasets = _links.For(linkedKeys);
+
+            var objectLinks = new List<ObjectLinkDto>();
+            if (building?.CadastreUrl != null)
+                objectLinks.Add(new ObjectLinkDto($"Stavební objekt {building.RuianCode} v RÚIAN", building.CadastreUrl, "ČÚZK"));
+            if (facility.Organization != null)
+                objectLinks.Add(new ObjectLinkDto($"Smlouvy organizace IČO {facility.Organization.Ico}", OpenDataLinks.RegistrySearchUrl(facility.Organization.Ico), "Registr smluv"));
+            objectLinks.Add(new ObjectLinkDto(
+                "Počasí v místě objektu (živé API)",
+                FormattableString.Invariant($"https://api.open-meteo.com/v1/forecast?latitude={facility.Location.Y:0.####}&longitude={facility.Location.X:0.####}&hourly=temperature_2m&past_days=7"),
+                "Open-Meteo"));
+            objectLinks.Add(new ObjectLinkDto("Katalog otevřených dat KHK (DCAT-AP-CZ)", OpenDataLinks.KhkCatalogUrl, "Data KHK"));
+
             var dto = new GetFacilityDetailDto(
                 facility.Id,
                 facility.Code,
@@ -260,7 +361,12 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 zoneCount,
                 sensorCount,
                 facility.SourceKey.StartsWith(Facility.ManagerSourcePrefix),
-                buildingParts);
+                buildingParts,
+                live ? "LiveIqrf" : "OpenDataModel",
+                preAudit,
+                iqrfRoi,
+                linkedDatasets,
+                objectLinks);
 
             return Response.Success(dto);
         }

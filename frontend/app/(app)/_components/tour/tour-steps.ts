@@ -63,6 +63,12 @@ const FILTERS: TourStep = {
   body: "Okres přepnete i tady nahoře. Hledání najde budovu podle názvu, obce nebo kódu.",
 };
 
+const AI_GUIDE: TourStep = {
+  target: "ai-pruvodce",
+  title: "Zeptejte se vlastními slovy",
+  body: "Průvodce najde budovy, ukáže je v mapě očíslované a vysvětlí zjištění — vždy z dat kraje a s uvedeným zdrojem. Otevřete ho i klávesou /.",
+};
+
 const HELP: TourStep = {
   target: "pruvodce",
   title: "Průvodce kdykoli znovu",
@@ -80,6 +86,7 @@ const STEPS: Record<Role, TourStep[]> = {
     { target: "nav-anomalie", title: "Anomálie", body: "Co je kde špatně, s důkazem z měření a dopadem v Kč. Začněte od kritických." },
     { target: "nav-reporty", title: "PDF pro jednání", body: "Audit budovy nebo přehled okresu s mapou — podklad pro radu kraje nebo zřizovatele." },
     { target: "nav-senzory", title: "Skutečná čidla IQRF", body: "Připojte gateway v budově. Průvodce vás provede nastavením i přiřazením čidel do místností." },
+    AI_GUIDE,
     HELP,
     {
       title: "Zkuste to na konkrétní budově",
@@ -98,7 +105,8 @@ const STEPS: Record<Role, TourStep[]> = {
     LEGEND,
     { target: "nav-anomalie", title: "Co řešit ve vašich budovách", body: "Zjištění seřazená podle závažnosti, s vysvětlením, proč vznikla, a co s nimi." },
     { target: "nav-reporty", title: "PDF audit", body: "Audit budovy s grafy a doporučením — stáhnete ho pro vedení nebo zřizovatele." },
-    { target: "nav-senzory", title: "Máte v budově IQRF gateway?", body: "Tady ji připojíte. Aplikace sama najde čidla, vy jen vyberete místnosti. Skutečná měření pak nahradí simulaci." },
+    { target: "nav-senzory", title: "Máte v budově IQRF gateway?", body: "Tady ji připojíte. Aplikace sama najde čidla, vy jen vyberete místnosti. Skutečná měření pak nahradí fyzikální model z otevřených dat." },
+    AI_GUIDE,
     HELP,
     {
       title: "Zkuste to na své budově",
