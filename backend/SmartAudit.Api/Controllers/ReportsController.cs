@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SmartAudit.Api.Extentions;
+using SmartAudit.Api.Features.Reports.GetExecutiveSummary;
 using SmartAudit.Api.Features.Reports.GetFacilityReport;
 using SmartAudit.Api.Features.Reports.GetPortfolioReport;
 
@@ -27,6 +28,18 @@ namespace SmartAudit.Api.Controllers
             var command = new GetFacilityReportCommand(id, User.GetViewer());
 
             var result = await _mediator.Send(command, ct);
+
+            return result.IsSuccess && result.Data != null
+                ? File(result.Data.Content, PdfContentType, result.Data.FileName)
+                : result.ToActionResult();
+        }
+
+        // Jedna strana A4 pro Radu kraje: ztráta kraje, pět priorit, pilot IQRF s návratností, návrh usnesení
+        [HttpGet]
+        [Route("executive-summary.pdf")]
+        public async Task<IActionResult> ExecutiveSummary(CancellationToken ct)
+        {
+            var result = await _mediator.Send(new GetExecutiveSummaryCommand(User.GetViewer()), ct);
 
             return result.IsSuccess && result.Data != null
                 ? File(result.Data.Content, PdfContentType, result.Data.FileName)
