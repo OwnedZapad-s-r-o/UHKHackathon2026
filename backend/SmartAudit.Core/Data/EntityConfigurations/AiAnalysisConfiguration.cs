@@ -20,6 +20,7 @@ namespace SmartAudit.Core.Data.EntityConfigurations
 
             builder.Property(a => a.RootCause).HasMaxLength(2000);
             builder.Property(a => a.LetterDraft).HasMaxLength(6000);
+            builder.Property(a => a.InputFingerprint).HasMaxLength(64);
 
             builder.Property(a => a.RecommendationsJson)
                 .IsRequired()

@@ -444,7 +444,10 @@ Broker (`mqtt/`) nepouští nikoho bez jména a hesla a každá gateway smí jen
    (adresy z `IQRF_BROKER_PUBLIC_HOST`). Gateway ověřuje server certifikátem `smartaudit-ca.crt`, který jde stáhnout v aplikaci.
    Pro ostrý provoz lze certifikát nahradit krajským (svazek `mqtt_certs`) a zapnout vzájemné ověření certifikátem (`require_certificate`).
 4. **Nešifrovaný port 1883** je jen pro backend uvnitř sítě Dockeru a nástroje na serveru (`127.0.0.1`), ne pro síť školy.
-5. **HTTP Webhook Fallback:** Pro zabezpečené sítě, kde je blokován odchozí MQTT port, aplikace nabízí zabezpečený REST endpoint chráněný JWT tokenem role Kraj/Správce:
+   Stejně tak databáze (5432) a API (8080) — do sítě je vystavený jen web (3000) a MQTT přes TLS (8883).
+5. **Tajemství bez výchozích hodnot v produkci:** mimo režim Development aplikace odmítne nastartovat s ukázkovým
+   `JWT_SECRET`, `MQTT_BACKEND_PASSWORD`, `MQTT_DEVICE_SECRET` nebo výchozím heslem databáze.
+6. **HTTP Webhook Fallback:** Pro zabezpečené sítě, kde je blokován odchozí MQTT port, aplikace nabízí zabezpečený REST endpoint chráněný JWT tokenem role Kraj/Správce:
    ```http
    POST /api/sensors/iqrf/{gatewayId}/messages
    Authorization: Bearer <jwt-token>

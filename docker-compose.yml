@@ -5,8 +5,9 @@ services:
       POSTGRES_USER: smartaudit
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartaudit}
       POSTGRES_DB: smartaudit
+    # Databáze jen pro tento počítač (nástroje, migrace) — do sítě ji nevystavujeme
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -59,8 +60,9 @@ services:
       - ./seed:/seed
       # Jen ke čtení — aplikace nabídne správci ke stažení veřejný certifikát CA pro gateway
       - mqtt_certs:/mqtt-certs:ro
+    # API jen pro tento počítač — z (veřejné) sítě se k němu jde přes web (Next.js přeposílá /api/*)
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
   web:
     build:
