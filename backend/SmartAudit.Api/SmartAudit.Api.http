@@ -1,0 +1,18 @@
+@host = http://localhost:5033
+
+### Stav přípravy dat
+GET {{host}}/health
+
+### Demo přihlášení (Kraj | Spravce | Verejnost)
+# @name demo
+POST {{host}}/api/auth/demo
+Content-Type: application/json
+
+{ "role": "Kraj" }
+
+### Portfolio objektů (jen se zjištěním)
+GET {{host}}/api/facilities?onlyIssues=true
+Authorization: Bearer {{demo.response.body.token}}
+
+### Zdroje dat
+GET {{host}}/api/data-sources
