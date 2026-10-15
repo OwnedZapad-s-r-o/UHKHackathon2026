@@ -2,43 +2,43 @@
 
 import { useState } from "react";
 import { FileDown } from "lucide-react";
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 
 type FacilityOption = {
-  id: string;
+  value: string;
   label: string;
   district: string;
 };
 
-// Výběr objektu pro PDF audit — objekty seskupené podle okresu
+// Výběr objektu pro PDF audit — vyhledávací výběr (172 objektů), hledá v kódu a názvu
 export function FacilityReportPicker({ options }: { options: FacilityOption[] }) {
-  const [selectedId, setSelectedId] = useState(options[0]?.id ?? "");
-  const districts = [...new Set(options.map((o) => o.district))];
+  const [selected, setSelected] = useState<FacilityOption | null>(options[0] ?? null);
 
   return (
     <div className="mt-4 space-y-3">
-      <label className="block text-xs text-slate-500">
-        Objekt
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="mt-1 block h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-hk-navy"
-        >
-          {districts.map((district) => (
-            <optgroup key={district} label={`Okres ${district}`}>
-              {options
-                .filter((o) => o.district === district)
-                .map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+      <div className="space-y-1">
+        <p id="facility-picker-label" className="text-xs text-slate-500">
+          Objekt
+        </p>
+        <Combobox items={options} value={selected} onValueChange={(next) => setSelected(next as FacilityOption | null)}>
+          <ComboboxInput placeholder="Hledat objekt nebo kód…" aria-labelledby="facility-picker-label" className="h-10 w-full border-slate-300 bg-white" />
+          <ComboboxContent>
+            <ComboboxEmpty>Žádný objekt neodpovídá hledání.</ComboboxEmpty>
+            <ComboboxList>
+              {(item: FacilityOption) => (
+                <ComboboxItem key={item.value} value={item}>
+                  <span className="min-w-0 truncate">{item.label}</span>
+                  <span className="ml-auto shrink-0 text-xs text-slate-400">{item.district}</span>
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      </div>
+
       <a
-        href={selectedId ? `/reporty/objekt/${selectedId}` : undefined}
-        aria-disabled={!selectedId}
+        href={selected ? `/reporty/objekt/${selected.value}` : undefined}
+        aria-disabled={!selected}
         className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-hk-accent px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red aria-disabled:pointer-events-none aria-disabled:opacity-50"
       >
         <FileDown className="size-4" aria-hidden />

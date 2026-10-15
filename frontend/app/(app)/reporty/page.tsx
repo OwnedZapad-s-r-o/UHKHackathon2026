@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Building2, FileDown } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getFacilities } from "@/lib/api";
-import { DISTRICTS } from "@/lib/facility-meta";
+import { DistrictSelect } from "../_components/district-select";
 import { TopBar } from "../_components/top-bar";
 import { FacilityReportPicker } from "./_components/facility-report-picker";
 
@@ -14,7 +15,7 @@ export default async function ReportsPage() {
 
   const options = facilities
     .toSorted((a, b) => a.districtName.localeCompare(b.districtName, "cs") || a.name.localeCompare(b.name, "cs"))
-    .map((f) => ({ id: f.id, label: `${f.code} · ${f.name}`, district: f.districtName }));
+    .map((f) => ({ value: f.id, label: `${f.code} · ${f.name}`, district: f.districtName }));
 
   return (
     <>
@@ -51,21 +52,14 @@ export default async function ReportsPage() {
               Souhrn kraje nebo okresu, odhad ztrát podle ORP a pořadí objektů podle závažnosti — podklad pro investiční odbor.
             </p>
 
-            {/* Obyčejný GET formulář — funguje i bez JavaScriptu */}
+            {/* GET formulář — výběr okresu a checkbox odesílají hodnoty skrytými poli (Base UI) */}
             <form action="/reporty/portfolio" className="mt-4 space-y-3">
-              <label className="block text-xs text-slate-500">
-                Okres
-                <select name="okres" className="mt-1 block h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-hk-navy">
-                  <option value="">Celý kraj</option>
-                  {DISTRICTS.map((d) => (
-                    <option key={d.code} value={d.code}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="zjisteni" value="1" className="size-4 accent-hk-blue" />
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500">Okres</p>
+                <DistrictSelect name="okres" className="h-10 w-full text-sm" />
+              </div>
+              <label className="flex items-center gap-2.5 text-sm">
+                <Checkbox name="zjisteni" value="1" className="data-checked:border-hk-blue data-checked:bg-hk-blue" />
                 Jen objekty se zjištěním
               </label>
               <button
