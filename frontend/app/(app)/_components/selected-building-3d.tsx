@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { FeatureCollection, Geometry, Position } from "geojson";
-import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
+import type { GeoJSONSource, PropertyValueSpecification, Map as MapLibreMap } from "maplibre-gl";
 import { useMap } from "@/components/ui/map";
 import type { AuditStatus, Footprint } from "@/types/api";
 
 const TILE_SOURCE = "carto";
 const TILE_LAYER = "building";
+const BASE_BUILDINGS_LAYER = "building-3d";
 const SOURCE_ID = "selected-building";
+const GLOW_LAYER_ID = "selected-building-glow";
 const LAYER_ID = "selected-building-3d";
 
 // 3D budovy z dlaždic jsou vidět od přiblížení 14,5 — dřív nemá smysl hledat jejich výšku
@@ -17,6 +19,12 @@ const MIN_MATCH_ZOOM = 15;
 // O kolik je barevná budova vyšší než šedá z podkladu, aby střecha nepřekrývala stejnou rovinu
 const ROOF_CLEARANCE_METERS = 0.4;
 
+// Budova při výběru „vyroste“ ze země — pohyb přitáhne oko k vybranému objektu
+const GROW_MS = 700;
+
+// Okolní zástavba při výběru ustoupí do pozadí
+const DIMMED_BUILDINGS_OPACITY = 0.4;
+
 // Stavové barvy (Tailwind 500) — vybraná budova je barevná, okolní zástavba šedá
 const STATUS_COLOR: Record<AuditStatus, string> = {
   Nominal: "#10b981",
@@ -24,26 +32,78 @@ const STATUS_COLOR: Record<AuditStatus, string> = {
   Critical: "#ef4444",
 };
 
+// Půdorys se mění jen s katastrem: API ho posílá s Cache-Control na 2 dny (prohlížeč ho drží v HTTP cache)
+// a tady se navíc pamatuje pro okamžité opakované kliknutí na stejný objekt
+const footprintCache = new Map<string, Promise<Footprint | null>>();
+
+function loadFootprint(facilityId: string) {
+  let pending = footprintCache.get(facilityId);
+
+  if (!pending) {
+    pending = fetch(`/api/facilities/${facilityId}/footprint`)
+      .then((response) => (response.ok ? (response.json() as Promise<Footprint>) : null))
+      .catch(() => null);
+    footprintCache.set(facilityId, pending);
+    // Neúspěch se nepamatuje — příští klik to zkusí znovu
+    pending.then((footprint) => footprint === null && footprintCache.delete(facilityId));
+  }
+
+  return pending;
+}
+
+type SelectedBuilding3DProps = {
+  facilityId: string | null;
+  status: AuditStatus;
+};
+
 // Vybraná budova ve 3D. Podkladová mapa kreslí tutéž budovu šedě (OSM má v ČR půdorysy z katastru), proto:
 // - obrys je z ČÚZK rozšířený o ~0,4 m (server) — barevné stěny leží vně šedých, nic se nepřekrývá,
 // - výška se vezme ze skutečné budovy v dlaždicích (+0,4 m nad střechu); když tam není, odhad podle podlaží.
 // Obarvit přímo budovu z dlaždic nejde: ID prvků v dlaždicích CARTO nejsou napříč dlaždicemi unikátní.
-// Stav přichází ze seznamu objektů, ne s půdorysem — půdorys je cachovaný 2 dny, stav se mění průběžně.
-export function SelectedBuilding3D({ footprint, status }: { footprint: Footprint | null; status: AuditStatus }) {
+// Stav přichází ze seznamu objektů, ne s půdorysem — půdorys se cachuje, stav se mění průběžně.
+export function SelectedBuilding3D({ facilityId, status }: SelectedBuilding3DProps) {
   const { map, isLoaded } = useMap();
+  const [footprint, setFootprint] = useState<Footprint | null>(null);
 
   useEffect(() => {
-    if (!map || !isLoaded) return;
+    let cancelled = false;
 
-    const rings = outerRings(footprint?.geometry ?? null);
+    if (facilityId) {
+      loadFootprint(facilityId).then((loaded) => !cancelled && setFootprint(loaded));
+    }
+
+    return () => {
+      cancelled = true;
+      setFootprint(null);
+    };
+  }, [facilityId]);
+
+  useEffect(() => {
+    if (!map || !isLoaded || !footprint?.geometry) return;
+
+    const rings = outerRings(footprint.geometry);
     const color = STATUS_COLOR[status];
+    const baseOpacity = map.getLayer(BASE_BUILDINGS_LAYER) ? map.getPaintProperty(BASE_BUILDINGS_LAYER, "fill-extrusion-opacity") : undefined;
+    let targetHeight = footprint.properties.heightMeters;
     let resolved = false;
+    let frame = 0;
 
-    ensureLayer(map);
-    render(map, footprint, footprint?.properties.heightMeters ?? 0, color);
+    ensureLayers(map);
+    map.setPaintProperty(LAYER_ID, "fill-extrusion-color", color);
+    map.setPaintProperty(GLOW_LAYER_ID, "line-color", color);
+    if (baseOpacity !== undefined) map.setPaintProperty(BASE_BUILDINGS_LAYER, "fill-extrusion-opacity", DIMMED_BUILDINGS_OPACITY);
+
+    const start = performance.now();
+    function grow(now: number) {
+      const progress = Math.min(1, (now - start) / GROW_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      render(map!, footprint, targetHeight * eased);
+      if (progress < 1) frame = requestAnimationFrame(grow);
+    }
+    frame = requestAnimationFrame(grow);
 
     function refineHeight() {
-      if (resolved || !map || !footprint || rings.length === 0 || map.getZoom() < MIN_MATCH_ZOOM) return;
+      if (resolved || !map || rings.length === 0 || map.getZoom() < MIN_MATCH_ZOOM) return;
 
       const tileHeights = map
         .querySourceFeatures(TILE_SOURCE, { sourceLayer: TILE_LAYER })
@@ -52,7 +112,8 @@ export function SelectedBuilding3D({ footprint, status }: { footprint: Footprint
         .filter((height) => Number.isFinite(height) && height > 0);
 
       if (tileHeights.length > 0) {
-        render(map, footprint, Math.max(...tileHeights) + ROOF_CLEARANCE_METERS, color);
+        targetHeight = Math.max(...tileHeights) + ROOF_CLEARANCE_METERS;
+        if (performance.now() - start >= GROW_MS) render(map, footprint, targetHeight);
       }
 
       resolved = true;
@@ -62,31 +123,62 @@ export function SelectedBuilding3D({ footprint, status }: { footprint: Footprint
     map.on("idle", refineHeight);
 
     return () => {
+      cancelAnimationFrame(frame);
       map.off("idle", refineHeight);
-      if (map.getStyle()) render(map, null, 0, color);
+      if (!map.getStyle()) return;
+
+      render(map, null, 0);
+      if (baseOpacity !== undefined) {
+        map.setPaintProperty(BASE_BUILDINGS_LAYER, "fill-extrusion-opacity", baseOpacity as PropertyValueSpecification<number>);
+      }
     };
   }, [map, isLoaded, footprint, status]);
 
   return null;
 }
 
-function ensureLayer(map: MapLibreMap) {
+// Vrstvy se kreslí před okolní zástavbou: zprůhledněné domy pak přes vybranou budovu jen prosvítají.
+// Kdyby šla až po nich, hloubkový test by budovu schovanou za jiným domem nevykreslil vůbec.
+function ensureLayers(map: MapLibreMap) {
   if (map.getSource(SOURCE_ID)) return;
 
+  const beforeId = map.getLayer(BASE_BUILDINGS_LAYER)
+    ? BASE_BUILDINGS_LAYER
+    : map.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+
   map.addSource(SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-  map.addLayer({
-    id: LAYER_ID,
-    type: "fill-extrusion",
-    source: SOURCE_ID,
-    paint: {
-      "fill-extrusion-height": ["get", "height"],
-      "fill-extrusion-base": 0,
-      "fill-extrusion-opacity": 1,
+
+  // Rozmazaná záře kolem paty budovy — budova je vidět i z dálky a v hustém bloku
+  map.addLayer(
+    {
+      id: GLOW_LAYER_ID,
+      type: "line",
+      source: SOURCE_ID,
+      paint: {
+        "line-width": ["interpolate", ["linear"], ["zoom"], 14, 6, 18, 18],
+        "line-blur": ["interpolate", ["linear"], ["zoom"], 14, 4, 18, 12],
+        "line-opacity": 0.6,
+      },
     },
-  });
+    beforeId,
+  );
+
+  map.addLayer(
+    {
+      id: LAYER_ID,
+      type: "fill-extrusion",
+      source: SOURCE_ID,
+      paint: {
+        "fill-extrusion-height": ["get", "height"],
+        "fill-extrusion-base": 0,
+        "fill-extrusion-opacity": 1,
+      },
+    },
+    beforeId,
+  );
 }
 
-function render(map: MapLibreMap, footprint: Footprint | null, height: number, color: string) {
+function render(map: MapLibreMap, footprint: Footprint | null, height: number) {
   const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
   if (!source) return;
 
@@ -96,7 +188,6 @@ function render(map: MapLibreMap, footprint: Footprint | null, height: number, c
   };
 
   source.setData(data);
-  map.setPaintProperty(LAYER_ID, "fill-extrusion-color", color);
 }
 
 // Vnější obrysy polygonu (Polygon i MultiPolygon)

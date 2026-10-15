@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Map,
   MapMarker,
   MarkerContent,
+  MarkerLabel,
   MarkerTooltip,
   useMap,
 } from "@/components/ui/map";
@@ -16,7 +17,6 @@ import type {
   AuditStatus,
   FacilityCategory,
   FacilityListItem,
-  Footprint,
 } from "@/types/api";
 import { MapToolbar } from "./map-toolbar";
 import { SelectedBuilding3D } from "./selected-building-3d";
@@ -43,30 +43,30 @@ const DRAW_ORDER: Record<AuditStatus, number> = {
 type FacilityMapProps = {
   facilities: FacilityListItem[];
   selectedId: string | null;
-  footprint: Footprint | null;
 };
 
-export function FacilityMap({
-  facilities,
-  selectedId,
-  footprint,
-}: FacilityMapProps) {
+export function FacilityMap({ facilities, selectedId }: FacilityMapProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Vybraný objekt se kreslí poslední, aby ho nepřekryly okolní piny
   const ordered = facilities.toSorted(
-    (a, b) => DRAW_ORDER[a.status] - DRAW_ORDER[b.status],
+    (a, b) =>
+      Number(a.id === selectedId) - Number(b.id === selectedId) ||
+      DRAW_ORDER[a.status] - DRAW_ORDER[b.status],
   );
   const selected = facilities.find((f) => f.id === selectedId) ?? null;
 
-  // Na budovu se přeletí jen při výslovném výběru (klik na pin, odkaz z portfolia) — ne při prvním načtení mapy kraje
-  const explicitlySelected = searchParams.get("objekt") === selectedId;
-
   function select(id: string) {
-    // Výběr objektu na mapě vždy znovu otevře inspekční panel
+    router.push(withParams(pathname, searchParams, { objekt: id }), {
+      scroll: false,
+    });
+  }
+
+  function deselect() {
     router.push(
-      withParams(pathname, searchParams, { objekt: id, inspekce: null }),
+      withParams(pathname, searchParams, { objekt: null, panel: null }),
       { scroll: false },
     );
   }
@@ -81,14 +81,16 @@ export function FacilityMap({
         theme="light"
       >
         <MapToolbar home={KHK_HOME} />
-        <SelectedBuilding3D footprint={footprint} status={selected?.status ?? "Nominal"} />
-        {selected && explicitlySelected && (
-          <FlyToSelected
-            facilityId={selected.id}
-            longitude={selected.longitude}
-            latitude={selected.latitude}
-          />
-        )}
+        <SelectedBuilding3D
+          facilityId={selected?.id ?? null}
+          status={selected?.status ?? "Nominal"}
+        />
+        <FlyToSelected
+          facilityId={selected?.id ?? null}
+          longitude={selected?.longitude}
+          latitude={selected?.latitude}
+        />
+        {selected && <DeselectOnMapClick onDeselect={deselect} />}
 
         {ordered.map((facility) => (
           <MapMarker
@@ -103,6 +105,11 @@ export function FacilityMap({
                 status={facility.status}
                 selected={facility.id === selectedId}
               />
+              {facility.id === selectedId && (
+                <MarkerLabel position="bottom" className="mt-3">
+                  <SelectedLabel facility={facility} />
+                </MarkerLabel>
+              )}
             </MarkerContent>
             <MarkerTooltip>
               <p className="font-bold">{facility.name}</p>
@@ -128,30 +135,86 @@ export function FacilityMap({
   );
 }
 
-// Po výběru objektu mapa přeletí k budově a nakloní se, aby byla vidět ve 3D
+// Po výběru objektu mapa přeletí k budově a nakloní se, aby byla vidět ve 3D;
+// po zrušení výběru se jen srovná náklon — výřez zůstane, uživatel se nemá kde ztratit
 function FlyToSelected({
   facilityId,
   longitude,
   latitude,
 }: {
-  facilityId: string;
-  longitude: number;
-  latitude: number;
+  facilityId: string | null;
+  longitude?: number;
+  latitude?: number;
 }) {
   const { map, isLoaded } = useMap();
+  const hadSelection = useRef(false);
 
   useEffect(() => {
     if (!map || !isLoaded) return;
 
-    map.flyTo({
-      center: [longitude, latitude],
-      ...BUILDING_VIEW,
-      duration: 1600,
-      essential: true,
-    });
+    if (facilityId && longitude !== undefined && latitude !== undefined) {
+      hadSelection.current = true;
+      map.flyTo({
+        center: [longitude, latitude],
+        ...BUILDING_VIEW,
+        duration: 1600,
+        essential: true,
+      });
+    } else if (hadSelection.current) {
+      hadSelection.current = false;
+      map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+    }
   }, [map, isLoaded, facilityId, longitude, latitude]);
 
   return null;
+}
+
+// Výběr se ruší klikem do prázdné mapy nebo klávesou Esc
+function DeselectOnMapClick({ onDeselect }: { onDeselect: () => void }) {
+  const { map } = useMap();
+  const onDeselectRef = useRef(onDeselect);
+
+  useEffect(() => {
+    onDeselectRef.current = onDeselect;
+  }, [onDeselect]);
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Piny jsou HTML prvky uvnitř mapy — jejich klik by se jinak počítal i jako klik do mapy
+    function handleClick(event: { originalEvent: MouseEvent }) {
+      const target = event.originalEvent.target as HTMLElement | null;
+      if (target?.closest(".maplibregl-marker")) return;
+      onDeselectRef.current();
+    }
+
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onDeselectRef.current();
+    }
+
+    map.on("click", handleClick);
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      map.off("click", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [map]);
+
+  return null;
+}
+
+// Štítek pod vybraným pinem (nad ním by zakrýval budovu) — název a stav, aby bylo jasné, co je vybrané
+function SelectedLabel({ facility }: { facility: FacilityListItem }) {
+  const meta = STATUS_META[facility.status];
+
+  return (
+    <span className="flex max-w-64 items-center gap-2 rounded-lg bg-hk-navy px-2.5 py-1.5 text-white shadow-[0_10px_24px_rgba(11,25,44,0.35)]">
+      <span className={cn("size-2 shrink-0 rounded-full", meta.dot)} aria-hidden />
+      <span className="truncate text-[11.5px] font-bold">{facility.name}</span>
+      <span className="shrink-0 text-[10.5px] text-white/70">{meta.label}</span>
+    </span>
+  );
 }
 
 type FacilityPinProps = {
@@ -160,27 +223,39 @@ type FacilityPinProps = {
   selected: boolean;
 };
 
-// Pin jako v prototypu: kolečko v barvě stavu, bílý okraj, ikona druhu; vybraný je černý s červeným prstencem
+// Pin jako v prototypu: kolečko v barvě stavu, bílý okraj, ikona druhu.
+// Vybraný objekt má jen malou tečku s pulzujícím kroužkem — velký pin by zakrýval jeho 3D budovu.
 function FacilityPin({ category, status, selected }: FacilityPinProps) {
   const Icon = CATEGORY_META[category].icon;
+
+  if (selected) {
+    return (
+      <span className="relative flex size-4 cursor-pointer items-center justify-center">
+        <span
+          className={cn(
+            "absolute -inset-2 animate-ping rounded-full opacity-60",
+            STATUS_META[status].dot,
+          )}
+          aria-hidden
+        />
+        <span
+          className={cn(
+            "relative size-4 rounded-full border-[3px] border-white shadow-[0_4px_12px_rgba(0,0,0,0.4)]",
+            STATUS_META[status].dot,
+          )}
+        />
+      </span>
+    );
+  }
 
   return (
     <span
       className={cn(
-        "flex cursor-pointer items-center justify-center rounded-full border-2 border-white text-white transition-transform hover:scale-110",
-        selected
-          ? "size-9 bg-black shadow-[0_8px_18px_rgba(0,0,0,0.34)] outline-2 outline-offset-2 outline-hk-red"
-          : cn(
-              "size-7 shadow-[0_4px_10px_rgba(0,0,0,0.24)]",
-              STATUS_META[status].dot,
-            ),
+        "flex size-7 cursor-pointer items-center justify-center rounded-full border-2 border-white text-white shadow-[0_4px_10px_rgba(0,0,0,0.24)] transition-transform hover:scale-110",
+        STATUS_META[status].dot,
       )}
     >
-      <Icon
-        className={selected ? "size-4" : "size-3.5"}
-        strokeWidth={2}
-        aria-hidden
-      />
+      <Icon className="size-3.5" strokeWidth={2} aria-hidden />
     </span>
   );
 }
