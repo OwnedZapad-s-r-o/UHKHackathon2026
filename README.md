@@ -7,28 +7,35 @@
 
 ## 📸 Ukázky rozhraní (Screenshots)
 
-### 🗺️ Mapa objektů kraje a Inspekční panel
-Interaktivní mapa budov zřizovaných Královéhradeckým krajem (školy, domovy pro seniory, nemocnice, kulturní objekty) s barevným odlišením podle energetického stavu.
+### 🗺️ 2D a 3D Mapa objektů kraje
+*Celkový 2D pohled na mapu s budovami zřizovanými Královéhradeckým krajem (školy, domovy pro seniory, nemocnice, kulturní objekty):*
 
-![Mapa objektů kraje](docs/images/02-mapa-prehled.png)
+![2D Mapa objektů kraje](docs/images/02-mapa-2d-prehled.png)
 
-*Otevření inspekčního panelu objektu se živou telemetrií (teplota, CO₂, vlhkost) a grafy spotřeby:*
-![Inspekční panel s telemetrií](docs/images/03-inspekce-telemetrie.png)
+*3D náhled na vybranou budovu (Střední uměleckoprůmyslová škola hudebních nástrojů a nábytku u UHK v Hradci Králové) s 3D extruzí půdorysu z ČÚZK a okolní zástavbou:*
+
+![3D model budovy na mapě](docs/images/03-mapa-3d-budova.png)
 
 ---
 
-### 🏢 Schematický řez budovou a Karta ČÚZK
-*Detailní schematický 2D/3D řez budovou zobrazující jednotlivá podlaží a zóny s barevnou alokací senzorů a detekcí tepelných úniků:*
-![Schematický řez budovou](docs/images/04-inspekce-rez.png)
+### 📋 Inspekční panel & Telemetrie
+*Živá telemetrie vybraného objektu (teplota, CO₂, příkon) s grafy průběhu za posledních 48 hodin:*
 
-*Oficiální karta budovy s půdorysem a katastrálními daty přímo z ČÚZK INSPIRE WFS:*
-![Karta budovy ČÚZK](docs/images/05-inspekce-karta-cuzk.png)
+![Inspekční panel - Telemetrie](docs/images/04-inspekce-telemetrie.png)
+
+---
+
+### 🏢 Karta budovy ČÚZK & Schematický řez budovou
+*Oficiální karta budovy s katastrálními daty z ČÚZK INSPIRE WFS a schematický řez budovou po podlažích a zónách s alokací senzorů a detekcí překročení limitů CO₂:*
+
+![Karta budovy ČÚZK a Schematický řez](docs/images/05-inspekce-budova-rez-cuzk.png)
 
 ---
 
 ### 🤖 AI Analýza & Doporučení opatření (Azure OpenAI)
 *Automatické vyhodnocení úsporných opatření s propočtem návratnosti v Kč a generováním podkladů pro správce:*
-![AI Analýza](docs/images/06-inspekce-ai-analyza.png)
+
+![AI Analýza a Audit](docs/images/06-inspekce-audit-ai.png)
 
 ---
 
