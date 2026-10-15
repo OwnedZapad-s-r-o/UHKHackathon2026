@@ -15,7 +15,7 @@ namespace SmartAudit.Api.Services.Reports
     // SVG grafy pro PDF — stejná pravidla jako webové grafy (dataviz skill):
     // jedna série bez legendy, čára 2 px, sloupce ≤ 24 px se zaobleným koncem, sekvenční heatmapa v jednom odstínu,
     // hairline mřížka, text v neutrálních barvách, stav vždy s popiskem
-    public static class ReportCharts
+    public static partial class ReportCharts
     {
         private const string Font = "Hradec, sans-serif";
         private const string Series = ReportStyles.Blue;
