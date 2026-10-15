@@ -195,7 +195,7 @@ function TourOverlay({ step, index, total, isLast, onBack, onNext, onClose, onFi
         ref={cardRef}
         className={cn(
           "absolute animate-in rounded-2xl bg-white text-hk-navy shadow-[0_24px_60px_-12px_rgba(11,25,44,0.45)] fade-in zoom-in-95 duration-200",
-          centered ? "top-1/2 left-1/2 w-[min(460px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2" : "w-[min(344px,calc(100vw-32px))]",
+          centered ? "top-1/2 left-1/2 w-[min(510px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2" : "w-[min(350px,calc(100vw-32px))]",
         )}
         style={position ?? undefined}
       >
@@ -242,7 +242,7 @@ function TourOverlay({ step, index, total, isLast, onBack, onNext, onClose, onFi
           ))}
         </div>
 
-        <div className="flex items-center gap-2 px-5 pt-3.5 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-3.5 pb-4">
           {intro ? (
             <button type="button" onClick={onClose} className="text-[13px] text-slate-500 transition-colors hover:text-hk-navy">
               Teď ne
@@ -252,7 +252,7 @@ function TourOverlay({ step, index, total, isLast, onBack, onNext, onClose, onFi
               <button
                 type="button"
                 onClick={onBack}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[13px] transition-colors hover:bg-slate-50"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[13px] font-medium transition-colors hover:bg-slate-50"
               >
                 <ArrowLeft className="size-3.5" aria-hidden />
                 Zpět
@@ -260,10 +260,14 @@ function TourOverlay({ step, index, total, isLast, onBack, onNext, onClose, onFi
             )
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             {onFinale ? (
               <>
-                <button type="button" onClick={onClose} className="px-2 text-[13px] text-slate-500 transition-colors hover:text-hk-navy">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="whitespace-nowrap px-2.5 py-1.5 text-[13px] font-medium text-slate-500 transition-colors hover:text-hk-navy"
+                >
                   {step.finale?.skip}
                 </button>
                 <PrimaryButton ref={primaryRef} onClick={onFinale}>
@@ -290,7 +294,7 @@ function PrimaryButton({ ref, onClick, children }: { ref: React.Ref<HTMLButtonEl
       ref={ref}
       type="button"
       onClick={onClick}
-      className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-hk-accent px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-hk-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hk-red"
+      className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-hk-accent px-4 py-2 text-[13px] font-bold text-white whitespace-nowrap transition-colors hover:bg-hk-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hk-red"
     >
       {children}
     </button>
