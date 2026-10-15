@@ -65,7 +65,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
   }
 
   return (
-    <div data-map-root className="relative h-full w-full bg-slate-100">
+    <div data-map-root data-tour="mapa" className="relative h-full w-full bg-slate-100">
       {/* Prototyp je světlý — mapa drží světlý šedý styl i při tmavém systému */}
       <Map center={KHK_HOME.center} zoom={KHK_HOME.zoom} styles={GRAY_STYLES} theme="light">
         <MapToolbar home={KHK_HOME} />
@@ -81,7 +81,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
         <FacilityDots facilities={facilities} visible={!showPins} />
         <ZoomThreshold threshold={PIN_ZOOM} onChange={setZoomedIn} />
         <SelectedBuilding3D facilityId={selected?.id ?? null} status={selected?.status ?? "Nominal"} />
-        <FlyToSelected facilityId={selected?.id ?? null} longitude={selected?.longitude} latitude={selected?.latitude} />
+        <FlyToSelected facilityId={selected?.id ?? null} longitude={selected?.longitude} latitude={selected?.latitude} districtSelected={selectedDistrict !== null} />
         <MapClickRouter
           facilitySelected={selected !== null}
           districtSelected={selectedDistrict !== null}
@@ -120,7 +120,7 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
         })}
       </Map>
 
-      <MapLegend facilities={facilities} />
+      <MapLegend facilities={facilities} showDistricts={selected === null && !zoomedIn} />
     </div>
   );
 }
@@ -151,9 +151,12 @@ function ZoomThreshold({ threshold, onChange }: { threshold: number; onChange: (
   return null;
 }
 
+type FlyToSelectedProps = { facilityId: string | null; longitude?: number; latitude?: number; districtSelected: boolean };
+
 // Po výběru objektu mapa přeletí k budově a nakloní se, aby byla vidět ve 3D;
-// po zrušení výběru se jen srovná náklon — výřez zůstane, uživatel se nemá kde ztratit
-function FlyToSelected({ facilityId, longitude, latitude }: { facilityId: string | null; longitude?: number; latitude?: number }) {
+// po zrušení výběru se jen srovná náklon — výřez zůstane, uživatel se nemá kde ztratit.
+// Je-li vybraný okres, kameru po zavření objektu vede DistrictLayer (přelet zpět na celý okres).
+function FlyToSelected({ facilityId, longitude, latitude, districtSelected }: FlyToSelectedProps) {
   const { map, isLoaded } = useMap();
   const hadSelection = useRef(false);
 
@@ -165,9 +168,9 @@ function FlyToSelected({ facilityId, longitude, latitude }: { facilityId: string
       map.flyTo({ center: [longitude, latitude], ...BUILDING_VIEW, duration: 1600, essential: true });
     } else if (hadSelection.current) {
       hadSelection.current = false;
-      map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+      if (!districtSelected) map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
     }
-  }, [map, isLoaded, facilityId, longitude, latitude]);
+  }, [map, isLoaded, facilityId, longitude, latitude, districtSelected]);
 
   return null;
 }

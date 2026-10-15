@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, Loader2, MapPin, Trash2 } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Loader2, MapPin, PartyPopper, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { METRIC_META, METRICS, formatAgo, formatSensorValue } from "@/lib/sensor-meta";
 import { cn } from "@/lib/utils";
 import type { GatewayChannel, GatewayDetail, SensorMetric } from "@/types/api";
 import { assignChannel, deleteGateway } from "../actions";
+import { SensorSteps } from "./sensor-steps";
 
 // Průvodce obnovuje stav každé 2 s — hodnoty z gatewaye jsou vidět hned, jak přijdou
 const REFRESH_MS = 2000;
@@ -31,9 +32,13 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
   }, [initial.id]);
 
   const nodes = [...new Set(gateway.channels.map((c) => c.nodeAddress))].sort((a, b) => a - b);
+  const unassigned = gateway.channels.filter((c) => c.sensorId === null).length;
+  const step = currentStep(gateway, unassigned);
 
   return (
     <div className="space-y-4">
+      <SensorSteps current={step} />
+
       <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="min-w-0">
           <p className="font-mono text-[11px] text-hk-blue">gateway/{gateway.gatewayId}/iqrf</p>
@@ -68,29 +73,88 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
           <div className="rounded-2xl border border-slate-200 bg-white p-5">{guide}</div>
         </section>
       ) : (
-        <section aria-labelledby="channels" className="rounded-2xl border border-slate-200 bg-white">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
-            <h2 id="channels" className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-              Senzory na uzlech
-            </h2>
-            <p className="text-xs text-slate-500">Přiřazený kanál se ukládá a nahradí simulaci v dané místnosti.</p>
-          </div>
-          {nodes.map((node) => (
-            <div key={node} className="border-b border-slate-100 last:border-b-0">
-              <p className="bg-slate-50 px-5 py-1.5 font-mono text-[11px] text-slate-500">uzel {node}</p>
-              <ul className="divide-y divide-slate-100">
-                {gateway.channels
-                  .filter((c) => c.nodeAddress === node)
-                  .map((channel) => (
-                    <ChannelRow key={channel.id} gatewayId={gateway.id} channel={channel} zones={gateway.zones} onAssigned={refresh} now={now} />
-                  ))}
-              </ul>
+        <>
+          {step === 4 ? (
+            <NextStep tone="active" title={`Poslední krok: vyberte místnost u ${unassigned === 1 ? "1 čidla" : `${unassigned} čidel`}`}>
+              U každého čidla níže zvolte místnost a klikněte na Přiřadit. Od té chvíle se hodnoty ukládají a nahradí v místnosti simulaci.
+            </NextStep>
+          ) : (
+            <NextStep
+              tone="done"
+              title="Hotovo — čidla měří v místnostech"
+              action={{ href: `/mapa?objekt=${gateway.facility.id}&panel=telemetrie`, label: "Zobrazit měření v mapě" }}
+            >
+              Grafy místností teď pokračují skutečnými daty a audit budovy je započítá při dalším vyhodnocení.
+            </NextStep>
+          )}
+          <section aria-labelledby="channels" className="rounded-2xl border border-slate-200 bg-white">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+              <h2 id="channels" className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
+                Senzory na uzlech
+              </h2>
+              <p className="text-xs text-slate-500">Přiřazený kanál se ukládá a nahradí simulaci v dané místnosti.</p>
             </div>
-          ))}
-        </section>
+            {nodes.map((node) => (
+              <div key={node} className="border-b border-slate-100 last:border-b-0">
+                <p className="bg-slate-50 px-5 py-1.5 font-mono text-[11px] text-slate-500">uzel {node}</p>
+                <ul className="divide-y divide-slate-100">
+                  {gateway.channels
+                    .filter((c) => c.nodeAddress === node)
+                    .map((channel) => (
+                      <ChannelRow key={channel.id} gatewayId={gateway.id} channel={channel} zones={gateway.zones} onAssigned={refresh} now={now} />
+                    ))}
+                </ul>
+              </div>
+            ))}
+          </section>
+        </>
       )}
 
       <MessageLog messages={gateway.messages} />
+    </div>
+  );
+}
+
+// Kde v postupu připojení gateway je: 2 = čeká na nastavení v budově, 3 = odpověděla a hledají se čidla, 4 = přiřazení, 5 = hotovo
+function currentStep(gateway: GatewayDetail, unassigned: number) {
+  if (gateway.lastSeenAt === null) return 2;
+  if (gateway.channels.length === 0) return 3;
+  return unassigned > 0 ? 4 : 5;
+}
+
+type NextStepProps = {
+  tone: "active" | "done";
+  title: string;
+  action?: { href: string; label: string };
+  children: ReactNode;
+};
+
+function NextStep({ tone, title, action, children }: NextStepProps) {
+  const done = tone === "done";
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-4 rounded-2xl border px-5 py-4",
+        done ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-hk-red/20 bg-red-50/60",
+      )}
+    >
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl text-white", done ? "bg-emerald-500" : "bg-hk-red")}>
+        {done ? <PartyPopper className="size-5" aria-hidden /> : <ArrowDownLeft className="size-5 -rotate-45" aria-hidden />}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-bold">{title}</p>
+        <p className="mt-0.5 text-[13px] opacity-80">{children}</p>
+      </div>
+      {action && (
+        <Link
+          href={action.href as `/mapa?${string}`}
+          className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-700"
+        >
+          {action.label}
+          <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      )}
     </div>
   );
 }

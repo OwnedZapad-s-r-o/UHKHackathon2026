@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { getFacilities } from "@/lib/api";
 import { CATEGORY_META, STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
-import { readParam, withParams } from "@/lib/search-params";
+import { facilityMapHref, readParam, withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { FacilityListItem } from "@/types/api";
 import { KpiRow } from "../_components/kpi-row";
@@ -136,7 +136,7 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
 }
 
 function facilityHref(facility: FacilityListItem) {
-  return `/mapa?objekt=${facility.id}&panel=telemetrie`;
+  return facilityMapHref(facility, "telemetrie");
 }
 
 function StatusPill({ facility }: { facility: FacilityListItem }) {

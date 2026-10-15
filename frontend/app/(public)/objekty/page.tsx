@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Info, Search } from "lucide-react";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { ChevronRight, Info } from "lucide-react";
 import { LiveBadge } from "@/components/live-badge";
 import { AIR_META, airLevel, type AirLevel } from "@/lib/air-quality";
 import { CATEGORY_META } from "@/lib/facility-meta";
@@ -9,6 +8,8 @@ import { getPublicFacilities } from "@/lib/public-api";
 import { readParam } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { OpenFacility } from "@/types/api";
+import { SchoolSearch } from "../_components/school-search";
+import { toSearchItems } from "../_components/search-items";
 import { ObjectFilters } from "./_components/object-filters";
 
 export const metadata: Metadata = {
@@ -45,12 +46,14 @@ export default async function ObjectsPage({ searchParams }: PageProps<"/objekty"
       <form action="/objekty" className="mt-6 max-w-xl">
         {district && <input type="hidden" name="okres" value={district} />}
         {category && <input type="hidden" name="druh" value={category} />}
-        <InputGroup className="h-12 w-full border-slate-300 bg-white">
-          <InputGroupAddon>
-            <Search className="text-slate-400" aria-hidden />
-          </InputGroupAddon>
-          <InputGroupInput name="q" defaultValue={readParam(params, "q")} placeholder="Název školy, domova nebo obec…" aria-label="Hledat objekt" className="text-[15px]" />
-        </InputGroup>
+        <SchoolSearch
+          items={toSearchItems(all)}
+          defaultValue={readParam(params, "q")}
+          placeholder="Název školy, domova nebo obec…"
+          fieldClassName="flex h-12 items-center gap-2.5 rounded-lg border border-slate-300 bg-white px-3.5 focus-within:border-hk-blue focus-within:ring-3 focus-within:ring-hk-blue/15"
+          iconClassName="size-4 text-slate-400"
+          inputClassName="text-[15px]"
+        />
       </form>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">

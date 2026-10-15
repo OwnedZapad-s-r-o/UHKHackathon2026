@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, Search } from "lucide-react";
+import { Compass, LogOut, Search } from "lucide-react";
 import { logout } from "@/app/login/actions";
 import { cn } from "@/lib/utils";
 import type { Role, Session } from "@/types/api";
@@ -21,7 +21,7 @@ type SidebarProps = {
 
 export function Sidebar({ session, counts, className }: SidebarProps) {
   return (
-    <aside className={cn("flex w-58 shrink-0 flex-col overflow-y-auto bg-black px-4 pt-7 pb-5 text-white", className)}>
+    <aside className={cn("flex w-58 shrink-0 flex-col overflow-y-auto bg-hk-navy px-4 pt-7 pb-5 text-white", className)}>
       <Link href="/mapa" className="block px-2">
         <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-11 w-auto" />
         <span className="mt-4.5 block text-[15px] font-bold tracking-tight">SmartAudit</span>
@@ -30,7 +30,7 @@ export function Sidebar({ session, counts, className }: SidebarProps) {
 
       <SidebarNav counts={counts} />
 
-      <div className="mx-2 my-5 h-px bg-neutral-800" aria-hidden />
+      <div className="mx-2 my-5 h-px bg-white/10" aria-hidden />
 
       <nav className="flex flex-col gap-0.5" aria-label="Rychlé akce">
         <Link
@@ -41,10 +41,18 @@ export function Sidebar({ session, counts, className }: SidebarProps) {
           Hledat objekt
         </Link>
         <IssuesToggle />
+        <Link
+          href="/mapa?pruvodce=1"
+          data-tour="pruvodce"
+          className="flex h-10.5 items-center gap-3 rounded-lg px-3 text-sm text-white/55 transition-colors hover:text-white"
+        >
+          <Compass className="size-4.5" strokeWidth={1.75} aria-hidden />
+          Průvodce aplikací
+        </Link>
       </nav>
 
       <div className="mt-auto flex items-center gap-2.5 px-2">
-        <span className="flex size-8.5 shrink-0 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-xs font-bold text-white/70">
+        <span className="flex size-8.5 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/8 text-xs font-bold text-white/70">
           {initials(session.displayName)}
         </span>
         <span className="min-w-0 flex-1 leading-tight">
@@ -54,7 +62,7 @@ export function Sidebar({ session, counts, className }: SidebarProps) {
           </span>
         </span>
         <form action={logout}>
-          <button type="submit" aria-label="Odhlásit" title="Odhlásit" className="rounded-md p-1.5 text-white/50 transition-colors hover:bg-neutral-900 hover:text-white">
+          <button type="submit" aria-label="Odhlásit" title="Odhlásit" className="rounded-md p-1.5 text-white/50 transition-colors hover:bg-white/8 hover:text-white">
             <LogOut className="size-4" strokeWidth={1.75} />
           </button>
         </form>

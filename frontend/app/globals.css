@@ -194,3 +194,44 @@
     animation: none;
   }
 }
+
+/* Posuvník veřejné části v barvách kraje: transparentní dráha (žádný rušivý šedý panel),
+   jemný plovoucí jezdec s červeným hover efektem */
+.scrollbar-hk::-webkit-scrollbar {
+  width: 9px;
+}
+.scrollbar-hk::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: none;
+}
+.scrollbar-hk::-webkit-scrollbar-thumb {
+  background: rgba(30, 62, 98, 0.38);
+  border-radius: 9999px;
+  min-height: 48px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.15s ease;
+}
+.scrollbar-hk::-webkit-scrollbar-thumb:hover {
+  background: #d90429;
+  background-clip: padding-box;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-hk {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(30, 62, 98, 0.38) transparent;
+  }
+}
+
+/* Užší varianta pro rozbalovací seznamy (našeptávač) — bílá dráha splyne s podkladem seznamu */
+.scrollbar-hk-thin::-webkit-scrollbar {
+  width: 10px;
+}
+.scrollbar-hk-thin::-webkit-scrollbar-track {
+  background: #ffffff;
+  border-left: 0;
+}
+.scrollbar-hk-thin::-webkit-scrollbar-thumb {
+  border: 3px solid #ffffff;
+  min-height: 32px;
+}

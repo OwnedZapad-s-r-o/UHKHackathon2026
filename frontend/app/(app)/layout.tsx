@@ -1,9 +1,14 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getFacilities, getSession } from "@/lib/api";
+import type { AuditStatus, FacilityListItem } from "@/types/api";
 import { MobileNav } from "./_components/mobile-nav";
 import { Sidebar } from "./_components/sidebar";
+import { AppTour } from "./_components/tour/app-tour";
 
-// Rozvržení podle prototypu: černý postranní panel vlevo, obsah obrazovky vpravo
+const SEVERITY: Record<AuditStatus, number> = { Critical: 0, Warning: 1, Nominal: 2 };
+
+// Rozvržení podle prototypu: tmavě modrý postranní panel vlevo, obsah obrazovky vpravo, nad tím průvodce aplikací
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -24,6 +29,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </MobileNav>
         {children}
       </div>
+
+      {/* useSearchParams v průvodci potřebuje hranici Suspense, jinak by celé rozvržení čekalo na klienta */}
+      <Suspense>
+        <AppTour role={session.role} facility={tourFacility(facilities)} />
+      </Suspense>
     </div>
   );
+}
+
+// Budova pro poslední krok průvodce: nejvážnější stav, v něm nejvyšší ztráta
+function tourFacility(facilities: FacilityListItem[]) {
+  const pick = facilities.toSorted((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || (b.annualLossCzk ?? 0) - (a.annualLossCzk ?? 0))[0];
+  return pick ? { id: pick.id, districtCode: pick.districtCode } : null;
 }

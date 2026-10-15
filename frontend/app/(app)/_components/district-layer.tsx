@@ -25,15 +25,22 @@ const HIGHLIGHT_BEFORE_LAYER = "building";
 const FADE_START_ZOOM = 10.5;
 const FADE_END_ZOOM = 13.5;
 
-const SELECTED_OUTLINE = "#d90429";
+// Obrys vybraného okresu v barvách aplikace — tmavě modrá čára s bílým lemem a jemnou modrou září.
+// Červená je v mapě vyhrazená pro kritický stav objektů, na hranici okresu zbytečně křičela.
+const SELECTED_OUTLINE = "#1e3e62";
+const SELECTED_GLOW = "#3f6592";
+
+// Přelet na vybraný okres — pomalejší než běžný posun, aby bylo vidět, odkud a kam mapa letí
+const FLY_MS = 1600;
+const FLY_PADDING = 56;
 
 // Zvýraznění vybraného okresu — koncové hodnoty animace (mapcn vrstvy: geojson-fill-{id}, geojson-line-{id})
 const MASK_LAYER = "geojson-fill-district-mask";
 const GLOW_LAYER = "geojson-line-district-glow";
 const MASK_OPACITY = 0.78;
-const GLOW_WIDTH = 10;
-const GLOW_OPACITY = 0.35;
-const HIGHLIGHT_MS = 1400;
+const GLOW_WIDTH = 8;
+const GLOW_OPACITY = 0.22;
+const HIGHLIGHT_MS = FLY_MS;
 
 // Obálka pro masku „vše kromě vybraného okresu“ — s rezervou kolem celého kraje
 const MASK_EXTENT: Position[] = [
@@ -75,8 +82,8 @@ type DistrictLayerProps = {
 
 type Hover = { stats: DistrictStats; x: number; y: number };
 
-// Okresy barevně podle podílu objektů se zjištěním. Vybraný okres: zbytek mapy zešedne maskou
-// a okres má červený obrys se září; vlevo nahoře štítek se souhrnem a návratem na celý kraj.
+// Okresy barevně podle podílu objektů se zjištěním. Vybraný okres: mapa k němu přeletí, zbytek mapy zešedne maskou
+// a okres má modrý obrys se září; vlevo nahoře štítek se souhrnem a návratem na celý kraj.
 export function DistrictLayer({ stats, selectedCode, facilitySelected, home, showLabels, onSelect, onClear }: DistrictLayerProps) {
   const { map, isLoaded } = useMap();
   const [districts, setDistricts] = useState<RegionCollection | null>(null);
@@ -114,13 +121,14 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
 
   const fillHoverPaint = useMemo(() => ({ "fill-color": "#1e3e62" }), []);
   const maskPaint = useMemo(() => ({ "fill-color": "#f8fafc", "fill-opacity": MASK_OPACITY }), []);
-  const glowPaint = useMemo(() => ({ "line-color": SELECTED_OUTLINE, "line-width": GLOW_WIDTH, "line-blur": 8, "line-opacity": GLOW_OPACITY }), []);
-  const outlinePaint = useMemo(() => ({ "line-color": SELECTED_OUTLINE, "line-width": 2.5 }), []);
+  const glowPaint = useMemo(() => ({ "line-color": SELECTED_GLOW, "line-width": GLOW_WIDTH, "line-blur": 8, "line-opacity": GLOW_OPACITY }), []);
+  const haloPaint = useMemo(() => ({ "line-color": "#ffffff", "line-width": 5, "line-opacity": 0.9 }), []);
+  const outlinePaint = useMemo(() => ({ "line-color": SELECTED_OUTLINE, "line-width": 2 }), []);
 
   const mask = useMemo(() => (selectedFeature ? maskAround(selectedFeature) : EMPTY), [selectedFeature]);
   const outline = useMemo(() => (selectedFeature ? { type: "FeatureCollection" as const, features: [selectedFeature] } : EMPTY), [selectedFeature]);
 
-  // Animace výběru okresu: okolí plynule zešedne a obrys dvakrát pulzne září
+  // Animace výběru okresu během přeletu: okolí plynule zešedne a září obrysu jednou pomalu nabobtná a opadne
   useEffect(() => {
     if (!map || !isLoaded || !selectedCode) return;
 
@@ -132,11 +140,11 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
 
       const t = Math.min(1, (now - start) / HIGHLIGHT_MS);
       const fade = 1 - Math.pow(1 - Math.min(1, t * 2.2), 3);
-      const pulse = Math.sin(t * Math.PI * 2) ** 2 * (1 - t);
+      const pulse = Math.sin(t * Math.PI) ** 2;
 
       map!.setPaintProperty(MASK_LAYER, "fill-opacity", MASK_OPACITY * fade);
-      map!.setPaintProperty(GLOW_LAYER, "line-width", GLOW_WIDTH + 18 * pulse);
-      map!.setPaintProperty(GLOW_LAYER, "line-opacity", GLOW_OPACITY + 0.45 * pulse);
+      map!.setPaintProperty(GLOW_LAYER, "line-width", GLOW_WIDTH + 12 * pulse);
+      map!.setPaintProperty(GLOW_LAYER, "line-opacity", GLOW_OPACITY + 0.3 * pulse);
 
       if (t < 1) frame = requestAnimationFrame(step);
     }
@@ -145,15 +153,16 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
     return () => cancelAnimationFrame(frame);
   }, [map, isLoaded, selectedCode]);
 
-  // Výběr okresu přiblíží mapu na jeho hranice; „Celý kraj“ vrátí výřez kraje
+  // Výběr okresu: mapa přeletí obloukem (oddálí se a znovu přiblíží) na jeho hranice; „Celý kraj“ vrátí výřez kraje
   const previousCode = useRef<string | null>(null);
   useEffect(() => {
     if (!map || !isLoaded || !districts || facilitySelected) return;
 
     if (selectedFeature) {
-      map.fitBounds(bounds(selectedFeature), { padding: 56, duration: 900, pitch: 0, bearing: 0 });
+      const camera = map.cameraForBounds(bounds(selectedFeature), { padding: FLY_PADDING, bearing: 0 });
+      if (camera) map.flyTo({ ...camera, pitch: 0, bearing: 0, duration: FLY_MS, curve: 1.3, essential: true });
     } else if (previousCode.current !== null) {
-      map.flyTo({ center: home.center, zoom: home.zoom, pitch: 0, bearing: 0, duration: 900 });
+      map.flyTo({ center: home.center, zoom: home.zoom, pitch: 0, bearing: 0, duration: 1100, essential: true });
     }
 
     previousCode.current = selectedCode;
@@ -191,9 +200,10 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
         fillHoverPaint={fillHoverPaint}
         onHover={handleHover}
       />
-      {/* Pořadí komponent = pořadí vrstev: maska, záře, ostrý obrys */}
+      {/* Pořadí komponent = pořadí vrstev: maska, záře, bílý lem, ostrý obrys */}
       <MapGeoJSON id="district-mask" data={mask} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={maskPaint} linePaint={false} />
       <MapGeoJSON id="district-glow" data={outline} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={false} linePaint={glowPaint} />
+      <MapGeoJSON id="district-halo" data={outline} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={false} linePaint={haloPaint} />
       <MapGeoJSON id="district-outline" data={outline} beforeId={HIGHLIGHT_BEFORE_LAYER} fillPaint={false} linePaint={outlinePaint} />
 
       {showLabels &&
@@ -212,7 +222,8 @@ export function DistrictLayer({ stats, selectedCode, facilitySelected, home, sho
         })}
 
       {hover && !showLabels && (!selectedCode || hover.stats.code === selectedCode) && <DistrictTooltip hover={hover} selected={hover.stats.code === selectedCode} />}
-      {selectedStats && <SelectedDistrictChip stats={selectedStats} onClear={onClear} />}
+      {/* U otevřeného objektu nese okres drobečková navigace nad mapou — štítek by jen zakrýval mapu */}
+      {selectedStats && !facilitySelected && <SelectedDistrictChip stats={selectedStats} onClear={onClear} />}
     </>
   );
 }
@@ -259,7 +270,7 @@ function DistrictBubble({ stats, delay }: { stats: DistrictStats; delay: number 
 function SelectedDistrictChip({ stats, onClear }: { stats: DistrictStats; onClear: () => void }) {
   return (
     <div className="absolute top-3 left-3 z-10 flex items-center gap-3 rounded-xl border border-slate-200 bg-white/97 py-2 pr-2 pl-3 text-hk-navy shadow-[0_10px_24px_rgba(11,25,44,0.14)]">
-      <span className="h-8 w-1 rounded-full bg-hk-red" aria-hidden />
+      <span className="h-8 w-1 rounded-full bg-hk-blue" aria-hidden />
       <span>
         <span className="block text-[13px] font-bold">Okres {stats.name}</span>
         <span className="block text-[11px] text-slate-500">
