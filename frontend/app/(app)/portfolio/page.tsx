@@ -7,6 +7,7 @@ import { readParam, withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { FacilityListItem } from "@/types/api";
 import { KpiRow } from "../_components/kpi-row";
+import { PortfolioReportLink } from "../_components/portfolio-report-link";
 import { TopBar } from "../_components/top-bar";
 
 export const metadata: Metadata = {
@@ -41,7 +42,9 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
 
   return (
     <>
-      <TopBar title="Portfolio" />
+      <TopBar title="Portfolio">
+        <PortfolioReportLink onlyIssues={readParam(params, "zjisteni") === "1"} />
+      </TopBar>
 
       <main className="min-h-0 flex-1 overflow-y-auto p-6">
         <div className="flex flex-wrap items-end gap-4">
