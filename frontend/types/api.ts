@@ -30,6 +30,8 @@ export type FacilityListItem = {
   power: number | null;
   annualLossCzk: number | null;
   heritageStatus: HeritageStatus;
+  // Mění se s doplněnými přilehlými budovami — mapa ji přidá k adrese obrysu (ten se jinak cachuje 2 dny)
+  footprintVersion: string;
 };
 
 // Hranice okresů z GET /api/map/regions?type=Okres (GeoJSON, zjednodušené)
@@ -122,6 +124,12 @@ export type FacilityDetail = {
     ruianCode: string | null;
     cadastreUrl: string | null;
     parcelRef: string | null;
+    // Opravy od správce — mají přednost ve výpočtu ztráty; hodnoty výše zůstávají z ČÚZK a odhadu
+    areaOverride: number | null;
+    floorsOverride: number | null;
+    yearOverride: number | null;
+    editedEnergyCategory: string | null;
+    editedAt: string | null;
   } | null;
   occupancy: {
     schoolYear: string;
@@ -157,9 +165,26 @@ export type FacilityDetail = {
     annualLossCzk: number | null;
     savingPercent: number | null;
     evaluatedAt: string;
+    // Jak skutečná čidla opravila odhad ztráty (jen pro kraj a správce) — null, dokud budovu neměří žádné čidlo teploty
+    sensorCorrection: SensorCorrection | null;
   } | null;
   zoneCount: number;
   sensorCount: number;
+  // Budovu přidal správce (není v otevřených datech kraje) — jen takovou může odebrat
+  addedByManager: boolean;
+  // Přilehlé budovy, které katastr k objektu nevede a doplnil je správce — jejich plocha vstupuje do výpočtu ztráty
+  addedBuildingParts: BuildingPart[];
+};
+
+export type BuildingPart = { id: string; areaSquareMeters: number; source: string; addedAt: string };
+
+// virtualHistory = aspoň jedno čidlo je virtuální a dodalo týden historie; skutečné čidlo ztrátu upřesňuje postupně 7 dní
+export type SensorCorrection = {
+  lossBeforeCzk: number;
+  measuredZones: number;
+  zoneCount: number;
+  virtualHistory: boolean;
+  since: string;
 };
 
 export type SensorMetric = "Temperature" | "Co2" | "Power" | "Humidity" | "Voc" | "Illuminance" | "Pressure" | "Pm25" | "Noise" | "Motion" | "Other";
@@ -212,6 +237,8 @@ export type Footprint = {
     constructionYear: number | null;
     ruianCode: string | null;
     source: string;
+    // Kolik přilehlých budov doplnil správce — jsou v geometrii jako další polygony MultiPolygonu
+    addedParts: number;
   };
 };
 
@@ -310,6 +337,25 @@ export type GatewayDetail = {
   messages: { timestamp: string; direction: "Request" | "Response"; messageType: string; payload: string }[];
 };
 
+// Nové gatewaye online, které čekají na spárování heslem z nálepky — GET /api/sensors/nearby
+export type NearbyDevice = {
+  serial: string;
+  model: string;
+  nodes: { address: number; metrics: SensorMetric[] }[];
+  rssi: number | null;
+  emulated: boolean;
+  lastSeenAt: string;
+  // Nálepka emulovaného zařízení (demo) — skutečné zařízení ji v aplikaci nemá
+  label: { serial: string; model: string; password: string } | null;
+};
+
+// Čidla v dosahu gatewaye mimo její síť — GET /api/sensors/gateways/{id}/nearby
+// supported = false: gateway seznam neumí (skutečný IQRF daemon) nebo neodpověděla — čidlo jde přidat jen kódem
+export type NearbyNodes = {
+  supported: boolean;
+  nodes: { mid: string; metrics: SensorMetric[]; rssi: number | null; label: { mid: string; code: string } | null }[];
+};
+
 // Otevřené API — GET /api/open/v1/facilities (veřejný pohled, bez Kč)
 export type OpenFacility = {
   id: string;
@@ -331,4 +377,122 @@ export type OpenFacility = {
   co2HoursOverLimit: number | null;
   hasLiveSensors: boolean;
   evaluatedAt: string | null;
+};
+
+// Smlouvy organizace z Registru smluv — GET /api/facilities/{id}/contracts (jen kraj a správce)
+export type ContractCategory = "EnergySupply" | "FacilityManagement" | "Reconstruction" | "Other";
+
+export type EnergyCommodity = "Heat" | "Gas" | "Electricity";
+
+export type FacilityContract = {
+  id: string;
+  contractId: string;
+  contractNumber: string | null;
+  title: string;
+  category: ContractCategory;
+  partnerName: string;
+  partnerIco: string | null;
+  amountWithoutVat: number | null;
+  amountWithVat: number | null;
+  dateSigned: string | null;
+  publishedOn: string;
+  registryUrl: string;
+  commodity: EnergyCommodity | null;
+  unitPriceCzkPerMwh: number | null;
+  priceSource: string | null;
+  attachments: { id: string; name: string }[];
+};
+
+// Cena tepla, se kterou počítá audit — ze smlouvy (fromContract), jinak paušál
+export type HeatPrice = {
+  czkPerKwh: number;
+  defaultCzkPerKwh: number;
+  fromContract: boolean;
+  contractId: string | null;
+  annualLossCzk: number | null;
+};
+
+// syncedAt = null: smlouvy se z registru ještě nestáhly (běží na pozadí po startu)
+export type FacilityContracts = {
+  organizationName: string | null;
+  ico: string | null;
+  syncedAt: string | null;
+  heatPrice: HeatPrice;
+  contracts: FacilityContract[];
+};
+
+// Demo správa: vyrobená zařízení, jejich stav v párování a budovy, kterým čidla opravila odhad ztráty
+export type DemoBehavior = "Setback" | "Overheating";
+
+export type DemoStage = "Starting" | "Announcing" | "InRange" | "Paired" | "Reporting" | "Assigned";
+
+export type DemoDevice = {
+  id: string;
+  kind: "Gateway" | "Node";
+  serial: string;
+  model: string;
+  code: string;
+  nodes: string[];
+  metrics: SensorMetric[];
+  behavior: DemoBehavior;
+  stage: DemoStage;
+  parentName: string | null;
+  gatewayId: string | null;
+  facilityId: string | null;
+  facilityName: string | null;
+  channelCount: number;
+  assignedCount: number;
+  createdAt: string;
+};
+
+export type LossCorrection = {
+  facilityId: string;
+  facilityCode: string;
+  facilityName: string;
+  lossBeforeCzk: number | null;
+  lossNowCzk: number;
+  measuredZones: number;
+  zoneCount: number;
+  virtualHistory: boolean;
+  since: string;
+  evaluatedAt: string;
+};
+
+export type DemoOverview = {
+  templates: { id: string; label: string; metrics: SensorMetric[] }[];
+  gateways: { id: string; gatewayId: string; name: string; facilityName: string }[];
+  devices: DemoDevice[];
+  corrections: LossCorrection[];
+};
+
+// Přidání budovy správcem — našeptávač adres a dohledání místa (RÚIAN, hranice KHK, katastr, památky)
+export type AddressSuggestion = {
+  key: string;
+  label: string;
+  street: string | null;
+  houseNumber: string | null;
+  psc: string | null;
+  post: string | null;
+};
+
+export type EnergyCategory = "Unknown" | "Before1945" | "From1946To1975" | "From1976To1990" | "From1991To2005" | "After2006";
+
+export type Place = {
+  latitude: number;
+  longitude: number;
+  address: { label: string; street: string | null; houseNumber: string | null; psc: string | null } | null;
+  territory: { municipalityCode: string; municipalityName: string; orpName: string; districtCode: string; districtName: string };
+  building: {
+    footprint: Polygon | MultiPolygon;
+    builtUpArea: number | null;
+    constructionYear: number | null;
+    currentUse: string | null;
+    ruianCode: string | null;
+    energyCategory: EnergyCategory;
+    estimatedFloors: Record<FacilityCategory, number>;
+  } | null;
+  cadastreAvailable: boolean;
+  heritageStatus: HeritageStatus;
+  heritageName: string | null;
+  neighbors: { id: string; code: string; name: string; distanceMeters: number; sameBuilding: boolean; own: boolean }[];
 };

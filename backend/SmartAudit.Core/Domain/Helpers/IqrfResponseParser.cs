@@ -5,9 +5,17 @@ namespace SmartAudit.Core.Domain.Helpers
 {
     public record IqrfReading(string ChannelKey, int NodeAddress, int Type, string Name, string Unit, double Value);
 
+    // Čidlo v dosahu gatewaye, které ještě není v její síti (rozšíření emulátoru smartaudit_NearbyNodes)
+    public record IqrfNearbyNode(string Mid, IReadOnlyList<int> SensorTypes, int? Rssi);
+
     public record IqrfResponse(string MessageType, string? MessageId, int? NodeAddress, int Status, string? StatusText, IReadOnlyList<IqrfReading> Readings, IReadOnlyList<int>? BondedNodes)
     {
         public bool IsOk => Status == 0;
+
+        // Adresa, kterou koordinátor přidělil čidlu přidanému přes SmartConnect
+        public int? AssignedAddress { get; init; }
+
+        public IReadOnlyList<IqrfNearbyNode>? NearbyNodes { get; init; }
     }
 
     // Odpovědi IQRF Gateway Daemonu (IQRF JSON API) → hodnoty senzorů.
@@ -18,6 +26,10 @@ namespace SmartAudit.Core.Domain.Helpers
         public const string ReadSensorsWithTypes = "iqrfSensor_ReadSensorsWithTypes";
         public const string SensorFrc = "iqrfSensor_Frc";
         public const string BondedDevices = "iqrfEmbedCoordinator_BondedDevices";
+        public const string SmartConnect = "iqmeshNetwork_SmartConnect";
+
+        // Vlastní rozšíření emulátoru a virtuálních gatewayí: čidla v dosahu mimo síť. Skutečný daemon ho nezná a odpoví chybou.
+        public const string NearbyNodes = "smartaudit_NearbyNodes";
 
         public static IqrfResponse? Parse(string json)
         {
@@ -57,7 +69,19 @@ namespace SmartAudit.Core.Domain.Helpers
                     ? list.EnumerateArray().Where(n => n.ValueKind == JsonValueKind.Number).Select(n => n.GetInt32()).ToList()
                     : null;
 
-                return new IqrfResponse(messageType, messageId, nodeAddress, status, statusText, readings, bonded);
+                var assigned = messageType == SmartConnect ? Int(rsp, "assignedAddr") : null;
+
+                var nearby = messageType == NearbyNodes && Property(result, "nodes") is { ValueKind: JsonValueKind.Array } nodes
+                    ? nodes.EnumerateArray()
+                        .Where(n => String(n, "mid") != null)
+                        .Select(n => new IqrfNearbyNode(
+                            String(n, "mid")!,
+                            Property(n, "sensors") is { ValueKind: JsonValueKind.Array } types ? types.EnumerateArray().Where(t => t.ValueKind == JsonValueKind.Number).Select(t => t.GetInt32()).ToList() : [],
+                            Int(n, "rssi")))
+                        .ToList()
+                    : null;
+
+                return new IqrfResponse(messageType, messageId, nodeAddress, status, statusText, readings, bonded) { AssignedAddress = assigned, NearbyNodes = nearby };
             }
         }
 
@@ -132,6 +156,35 @@ namespace SmartAudit.Core.Domain.Helpers
             return JsonSerializer.Serialize(new
             {
                 mType = BondedDevices,
+                data = new
+                {
+                    msgId = messageId,
+                    req = new { nAdr = 0, param = new { } },
+                    returnVerbose = true,
+                },
+            });
+        }
+
+        // Přidání čidla do sítě podle kódu z nálepky (IQRF SmartConnect); adresa 0 = koordinátor přidělí první volnou
+        public static string SmartConnectRequest(string smartConnectCode, string messageId)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                mType = SmartConnect,
+                data = new
+                {
+                    msgId = messageId,
+                    req = new { deviceAddr = 0, smartConnectCode, bondingTestRetries = 1, userData = new[] { 0, 0, 0, 0 } },
+                    returnVerbose = true,
+                },
+            });
+        }
+
+        public static string NearbyNodesRequest(string messageId)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                mType = NearbyNodes,
                 data = new
                 {
                     msgId = messageId,

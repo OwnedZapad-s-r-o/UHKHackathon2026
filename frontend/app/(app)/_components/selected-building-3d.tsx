@@ -36,16 +36,18 @@ const STATUS_COLOR: Record<AuditStatus, string> = {
 // a tady se navíc pamatuje pro okamžité opakované kliknutí na stejný objekt
 const footprintCache = new Map<string, Promise<Footprint | null>>();
 
-function loadFootprint(facilityId: string) {
-  let pending = footprintCache.get(facilityId);
+// version = verze obrysu ze seznamu objektů: po doplnění nebo úpravě budovy vznikne nová adresa, stará cache se nepoužije
+function loadFootprint(facilityId: string, version: string) {
+  const key = `${facilityId}:${version}`;
+  let pending = footprintCache.get(key);
 
   if (!pending) {
-    pending = fetch(`/api/facilities/${facilityId}/footprint`)
+    pending = fetch(`/api/facilities/${facilityId}/footprint?v=${encodeURIComponent(version)}`)
       .then((response) => (response.ok ? (response.json() as Promise<Footprint>) : null))
       .catch(() => null);
-    footprintCache.set(facilityId, pending);
+    footprintCache.set(key, pending);
     // Neúspěch se nepamatuje — příští klik to zkusí znovu
-    pending.then((footprint) => footprint === null && footprintCache.delete(facilityId));
+    pending.then((footprint) => footprint === null && footprintCache.delete(key));
   }
 
   return pending;
@@ -53,15 +55,17 @@ function loadFootprint(facilityId: string) {
 
 type SelectedBuilding3DProps = {
   facilityId: string | null;
+  version: string;
   status: AuditStatus;
 };
 
-// Vybraná budova ve 3D. Podkladová mapa kreslí tutéž budovu šedě (OSM má v ČR půdorysy z katastru), proto:
+// Vybraná budova ve 3D. Obrys je budova z ČÚZK a přilehlé budovy doplněné správcem (MultiPolygon) — každá má svou výšku.
+// Podkladová mapa kreslí tutéž budovu šedě (OSM má v ČR půdorysy z katastru), proto:
 // - obrys je z ČÚZK rozšířený o ~0,4 m (server) — barevné stěny leží vně šedých, nic se nepřekrývá,
 // - výška se vezme ze skutečné budovy v dlaždicích (+0,4 m nad střechu); když tam není, odhad podle podlaží.
 // Obarvit přímo budovu z dlaždic nejde: ID prvků v dlaždicích CARTO nejsou napříč dlaždicemi unikátní.
 // Stav přichází ze seznamu objektů, ne s půdorysem — půdorys se cachuje, stav se mění průběžně.
-export function SelectedBuilding3D({ facilityId, status }: SelectedBuilding3DProps) {
+export function SelectedBuilding3D({ facilityId, version, status }: SelectedBuilding3DProps) {
   const { map, isLoaded } = useMap();
   const [footprint, setFootprint] = useState<Footprint | null>(null);
 
@@ -69,23 +73,24 @@ export function SelectedBuilding3D({ facilityId, status }: SelectedBuilding3DPro
     let cancelled = false;
 
     if (facilityId) {
-      loadFootprint(facilityId).then((loaded) => !cancelled && setFootprint(loaded));
+      loadFootprint(facilityId, version).then((loaded) => !cancelled && setFootprint(loaded));
     }
 
     return () => {
       cancelled = true;
       setFootprint(null);
     };
-  }, [facilityId]);
+  }, [facilityId, version]);
 
   useEffect(() => {
     if (!map || !isLoaded || !footprint?.geometry) return;
 
-    const rings = outerRings(footprint.geometry);
+    const polygons = polygonsOf(footprint.geometry);
     const color = STATUS_COLOR[status];
     const baseOpacity = map.getLayer(BASE_BUILDINGS_LAYER) ? map.getPaintProperty(BASE_BUILDINGS_LAYER, "fill-extrusion-opacity") : undefined;
-    let targetHeight = footprint.properties.heightMeters;
-    let resolved = false;
+    // Výška každé budovy zvlášť: odhad z podlaží, dokud se nenajde skutečná v dlaždicích
+    const targetHeights = polygons.map(() => footprint.properties.heightMeters);
+    const resolved = polygons.map(() => false);
     let frame = 0;
 
     ensureLayers(map);
@@ -97,26 +102,35 @@ export function SelectedBuilding3D({ facilityId, status }: SelectedBuilding3DPro
     function grow(now: number) {
       const progress = Math.min(1, (now - start) / GROW_MS);
       const eased = 1 - Math.pow(1 - progress, 3);
-      render(map!, footprint, targetHeight * eased);
+      render(map!, polygons, targetHeights.map((height) => height * eased));
       if (progress < 1) frame = requestAnimationFrame(grow);
     }
     frame = requestAnimationFrame(grow);
 
     function refineHeight() {
-      if (resolved || !map || rings.length === 0 || map.getZoom() < MIN_MATCH_ZOOM) return;
+      if (!map || resolved.every(Boolean) || map.getZoom() < MIN_MATCH_ZOOM) return;
 
-      const tileHeights = map
-        .querySourceFeatures(TILE_SOURCE, { sourceLayer: TILE_LAYER })
-        .filter((feature) => overlaps(feature.geometry, rings))
-        .map((feature) => Number(feature.properties?.render_height))
-        .filter((height) => Number.isFinite(height) && height > 0);
+      const tiles = map.querySourceFeatures(TILE_SOURCE, { sourceLayer: TILE_LAYER });
+      let changed = false;
 
-      if (tileHeights.length > 0) {
-        targetHeight = Math.max(...tileHeights) + ROOF_CLEARANCE_METERS;
-        if (performance.now() - start >= GROW_MS) render(map, footprint, targetHeight);
-      }
+      polygons.forEach((polygon, index) => {
+        if (resolved[index]) return;
 
-      resolved = true;
+        const tileHeights = tiles
+          .filter((feature) => overlaps(feature.geometry, [polygon[0]]))
+          .map((feature) => Number(feature.properties?.render_height))
+          .filter((height) => Number.isFinite(height) && height > 0);
+
+        // Nenalezená budova se zkusí znovu při dalším „idle“ — při skoku z jiné otevřené budovy běží první pokus
+        // ještě nad dlaždicemi staré polohy a odhadnutá výška by pak zůstala nižší než šedá budova z podkladu
+        if (tileHeights.length === 0) return;
+
+        targetHeights[index] = Math.max(...tileHeights) + ROOF_CLEARANCE_METERS;
+        resolved[index] = true;
+        changed = true;
+      });
+
+      if (changed && performance.now() - start >= GROW_MS) render(map, polygons, targetHeights);
     }
 
     refineHeight();
@@ -127,7 +141,7 @@ export function SelectedBuilding3D({ facilityId, status }: SelectedBuilding3DPro
       map.off("idle", refineHeight);
       if (!map.getStyle()) return;
 
-      render(map, null, 0);
+      render(map, [], []);
       if (baseOpacity !== undefined) {
         map.setPaintProperty(BASE_BUILDINGS_LAYER, "fill-extrusion-opacity", baseOpacity as PropertyValueSpecification<number>);
       }
@@ -178,16 +192,25 @@ function ensureLayers(map: MapLibreMap) {
   );
 }
 
-function render(map: MapLibreMap, footprint: Footprint | null, height: number) {
+function render(map: MapLibreMap, polygons: Position[][][], heights: number[]) {
   const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
   if (!source) return;
 
   const data: FeatureCollection = {
     type: "FeatureCollection",
-    features: footprint?.geometry ? [{ type: "Feature", geometry: footprint.geometry as Geometry, properties: { height } }] : [],
+    features: polygons.map((coordinates, index) => ({ type: "Feature", geometry: { type: "Polygon", coordinates }, properties: { height: heights[index] } })),
   };
 
   source.setData(data);
+}
+
+// Jednotlivé budovy obrysu: Polygon = jedna, MultiPolygon = budova z ČÚZK a doplněné přilehlé budovy
+function polygonsOf(geometry: Footprint["geometry"]): Position[][][] {
+  const typed = geometry as Geometry | null;
+  if (typed?.type === "Polygon") return [typed.coordinates];
+  if (typed?.type === "MultiPolygon") return typed.coordinates;
+
+  return [];
 }
 
 // Vnější obrysy polygonu (Polygon i MultiPolygon)

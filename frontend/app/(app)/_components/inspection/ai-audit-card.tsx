@@ -31,7 +31,7 @@ export function AiAuditCard({ facilityId, configured, initialAnalysis }: AiAudit
   return (
     <section className="mt-3.5 rounded-2xl border border-slate-200 bg-white p-4.5" aria-labelledby={`ai-${facilityId}`}>
       <div className="flex items-center gap-2">
-        <Sparkles className="size-4.5 text-hk-accent" aria-hidden />
+        <Sparkles className="size-4.5 text-hk-red" aria-hidden />
         <h2 id={`ai-${facilityId}`} className="text-lg font-bold tracking-tight">
           AI analýza
         </h2>
@@ -53,7 +53,7 @@ export function AiAuditCard({ facilityId, configured, initialAnalysis }: AiAudit
           type="button"
           onClick={generate}
           disabled={isPending}
-          className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-hk-accent text-sm font-bold text-white transition-colors hover:bg-hk-red disabled:opacity-60"
+          className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-hk-red text-sm font-bold text-white transition-colors hover:bg-hk-red-dark disabled:opacity-60"
         >
           <Sparkles className="size-4" aria-hidden />
           {isPending ? "Model analyzuje objekt…" : analysis ? "Vygenerovat znovu" : "Generovat AI audit"}

@@ -27,6 +27,6 @@ export function withParams(path: string, current: RawSearchParams | URLSearchPar
 }
 
 // Objekt v mapě i s jeho okresem — mapa ukáže špendlíky okresu a po zavření panelu zůstane v něm
-export function facilityMapHref(facility: { id: string; districtCode: string }, panel: "telemetrie" | "audit") {
+export function facilityMapHref(facility: { id: string; districtCode: string }, panel: "telemetrie" | "audit" | "budova") {
   return `/mapa?okres=${facility.districtCode}&objekt=${facility.id}&panel=${panel}` as const;
 }

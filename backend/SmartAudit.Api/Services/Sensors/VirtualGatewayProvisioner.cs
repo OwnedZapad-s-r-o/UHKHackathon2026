@@ -95,6 +95,7 @@ namespace SmartAudit.Api.Services.Sensors
 
                     var physical = Sensor.Physical(facilityId, zone?.Id, metric, device.Id, now);
                     _dbContext.Sensors.Add(physical);
+                    _dbContext.SensorReadings.AddRange(VirtualHistory.Backfill(device, node.Address, sensor.Type, physical.Id, now));
                     channel.LinkSensor(physical.Id, metric);
                     await SimulationHandover.TakeOverAsync(_dbContext, facilityId, zone?.Id, metric, ct);
                 }

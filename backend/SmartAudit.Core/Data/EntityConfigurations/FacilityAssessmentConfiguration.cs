@@ -24,6 +24,8 @@ namespace SmartAudit.Core.Data.EntityConfigurations
 
             builder.Property(a => a.AnnualLossCzk).HasPrecision(14, 2);
 
+            builder.Property(a => a.LossBeforeSensorsCzk).HasPrecision(14, 2);
+
             builder.HasIndex(a => a.FacilityId).IsUnique();
 
             builder.HasIndex(a => a.Status);

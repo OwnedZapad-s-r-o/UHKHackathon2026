@@ -16,7 +16,9 @@ const PROMISES = ["Kde kraj zbytečně topí a kolik to stojí", "Kde se ve tř�
 // Přihlášení = rozcestník: kraj a správce jdou do dema (bez registrace), veřejnost na hledání budov bez přihlášení.
 // Kdo má účet, rozbalí přihlášení e-mailem. Po vstupu do aplikace provede nového uživatele průvodce.
 export default async function LoginPage() {
-  if (await getSession()) redirect("/mapa");
+  // Staré přihlášení veřejnosti (dřív šlo do aplikace) nesmí zablokovat přihlášení jinou rolí
+  const session = await getSession();
+  if (session && session.role !== "Verejnost") redirect("/mapa");
 
   return (
     <main className="flex min-h-0 flex-1 overflow-y-auto bg-white text-hk-navy">
@@ -39,7 +41,7 @@ export default async function LoginPage() {
         <ul className="mt-6 space-y-2.5 text-[15px] text-white/80">
           {PROMISES.map((promise) => (
             <li key={promise} className="flex gap-2.5">
-              <Check className="mt-0.5 size-4 shrink-0 text-hk-accent" aria-hidden />
+              <Check className="mt-0.5 size-4 shrink-0 text-hk-red" aria-hidden />
               {promise}
             </li>
           ))}
@@ -111,12 +113,11 @@ export default async function LoginPage() {
             </div>
             <Link
               href="/objekty"
-              className="mt-3.5 flex h-11 items-center justify-center gap-2 rounded-xl bg-hk-navy text-[14px] font-bold text-white transition-colors hover:bg-hk-blue"
+              className="mt-3.5 flex h-12 items-center justify-center gap-2 rounded-xl bg-hk-navy text-[14px] font-bold text-white transition-colors hover:bg-hk-blue"
             >
               <Search className="size-4" aria-hidden />
               Najít svou školu nebo domov
             </Link>
-            <DemoButtons publicOnly />
           </div>
 
           <details className="group mt-6 rounded-2xl border border-slate-200 open:bg-slate-50/60">

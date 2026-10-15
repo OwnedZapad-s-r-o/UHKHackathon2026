@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Cpu, Radio, RadioTower } from "lucide-react";
-import { getFacilities, getGateways, getSession } from "@/lib/api";
+import { Cpu, Radio, RadioTower } from "lucide-react";
+import { getFacilities, getGateways, getNearbyDevices, getSession } from "@/lib/api";
 import { DEMO_NETWORK_GATEWAYS, formatAgo } from "@/lib/sensor-meta";
 import { readParam } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,11 @@ import { TopBar } from "../_components/top-bar";
 import { brokerHost } from "./broker-host";
 import { ConnectGatewayForm } from "./_components/connect-gateway-form";
 import { DemoNetworkPanel } from "./_components/demo-network-panel";
+import { GatewayList } from "./_components/gateway-list";
+import { GatewayRow, gatewayGroup, needsAttention } from "./_components/gateway-row";
+import { NearbyDevicesPanel } from "./_components/nearby-devices-panel";
+import { PublicMonitoringInfo } from "./_components/public-monitoring-info";
+import { SensorTourLink } from "./_components/sensor-tour-link";
 import { SENSOR_STEPS, SensorSteps } from "./_components/sensor-steps";
 import { Code, emulatorCommand } from "./_components/setup-guide";
 
@@ -28,16 +33,15 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
       <>
         <TopBar title="Senzory" />
         <main className="min-h-0 flex-1 overflow-y-auto p-6">
-          <p className="max-w-xl rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-            Připojování čidel je pro kraj a správce budov. Naměřené hodnoty vidíte v mapě u každého objektu.
-          </p>
+          <PublicMonitoringInfo />
         </main>
       </>
     );
   }
 
   const params = await searchParams;
-  const [data, facilities] = await Promise.all([getGateways(), getFacilities()]);
+  // Seznam nových zařízení nesmí shodit stránku — bez něj jde gateway pořád připojit ručně
+  const [data, facilities, nearby] = await Promise.all([getGateways(), getFacilities(), getNearbyDevices().catch(() => [])]);
   const host = await brokerHost(data.broker);
   const suggestedId = readParam(params, "gateway");
 
@@ -47,7 +51,9 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
 
   return (
     <>
-      <TopBar title="Senzory" />
+      <TopBar title="Senzory">
+        <SensorTourLink href="/senzory?pruvodce=1" />
+      </TopBar>
 
       <main className="min-h-0 flex-1 overflow-y-auto p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -71,6 +77,8 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_26rem]">
           <div className="min-w-0 space-y-4">
+            <NearbyDevicesPanel initial={nearby} facilities={options} />
+
             {data.unknown.length > 0 && (
               <section aria-labelledby="unknown" className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
                 <h2 id="unknown" className="flex items-center gap-2 text-[14px] font-bold text-amber-900">
@@ -96,7 +104,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
               </section>
             )}
 
-            <section aria-labelledby="gateways" className="rounded-2xl border border-slate-200 bg-white">
+            <section data-tour="senzory-seznam" aria-labelledby="gateways" className="rounded-2xl border border-slate-200 bg-white">
               <h2 id="gateways" className="border-b border-slate-100 px-5 py-3.5 text-[11px] font-bold tracking-wide text-slate-500 uppercase">
                 Připojené gatewaye
               </h2>
@@ -114,33 +122,15 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
                   </div>
                 </div>
               ) : (
-                <ul className="divide-y divide-slate-100">
-                  {data.gateways.map((gateway) => (
-                    <li key={gateway.id}>
-                      <Link href={`/senzory/${gateway.id}`} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50">
-                        <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-hk-navy">
-                          <RadioTower className="size-4.5" strokeWidth={1.75} aria-hidden />
-                          <span
-                            className={cn("absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white", gateway.online ? "bg-emerald-500" : "bg-slate-300")}
-                            aria-label={gateway.online ? "online" : "offline"}
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-2">
-                            <span className="truncate text-[13.5px] font-bold">{gateway.name}</span>
-                            {gateway.isVirtual && <VirtualBadge />}
-                          </span>
-                          <span className="block truncate text-xs text-slate-500">
-                            {gateway.facilityCode} · {gateway.facilityName}
-                          </span>
-                        </span>
-                        <GatewayProgress assigned={gateway.assignedCount} total={gateway.channelCount} online={gateway.online} />
-                        <span className="hidden shrink-0 text-right font-mono text-[11px] text-slate-500 md:block">{formatAgo(gateway.lastSeenAt)}</span>
-                        <ChevronRight className="size-4 shrink-0 text-slate-400" aria-hidden />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <GatewayList
+                  entries={data.gateways.map((gateway) => ({
+                    id: gateway.id,
+                    group: gatewayGroup(gateway),
+                    needsAttention: needsAttention(gateway),
+                    searchText: `${gateway.name} ${gateway.gatewayId} ${gateway.facilityCode} ${gateway.facilityName}`,
+                    row: <GatewayRow gateway={gateway} />,
+                  }))}
+                />
               )}
             </section>
 
@@ -173,7 +163,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
             </section>
           </div>
 
-          <section id="pripojit" aria-labelledby="connect" className="h-fit scroll-mt-4 rounded-2xl border-2 border-hk-red/20 bg-white p-5 xl:sticky xl:top-0">
+          <section id="pripojit" data-tour="senzory-formular" aria-labelledby="connect" className="h-fit scroll-mt-4 rounded-2xl border-2 border-hk-red/20 bg-white p-5 xl:sticky xl:top-0">
             <p className="font-mono text-[11px] font-bold text-hk-red">krok 1</p>
             <h2 id="connect" className="mt-0.5 flex items-center gap-2.5 text-lg font-bold tracking-tight">
               <RadioTower className="size-5 text-hk-blue" aria-hidden />
@@ -196,31 +186,6 @@ const NEXT_TEXT = [
   "Aplikace se sama zeptá na spárované uzly a jejich čidla. Uvidíte je naživo.",
   "U každého čidla vyberete místnost. Skutečná měření pak nahradí simulaci.",
 ];
-
-// Poctivé označení: data posílá aplikace místo hardwaru
-function VirtualBadge() {
-  return (
-    <span className="shrink-0 rounded-full border border-hk-blue/25 bg-[#EFF4FA] px-2 py-0.5 text-[10.5px] font-bold text-hk-blue" title="Gateway bez hardwaru — odpovídá za ni aplikace přes MQTT">
-      virtuální
-    </span>
-  );
-}
-
-function GatewayProgress({ assigned, total, online }: { assigned: number; total: number; online: boolean }) {
-  const done = total > 0 && assigned === total;
-  const label = total === 0 ? (online ? "hledá čidla" : "čeká na gateway") : done ? "vše v místnostech" : `${assigned}/${total} čidel v místnostech`;
-
-  return (
-    <span
-      className={cn(
-        "hidden shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold sm:inline-flex",
-        done ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800",
-      )}
-    >
-      {label}
-    </span>
-  );
-}
 
 function BrokerBadge({ connected, error, address }: { connected: boolean; error: string | null; address: string }) {
   return (

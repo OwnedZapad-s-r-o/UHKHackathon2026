@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAudit.Api.Extentions;
 using SmartAudit.Api.Features.Sensors.AssignChannel;
+using SmartAudit.Api.Features.Sensors.BondNode;
+using SmartAudit.Api.Features.Sensors.ClaimGateway;
 using SmartAudit.Api.Features.Sensors.CreateDemoNetwork;
 using SmartAudit.Api.Features.Sensors.CreateGateway;
 using SmartAudit.Api.Features.Sensors.CreateVirtualGateway;
@@ -11,6 +13,8 @@ using SmartAudit.Api.Features.Sensors.DeleteGateway;
 using SmartAudit.Api.Features.Sensors.GetBrokerCertificate;
 using SmartAudit.Api.Features.Sensors.GetGateway;
 using SmartAudit.Api.Features.Sensors.GetGateways;
+using SmartAudit.Api.Features.Sensors.GetNearbyDevices;
+using SmartAudit.Api.Features.Sensors.GetNearbyNodes;
 using SmartAudit.Api.Features.Sensors.PostGatewayMessage;
 using SmartAudit.Core.Common;
 
@@ -85,6 +89,47 @@ namespace SmartAudit.Api.Controllers
             var command = new CreateGatewayCommand(User.GetViewer(), request.FacilityId, request.Name, request.GatewayId, request.PollSeconds, request.Nodes ?? []);
 
             var result = await _mediator.Send(command, ct);
+
+            return result.ToActionResult();
+        }
+
+        // Nové gatewaye online, které čekají na spárování heslem z nálepky
+        [HttpGet]
+        [Route("nearby")]
+        public async Task<IActionResult> GetNearbyDevices(CancellationToken ct)
+        {
+            var result = await _mediator.Send(new GetNearbyDevicesCommand(User.GetViewer()), ct);
+
+            return result.ToActionResult();
+        }
+
+        [HttpPost]
+        [Route("claims")]
+        public async Task<IActionResult> ClaimGateway([FromBody] ClaimGatewayRequest request, CancellationToken ct)
+        {
+            var command = new ClaimGatewayCommand(User.GetViewer(), request.Serial, request.Password, request.FacilityId, request.Name);
+
+            var result = await _mediator.Send(command, ct);
+
+            return result.ToActionResult();
+        }
+
+        // Čidla v dosahu gatewaye mimo její síť
+        [HttpGet]
+        [Route("gateways/{id:guid}/nearby")]
+        public async Task<IActionResult> GetNearbyNodes(Guid id, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new GetNearbyNodesCommand(User.GetViewer(), id), ct);
+
+            return result.ToActionResult();
+        }
+
+        // Přidání čidla do sítě gatewaye kódem z nálepky (IQRF SmartConnect)
+        [HttpPost]
+        [Route("gateways/{id:guid}/nodes")]
+        public async Task<IActionResult> BondNode(Guid id, [FromBody] BondNodeRequest request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(new BondNodeCommand(User.GetViewer(), id, request.Code ?? string.Empty), ct);
 
             return result.ToActionResult();
         }

@@ -39,16 +39,18 @@ export function MapToolbar({ home }: MapToolbarProps) {
     return () => document.removeEventListener("fullscreenchange", handleChange);
   }, []);
 
+  // essential: pohyb kamery ukazuje, kam se mapa posunula — MapLibre by ho jinak při systémovém
+  // „omezit animace“ (prefers-reduced-motion) přeskočil a mapa by jen skočila
   function zoomBy(delta: number) {
-    map?.zoomTo(map.getZoom() + delta, { duration: 300 });
+    map?.zoomTo(map.getZoom() + delta, { duration: 300, essential: true });
   }
 
   function flyHome() {
-    map?.flyTo({ center: home.center, zoom: home.zoom, bearing: 0, pitch: 0, duration: 900 });
+    map?.flyTo({ center: home.center, zoom: home.zoom, bearing: 0, pitch: 0, duration: 900, essential: true });
   }
 
   function resetNorth() {
-    map?.resetNorthPitch({ duration: 300 });
+    map?.resetNorthPitch({ duration: 300, essential: true });
   }
 
   // 3D budovy jsou vidět až od přiblížení ~15, proto se při zapnutí 3D mapa zároveň přiblíží
@@ -56,9 +58,9 @@ export function MapToolbar({ home }: MapToolbarProps) {
     if (!map) return;
 
     if (is3d) {
-      map.easeTo({ pitch: 0, bearing: 0, duration: 600 });
+      map.easeTo({ pitch: 0, bearing: 0, duration: 600, essential: true });
     } else {
-      map.easeTo({ pitch: 60, bearing: -20, zoom: Math.max(map.getZoom(), 16), duration: 800 });
+      map.easeTo({ pitch: 60, bearing: -20, zoom: Math.max(map.getZoom(), 16), duration: 800, essential: true });
     }
   }
 

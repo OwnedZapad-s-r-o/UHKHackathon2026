@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Map, MapMarker, MarkerContent, MarkerLabel, MarkerTooltip, useMap } from "@/components/ui/map";
 import type { DistrictStats } from "@/lib/district-shading";
+import { MAP_HOME_EVENT } from "@/lib/map-events";
 import { withParams } from "@/lib/search-params";
 import type { AuditStatus, FacilityListItem } from "@/types/api";
+import { BuildingEditor, parseBuildingEditMode } from "./building-editor";
 import { DistrictLayer } from "./district-layer";
 import { FacilityDots } from "./facility-dots";
 import { FacilityPin, FacilityTooltipContent, SelectedLabel, TOOLTIP_CLASS } from "./facility-pin";
@@ -21,7 +23,7 @@ const GRAY_STYLES = {
 };
 
 // Výchozí výřez — celý Královéhradecký kraj
-const KHK_HOME = { center: [15.845, 50.352] as [number, number], zoom: 8.6 };
+export const KHK_HOME = { center: [15.845, 50.352] as [number, number], zoom: 8.6 };
 
 // Pohled na vybranou budovu — přiblížení a náklon, aby byla vidět ve 3D
 const BUILDING_VIEW = { zoom: 17.2, pitch: 60, bearing: -20 };
@@ -44,9 +46,11 @@ type FacilityMapProps = {
   selectedId: string | null;
   selectedDistrict: string | null;
   districtStats: Record<string, DistrictStats>;
+  // Správce budovy: jen jeho budovy — bez okresů a teček, výřez na jeho budovy
+  ownBuildings?: boolean;
 };
 
-export function FacilityMap({ facilities, selectedId, selectedDistrict, districtStats }: FacilityMapProps) {
+export function FacilityMap({ facilities, selectedId, selectedDistrict, districtStats, ownBuildings = false }: FacilityMapProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -58,7 +62,12 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
 
   // Dvě úrovně: celý kraj = štítky okresů a tečky, vybraný okres (nebo objekt, nebo přiblížení) = špendlíky.
   // Seznam objektů je při vybraném okresu už filtrovaný, takže se ukážou jen špendlíky toho okresu.
-  const showPins = selectedDistrict !== null || selected !== null || zoomedIn;
+  const showPins = ownBuildings || selectedDistrict !== null || selected !== null || zoomedIn;
+  const home = ownBuildings ? viewOf(facilities) : KHK_HOME;
+
+  // Úpravy budov vybraného objektu (?budova=doplnit | vymenit:{id} | obrys:{id}) — mapa patří editoru:
+  // bez 3D zvýraznění (překrývalo by body obrysu), bez špendlíků a bez kliků, které mění výběr
+  const editMode = selected ? parseBuildingEditMode(searchParams.get("budova")) : null;
 
   function navigate(changes: Record<string, string | null>) {
     router.push(withParams(pathname, searchParams, changes), { scroll: false });
@@ -67,30 +76,42 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
   return (
     <div data-map-root data-tour="mapa" className="relative h-full w-full bg-slate-100">
       {/* Prototyp je světlý — mapa drží světlý šedý styl i při tmavém systému */}
-      <Map center={KHK_HOME.center} zoom={KHK_HOME.zoom} styles={GRAY_STYLES} theme="light">
-        <MapToolbar home={KHK_HOME} />
-        <DistrictLayer
-          stats={districtStats}
-          selectedCode={selectedDistrict}
-          facilitySelected={selected !== null}
-          home={KHK_HOME}
-          showLabels={!showPins}
-          onSelect={(code) => navigate({ okres: code, objekt: null, panel: null })}
-          onClear={() => navigate({ okres: null })}
-        />
-        <FacilityDots facilities={facilities} visible={!showPins} />
+      <Map center={home.center} zoom={home.zoom} styles={GRAY_STYLES} theme="light">
+        <MapToolbar home={home} />
+        {!ownBuildings && (
+          <>
+            <DistrictLayer
+              stats={districtStats}
+              selectedCode={selectedDistrict}
+              facilitySelected={selected !== null}
+              home={KHK_HOME}
+              showLabels={!showPins}
+              onSelect={(code) => navigate({ okres: code, objekt: null, panel: null })}
+              onClear={() => navigate({ okres: null })}
+            />
+            <FacilityDots facilities={facilities} visible={!showPins} />
+          </>
+        )}
         <ZoomThreshold threshold={PIN_ZOOM} onChange={setZoomedIn} />
-        <SelectedBuilding3D facilityId={selected?.id ?? null} status={selected?.status ?? "Nominal"} />
-        <FlyToSelected facilityId={selected?.id ?? null} longitude={selected?.longitude} latitude={selected?.latitude} districtSelected={selectedDistrict !== null} />
+        <SelectedBuilding3D facilityId={editMode ? null : (selected?.id ?? null)} version={selected?.footprintVersion ?? "0"} status={selected?.status ?? "Nominal"} />
+        {selected && editMode && <BuildingEditor key={`${selected.id}-${searchParams.get("budova")}`} facilityId={selected.id} mode={editMode} />}
+        <FlyToSelected
+          facilityId={selected?.id ?? null}
+          longitude={selected?.longitude}
+          latitude={selected?.latitude}
+          districtSelected={selectedDistrict !== null}
+          home={home}
+        />
         <MapClickRouter
           facilitySelected={selected !== null}
           districtSelected={selectedDistrict !== null}
           onSelectDistrict={(code) => navigate({ okres: code, objekt: null, panel: null })}
           onClearDistrict={() => navigate({ okres: null, objekt: null, panel: null })}
           onDeselectFacility={() => navigate({ objekt: null, panel: null })}
+          disabled={editMode !== null}
         />
 
-        {showPins && ordered.map((facility, index) => {
+        {showPins && !editMode && ordered.map((facility, index) => {
           const isSelected = facility.id === selectedId;
 
           return (
@@ -120,9 +141,24 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
         })}
       </Map>
 
-      <MapLegend facilities={facilities} showDistricts={selected === null && !zoomedIn} />
+      <MapLegend facilities={facilities} showDistricts={!ownBuildings && selected === null && !zoomedIn} showCategories={!ownBuildings} />
     </div>
   );
+}
+
+// Výřez na budovy správce: střed a přiblížení podle toho, jak daleko od sebe leží (jedna budova = ulice kolem ní)
+export function viewOf(facilities: FacilityListItem[]) {
+  if (facilities.length === 0) return KHK_HOME;
+
+  const longitudes = facilities.map((f) => f.longitude);
+  const latitudes = facilities.map((f) => f.latitude);
+  const span = Math.max(Math.max(...longitudes) - Math.min(...longitudes), (Math.max(...latitudes) - Math.min(...latitudes)) * 1.6);
+  const zoom = span < 0.004 ? 15.5 : Math.min(15.5, Math.max(KHK_HOME.zoom, Math.log2(360 / span) - 1));
+
+  return {
+    center: [(Math.max(...longitudes) + Math.min(...longitudes)) / 2, (Math.max(...latitudes) + Math.min(...latitudes)) / 2] as [number, number],
+    zoom,
+  };
 }
 
 // Hlásí jen překročení prahu přiblížení — ne každý krok zoomu, jinak by se mapa překreslovala při každém pohybu kolečkem
@@ -151,24 +187,47 @@ function ZoomThreshold({ threshold, onChange }: { threshold: number; onChange: (
   return null;
 }
 
-type FlyToSelectedProps = { facilityId: string | null; longitude?: number; latitude?: number; districtSelected: boolean };
+type FlyToSelectedProps = {
+  facilityId: string | null;
+  longitude?: number;
+  latitude?: number;
+  districtSelected: boolean;
+  home: { center: [number, number]; zoom: number };
+};
 
 // Po výběru objektu mapa přeletí k budově a nakloní se, aby byla vidět ve 3D;
 // po zrušení výběru se jen srovná náklon — výřez zůstane, uživatel se nemá kde ztratit.
 // Je-li vybraný okres, kameru po zavření objektu vede DistrictLayer (přelet zpět na celý okres).
-function FlyToSelected({ facilityId, longitude, latitude, districtSelected }: FlyToSelectedProps) {
+// „Celý kraj“ v drobečkové navigaci (requestMapHome) přeletí na celý kraj hned, ještě než se změní URL —
+// náklon se pak už nesrovnává, easeTo by přelet přerušil.
+function FlyToSelected({ facilityId, longitude, latitude, districtSelected, home }: FlyToSelectedProps) {
   const { map, isLoaded } = useMap();
   const hadSelection = useRef(false);
+  const homeRequested = useRef(false);
+
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    function flyHome() {
+      homeRequested.current = true;
+      map!.flyTo({ center: home.center, zoom: home.zoom, pitch: 0, bearing: 0, duration: 1100, essential: true });
+    }
+
+    window.addEventListener(MAP_HOME_EVENT, flyHome);
+    return () => window.removeEventListener(MAP_HOME_EVENT, flyHome);
+  }, [map, isLoaded, home]);
 
   useEffect(() => {
     if (!map || !isLoaded) return;
 
     if (facilityId && longitude !== undefined && latitude !== undefined) {
       hadSelection.current = true;
+      homeRequested.current = false;
       map.flyTo({ center: [longitude, latitude], ...BUILDING_VIEW, duration: 1600, essential: true });
     } else if (hadSelection.current) {
       hadSelection.current = false;
-      if (!districtSelected) map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+      if (!districtSelected && !homeRequested.current) map.easeTo({ pitch: 0, bearing: 0, duration: 700, essential: true });
+      homeRequested.current = false;
     }
   }, [map, isLoaded, facilityId, longitude, latitude, districtSelected]);
 

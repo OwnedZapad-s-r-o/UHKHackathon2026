@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ChevronRight, ExternalLink, FileDown, X } from "lucide-react";
-import { getFacilityDetail } from "@/lib/api";
+import { getFacilityDetail, getSession } from "@/lib/api";
 import { STATUS_META, formatMillionsCzk, formatNumber } from "@/lib/facility-meta";
 import { withParams, type RawSearchParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { FacilityDetail } from "@/types/api";
 import { AuditTab } from "./audit-tab";
 import { BuildingTab } from "./building-tab";
+import { ContractsTab } from "./contracts-tab";
 import { OverviewTab } from "./overview-tab";
 import { TelemetryTab } from "./telemetry-tab";
 
@@ -15,6 +16,7 @@ export const PANEL_TABS = [
   { key: "telemetrie", label: "Telemetrie" },
   { key: "audit", label: "Audit" },
   { key: "budova", label: "Budova" },
+  { key: "smlouvy", label: "Smlouvy" },
 ] as const;
 
 export type PanelTab = (typeof PANEL_TABS)[number]["key"];
@@ -23,10 +25,17 @@ type InspectionPanelProps = {
   facilityId: string;
   tab: PanelTab;
   searchParams: RawSearchParams;
+  // Správce jediné budovy panel nezavírá — neměl by kam jít
+  closable?: boolean;
 };
 
-export async function InspectionPanel({ facilityId, tab, searchParams }: InspectionPanelProps) {
-  const facility = await getFacilityDetail(facilityId);
+export async function InspectionPanel({ facilityId, tab, searchParams, closable = true }: InspectionPanelProps) {
+  const [facility, session] = await Promise.all([getFacilityDetail(facilityId), getSession()]);
+
+  // Smlouvy s částkami v Kč vidí jen kraj a správce — veřejnost záložku nemá (a odkaz ?panel=smlouvy spadne na telemetrii)
+  const canSeeContracts = session !== null && session.role !== "Verejnost";
+  const tabs = PANEL_TABS.filter((t) => canSeeContracts || t.key !== "smlouvy");
+  const activeTab = tabs.some((t) => t.key === tab) ? tab : "telemetrie";
 
   return (
     <div className="p-5">
@@ -43,29 +52,31 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
           <FileDown className="size-3.5" aria-hidden />
           PDF
         </a>
-        <Link
-          href={withParams("/mapa", searchParams, { objekt: null, panel: null })}
-          scroll={false}
-          aria-label="Zrušit výběr objektu"
-          title="Zrušit výběr objektu (Esc)"
-          className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-hk-navy"
-        >
-          <X className="size-4" />
-        </Link>
+        {closable && (
+          <Link
+            href={withParams("/mapa", searchParams, { objekt: null, panel: null })}
+            scroll={false}
+            aria-label="Zrušit výběr objektu"
+            title="Zrušit výběr objektu (Esc)"
+            className="flex size-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-hk-navy"
+          >
+            <X className="size-4" />
+          </Link>
+        )}
       </div>
 
       <FacilityHeader facility={facility} />
 
       <nav data-tour="panel-zalozky" className="mt-4 flex gap-0.5 border-b border-slate-200" aria-label="Záložky objektu">
-        {PANEL_TABS.map(({ key, label }) => (
+        {tabs.map(({ key, label }) => (
           <Link
             key={key}
             href={withParams("/mapa", searchParams, { panel: key })}
             scroll={false}
-            aria-current={tab === key ? "page" : undefined}
+            aria-current={activeTab === key ? "page" : undefined}
             className={cn(
               "px-3 pb-2.5 text-[13px] transition-colors hover:text-black",
-              tab === key ? "font-bold text-black shadow-[inset_0_-2px_0_0_var(--color-hk-red)]" : "text-slate-500",
+              activeTab === key ? "font-bold text-black shadow-[inset_0_-2px_0_0_var(--color-hk-red)]" : "text-slate-500",
             )}
           >
             {label}
@@ -73,10 +84,11 @@ export async function InspectionPanel({ facilityId, tab, searchParams }: Inspect
         ))}
       </nav>
 
-      {tab === "prehled" && <OverviewTab facility={facility} />}
-      {tab === "telemetrie" && <TelemetryTab facility={facility} />}
-      {tab === "audit" && <AuditTab facility={facility} />}
-      {tab === "budova" && <BuildingTab facility={facility} />}
+      {activeTab === "prehled" && <OverviewTab facility={facility} />}
+      {activeTab === "telemetrie" && <TelemetryTab facility={facility} />}
+      {activeTab === "audit" && <AuditTab facility={facility} />}
+      {activeTab === "budova" && <BuildingTab facility={facility} searchParams={searchParams} />}
+      {activeTab === "smlouvy" && <ContractsTab facility={facility} />}
     </div>
   );
 }

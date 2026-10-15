@@ -10,7 +10,8 @@ namespace SmartAudit.Core.Domain.Helpers
         // Podle id instance se pozná, že odpověď poslala aplikace sama (a ne externí emulátor nebo hardware)
         public const string InstanceId = "smartaudit-virtual";
 
-        public static string? Respond(string gatewayId, string requestJson, DateTimeOffset now)
+        // bonded = adresy uzlů, které jsou v síti gatewaye (včetně čidel přidaných přes SmartConnect)
+        public static string? Respond(string gatewayId, string requestJson, DateTimeOffset now, IReadOnlyCollection<int>? bonded = null)
         {
             JsonNode? request;
             try
@@ -28,7 +29,7 @@ namespace SmartAudit.Core.Domain.Helpers
             var req = data?["req"];
             var address = req?["nAdr"]?.GetValue<int>() ?? 0;
 
-            var nodes = VirtualGateways.NodesOf(gatewayId);
+            var nodes = VirtualGateways.NodesOf(gatewayId, bonded);
             var profile = VirtualGateways.ProfileOf(gatewayId);
 
             switch (messageType)
@@ -41,7 +42,7 @@ namespace SmartAudit.Core.Domain.Helpers
                     if (node == null)
                         return Envelope(messageType, messageId, address, null, 1002, "Timeout — uzel neodpověděl");
 
-                    var sensors = new JsonArray(node.Sensors.Select(s => (JsonNode)Sensor(gatewayId, profile, node.Address, s, now)).ToArray());
+                    var sensors = new JsonArray(node.Sensors.Select(s => (JsonNode)Sensor(gatewayId, profile, node, s, now)).ToArray());
                     return Envelope(messageType, messageId, address, new JsonObject { ["sensors"] = sensors });
 
                 case IqrfResponseParser.SensorFrc:
@@ -51,18 +52,45 @@ namespace SmartAudit.Core.Domain.Helpers
                     var frc = new JsonArray();
                     for (var a = 0; a <= nodes.Max(n => n.Address); a++)
                     {
-                        var sensor = nodes.FirstOrDefault(n => n.Address == a)?.Sensors.Where(s => s.Type == type).ElementAtOrDefault(index);
-                        frc.Add(sensor == null ? null : Sensor(gatewayId, profile, a, sensor, now));
+                        var frcNode = nodes.FirstOrDefault(n => n.Address == a);
+                        var sensor = frcNode?.Sensors.Where(s => s.Type == type).ElementAtOrDefault(index);
+                        frc.Add(sensor == null ? null : Sensor(gatewayId, profile, frcNode!, sensor, now));
                     }
 
                     return Envelope(messageType, messageId, 0, new JsonObject { ["sensors"] = frc });
+
+                case IqrfResponseParser.SmartConnect:
+                    // Kód z nálepky čidla v dosahu → čidlo dostane adresu v síti; už přidané čidlo odpoví stejnou adresou
+                    var code = req?["smartConnectCode"]?.GetValue<string>();
+                    var candidate = PairableDevices.NearbyOf(gatewayId).FirstOrDefault(n => PairingCode.Matches(n.Code, code));
+                    if (candidate == null)
+                        return Envelope(messageType, messageId, 0, null, 1003, "Bonding se nezdařil — čidlo s tímto kódem neodpovědělo");
+
+                    var connected = Envelope(messageType, messageId, 0, null);
+                    var json = JsonNode.Parse(connected)!;
+                    var rsp = json["data"]!["rsp"]!.AsObject();
+                    rsp["assignedAddr"] = candidate.Node.Address;
+                    rsp["nodesNr"] = nodes.Count + (nodes.Any(n => n.Address == candidate.Node.Address) ? 0 : 1);
+                    return json.ToJsonString();
+
+                case IqrfResponseParser.NearbyNodes:
+                    var nearby = PairableDevices.NearbyOf(gatewayId)
+                        .Where(n => nodes.All(b => b.Address != n.Node.Address))
+                        .Select(n => (JsonNode)new JsonObject
+                        {
+                            ["mid"] = n.Mid,
+                            ["sensors"] = new JsonArray(n.Node.Sensors.Select(s => (JsonNode)s.Type).ToArray()),
+                            ["rssi"] = -60 - Math.Abs(StableHash.Of(n.Mid) % 3) * 7,
+                        })
+                        .ToArray();
+                    return Envelope(messageType, messageId, 0, new JsonObject { ["nodes"] = new JsonArray(nearby) });
 
                 default:
                     return messageType == null ? null : Envelope(messageType, messageId, address, null, -1, "Virtuální gateway tento typ zprávy nepodporuje");
             }
         }
 
-        private static JsonObject Sensor(string gatewayId, VirtualProfile profile, int address, VirtualSensor sensor, DateTimeOffset now)
+        private static JsonObject Sensor(string gatewayId, VirtualProfile profile, VirtualNode node, VirtualSensor sensor, DateTimeOffset now)
         {
             return new JsonObject
             {
@@ -70,7 +98,7 @@ namespace SmartAudit.Core.Domain.Helpers
                 ["type"] = sensor.Type,
                 ["name"] = sensor.Name,
                 ["shortName"] = sensor.Id[..3],
-                ["value"] = VirtualGateways.Value(gatewayId, profile, address, sensor.Type, now),
+                ["value"] = VirtualGateways.Value(gatewayId, profile, node.Address, sensor.Type, now, node.Overheats),
                 ["unit"] = sensor.Unit,
                 ["decimalPlaces"] = 2,
             };

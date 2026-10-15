@@ -1,5 +1,6 @@
 using NetTopologySuite.Geometries;
 using SmartAudit.Core.Domain.Enums;
+using SmartAudit.Core.Domain.Helpers;
 
 namespace SmartAudit.Core.Data.Tables
 {
@@ -22,6 +23,22 @@ namespace SmartAudit.Core.Data.Tables
         // Odvozené odhady
         public EnergyCategory EnergyCategory { get; private set; }
         public int EstimatedFloors { get; private set; } = 2;
+
+
+        // Opravy od správce — mají přednost před ČÚZK a odhady; původní hodnoty zůstávají pro srovnání.
+        // AreaOverride je zastavěná plocha celého objektu (nahrazuje ČÚZK i doplněné přilehlé budovy).
+        public double? AreaOverride { get; private set; }
+        public int? FloorsOverride { get; private set; }
+        public int? YearOverride { get; private set; }
+        public DateTimeOffset? EditedAt { get; private set; }
+
+        public double? EffectiveArea(double addedPartsArea) => AreaOverride ?? (addedPartsArea > 0 ? (BuiltUpArea ?? 0) + addedPartsArea : BuiltUpArea);
+
+        public int EffectiveFloors => FloorsOverride ?? EstimatedFloors;
+
+        public int? EffectiveYear => YearOverride ?? ConstructionYear;
+
+        public EnergyCategory EffectiveEnergyCategory => YearOverride is { } year ? BuildingEstimator.CategoryFromYear(year) : EnergyCategory;
 
 
         // Cizí klíče
@@ -56,6 +73,24 @@ namespace SmartAudit.Core.Data.Tables
             ParcelRef = parcelRef;
             RuianCode = ruianCode;
             FetchedAt = DateTimeOffset.UtcNow;
+        }
+
+        // null = vrátit údaj z ČÚZK / odhadu
+        public void SetOverrides(double? area, int? floors, int? year, DateTimeOffset now)
+        {
+            if (area is <= 0 or > 200_000)
+                throw new ArgumentException("Zastavěná plocha musí být 1–200 000 m².", nameof(area));
+
+            if (floors is < 1 or > 40)
+                throw new ArgumentException("Počet podlaží musí být 1–40.", nameof(floors));
+
+            if (year is < 1000 || year > now.Year)
+                throw new ArgumentException("Rok výstavby musí být mezi 1000 a letoškem.", nameof(year));
+
+            AreaOverride = area;
+            FloorsOverride = floors;
+            YearOverride = year;
+            EditedAt = area == null && floors == null && year == null ? null : now;
         }
 
         public void SetEstimates(EnergyCategory energyCategory, int estimatedFloors)

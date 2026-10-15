@@ -18,6 +18,10 @@ namespace SmartAudit.Core.Domain.Settings
         // Tajemství pro odvození hesla každé gatewaye (HMAC) — heslo se nikde neukládá a jde kdykoli znovu ukázat správci
         public string DeviceSecret { get; set; } = string.Empty;
 
+        // Heslo sdíleného účtu „provisioning“ na brokeru — smí jen ohlásit nespárovanou gatewayi a převzít zašifrovanou nabídku.
+        // Prázdné = párování heslem z nálepky je vypnuté.
+        public string ProvisioningPassword { get; set; } = string.Empty;
+
         // Výchozí topicy IQRF Gateway Daemonu; {0} = id gatewaye
         public string ResponseTopicFilter { get; set; } = "gateway/+/iqrf/responses";
         public string RequestTopicTemplate { get; set; } = "gateway/{0}/iqrf/requests";

@@ -14,10 +14,13 @@ namespace SmartAudit.Api.Services
 
     public record AiAuditResult(string Model, string Summary, string RootCause, IReadOnlyList<AiRecommendation> Recommendations, string LetterDraft);
 
+    // Smlouva organizace z Registru smluv, jak ji dostane model — číslo a odkaz, aby šla v doporučení dohledat
+    public record AiContractContext(string Title, ContractCategory Category, string PartnerName, string? ContractNumber, string RegistryUrl, decimal? AmountWithoutVat, decimal? AmountWithVat, DateOnly? DateSigned, double? UnitPriceCzkPerMwh);
+
     public interface IAiAuditService
     {
         bool IsConfigured { get; }
-        Task<AiAuditResult> AnalyzeAsync(GetFacilityDetailDto facility, CancellationToken ct);
+        Task<AiAuditResult> AnalyzeAsync(GetFacilityDetailDto facility, IReadOnlyCollection<AiContractContext> contracts, CancellationToken ct);
     }
 
     // AI analýza objektu přes Azure OpenAI — model dostane jen data z aplikace a pevný katalog opatření,
@@ -48,6 +51,11 @@ namespace SmartAudit.Api.Services
             - U objektu v památkové ochraně označ opatření se zásahem do obálky heritageSafe = false.
             - Dopis je krátký formální dopis správci budovy (na vědomí zřizovateli) s konkrétními zjištěními a čísly. Místo jmen použij zástupné [jméno], [funkce].
             - Telemetrie je zatím simulovaná — neuváděj to jako problém objektu.
+            - Pokud organizace disponuje servisní smlouvou na kotelnu, vytápění nebo MaR (sekce SMLOUVY, druh „servis“), doporuč seřízení
+              a nastavení útlumu uplatnit v rámci této smlouvy — uveď dodavatele a číslo smlouvy (nebo odkaz do registru) a jako náklad
+              „v rámci servisní smlouvy“. Smlouvy, které v kontextu nejsou, nevymýšlej.
+            - Pokud je v SMLOUVÁCH stavební smlouva na zateplení, okna nebo snížení energetické náročnosti, zmiň ji jako souvislost
+              a stejné opatření znovu nenavrhuj.
             """;
 
         private const string ResponseSchema = """
@@ -88,7 +96,7 @@ namespace SmartAudit.Api.Services
 
         public bool IsConfigured => _settings.IsConfigured;
 
-        public async Task<AiAuditResult> AnalyzeAsync(GetFacilityDetailDto facility, CancellationToken ct)
+        public async Task<AiAuditResult> AnalyzeAsync(GetFacilityDetailDto facility, IReadOnlyCollection<AiContractContext> contracts, CancellationToken ct)
         {
             if (!IsConfigured)
                 throw new InvalidOperationException("Azure OpenAI není nastavené");
@@ -103,7 +111,7 @@ namespace SmartAudit.Api.Services
                 ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("smartaudit_ai_audit", BinaryData.FromString(ResponseSchema), jsonSchemaIsStrict: true),
             };
 
-            ChatMessage[] messages = [new SystemChatMessage(SystemPrompt), new UserChatMessage(BuildContext(facility))];
+            ChatMessage[] messages = [new SystemChatMessage(SystemPrompt), new UserChatMessage(BuildContext(facility, contracts))];
 
             ChatCompletion completion = await chat.CompleteChatAsync(messages, options, ct);
 
@@ -119,7 +127,7 @@ namespace SmartAudit.Api.Services
         }
 
         // Kontext pro model — stejná data, jaká vidí uživatel v inspekčním panelu
-        private static string BuildContext(GetFacilityDetailDto facility)
+        private static string BuildContext(GetFacilityDetailDto facility, IReadOnlyCollection<AiContractContext> contracts)
         {
             var text = new StringBuilder();
             var assessment = facility.Assessment;
@@ -155,11 +163,33 @@ namespace SmartAudit.Api.Services
                 text.AppendLine($"Dotace do ORP 2021–2025: {grants.Count} dotací, {((grants.Total ?? 0) / 1_000_000m).ToString("0.#", Cs)} mil. Kč");
 
             text.AppendLine();
+            text.AppendLine("SMLOUVY ORGANIZACE V REGISTRU SMLUV (energie a provoz budovy):");
+            if (contracts.Count == 0)
+                text.AppendLine("- žádné nenalezeny");
+
+            foreach (var contract in contracts)
+            {
+                var amount = contract.AmountWithoutVat is { } withoutVat ? $"{withoutVat.ToString("N0", Cs)} Kč bez DPH"
+                    : contract.AmountWithVat is { } withVat ? $"{withVat.ToString("N0", Cs)} Kč vč. DPH" : "hodnota neuvedena";
+                var price = contract.UnitPriceCzkPerMwh is { } unitPrice ? $", cena energie {unitPrice.ToString("N0", Cs)} Kč/MWh" : "";
+
+                text.AppendLine($"- [{ContractLabel(contract.Category)}] {contract.Title}; dodavatel {contract.PartnerName}; č. {contract.ContractNumber ?? "neuvedeno"}; uzavřeno {contract.DateSigned?.ToString("d. M. yyyy", Cs) ?? "neuvedeno"}; {amount}{price}; {contract.RegistryUrl}");
+            }
+
+            text.AppendLine();
             text.AppendLine("KATALOG OPATŘENÍ:");
             text.AppendLine(MeasureCatalog);
 
             return text.ToString();
         }
+
+        private static string ContractLabel(ContractCategory category) => category switch
+        {
+            ContractCategory.EnergySupply => "dodávka energie",
+            ContractCategory.FacilityManagement => "servis",
+            ContractCategory.Reconstruction => "stavební úpravy",
+            _ => "jiné",
+        };
 
         private static string Format(double? value) => value == null ? "údaj chybí" : value.Value.ToString("0.#", Cs);
 

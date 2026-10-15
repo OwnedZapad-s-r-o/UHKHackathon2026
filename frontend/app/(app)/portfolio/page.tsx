@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, PenLine, Plus, Search } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { getFacilities, getSession } from "@/lib/api";
 import { CATEGORY_META, STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
@@ -46,18 +46,27 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
   const rows = sortFacilities(facilities, sortKey, direction);
   const moneyVisible = facilities.some((f) => f.annualLossCzk !== null);
   const columns = COLUMNS.filter((c) => c.key !== "loss" || moneyVisible);
+  const ownBuildings = session?.role === "Spravce";
+  // Upravovat budovy může kraj a správce (stejné pravidlo jako záložka Budova v detailu objektu)
+  const canEdit = session !== null && session.role !== "Verejnost";
 
   return (
     <>
-      <TopBar title="Portfolio">
+      <TopBar title={ownBuildings ? "Moje budovy" : "Portfolio"}>
         {session?.role === "Kraj" && <ExecutiveSummaryLink />}
+        {ownBuildings && (
+          <Link href="/budovy/nova" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-hk-red px-3.5 text-[13px] font-bold text-white transition-colors hover:bg-hk-red-dark">
+            <Plus className="size-4" aria-hidden />
+            Přidat budovu
+          </Link>
+        )}
         <PortfolioReportLink onlyIssues={readParam(params, "zjisteni") === "1"} />
       </TopBar>
 
       <main className="@container min-h-0 flex-1 overflow-y-auto p-4 @3xl:p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="min-w-0">
-            <h1 className="text-[28px] leading-tight font-bold tracking-tight @3xl:text-[32px]">Portfolio objektů</h1>
+            <h1 className="text-[28px] leading-tight font-bold tracking-tight @3xl:text-[32px]">{ownBuildings ? "Moje budovy" : "Portfolio objektů"}</h1>
             <p className="mt-1.5 text-sm text-slate-600">Objekty ve zřizovatelské působnosti Královéhradeckého kraje napojené na telemetrii.</p>
           </div>
 
@@ -88,8 +97,8 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
           </div>
           <ul className="space-y-2.5">
             {rows.map((facility) => (
-              <li key={facility.id}>
-                <PortfolioCard facility={facility} moneyVisible={moneyVisible} />
+              <li key={facility.id} className="relative">
+                <PortfolioCard facility={facility} moneyVisible={moneyVisible} canEdit={canEdit} />
               </li>
             ))}
           </ul>
@@ -112,25 +121,44 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
                       className={cn("px-3 py-3 text-[11px] font-normal whitespace-nowrap first:pl-4 last:pr-4", column.align === "right" && "text-right", column.className)}
                       aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : undefined}
                     >
-                      <Link href={withParams("/portfolio", params, { razeni: column.key, smer: nextDirection })} className={cn("hover:text-black", active ? "font-bold text-black" : "text-slate-500")}>
+                      <Link
+                        href={withParams("/portfolio", params, { razeni: column.key, smer: nextDirection })}
+                        className={cn("group inline-flex items-center gap-1 hover:text-hk-navy", active ? "font-bold text-hk-navy" : "text-slate-500")}
+                      >
                         {column.label}
-                        {active && (direction === "asc" ? " ↑" : " ↓")}
+                        {/* Šipka u každého sloupce: neaktivní naznačuje, že jde řadit, aktivní ukazuje směr */}
+                        {active ? (
+                          direction === "asc" ? (
+                            <ArrowUp className="size-3.5 text-hk-red" aria-label="vzestupně" />
+                          ) : (
+                            <ArrowDown className="size-3.5 text-hk-red" aria-label="sestupně" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="size-3 text-slate-300 group-hover:text-slate-500" aria-hidden />
+                        )}
                       </Link>
                     </th>
                   );
                 })}
+                {canEdit && (
+                  <th scope="col" className="py-3 pr-4 pl-1">
+                    <span className="sr-only">Akce</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {rows.map((facility) => (
-                <PortfolioRow key={facility.id} facility={facility} moneyVisible={moneyVisible} />
+                <PortfolioRow key={facility.id} facility={facility} moneyVisible={moneyVisible} canEdit={canEdit} />
               ))}
             </tbody>
           </table>
 
           {rows.length === 0 && <EmptyState />}
 
-          <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">{rows.length} záznamů · klikem na název otevřete objekt v mapě</p>
+          <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
+            {rows.length} záznamů · klikem na název otevřete objekt v mapě{canEdit && ", tužkou úpravu budovy"}
+          </p>
         </div>
       </main>
     </>
@@ -139,6 +167,20 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
 
 function facilityHref(facility: FacilityListItem) {
   return facilityMapHref(facility, "telemetrie");
+}
+
+// Otevře objekt v mapě rovnou na záložce Budova (přilehlé budovy, obrys, údaje pro výpočet ztráty)
+function EditBuildingLink({ facility, className }: { facility: FacilityListItem; className?: string }) {
+  return (
+    <Link
+      href={facilityMapHref(facility, "budova")}
+      title="Upravit budovu"
+      aria-label={`Upravit budovu ${facility.name}`}
+      className={cn("inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-hk-navy", className)}
+    >
+      <PenLine className="size-4" aria-hidden />
+    </Link>
+  );
 }
 
 function StatusPill({ facility }: { facility: FacilityListItem }) {
@@ -153,7 +195,7 @@ function StatusPill({ facility }: { facility: FacilityListItem }) {
   );
 }
 
-function PortfolioRow({ facility, moneyVisible }: { facility: FacilityListItem; moneyVisible: boolean }) {
+function PortfolioRow({ facility, moneyVisible, canEdit }: { facility: FacilityListItem; moneyVisible: boolean; canEdit: boolean }) {
   const CategoryIcon = CATEGORY_META[facility.category].icon;
   const href = facilityHref(facility);
 
@@ -185,30 +227,39 @@ function PortfolioRow({ facility, moneyVisible }: { facility: FacilityListItem; 
       <td className={cn("px-3 py-3 text-right font-mono whitespace-nowrap", (facility.co2 ?? 0) > 1500 && "text-amber-800")}>{formatNumber(facility.co2)}</td>
       <td className="hidden px-3 py-3 text-right font-mono whitespace-nowrap @5xl:table-cell">{formatNumber(facility.power)}</td>
       {moneyVisible && <td className="px-3 py-3 text-right font-mono whitespace-nowrap">{facility.annualLossCzk ? formatCzk(facility.annualLossCzk) : "—"}</td>}
-      <td className="max-w-56 py-3 pr-4 pl-3">
+      <td className={cn("max-w-56 py-3 pl-3", canEdit ? "pr-1" : "pr-4")}>
         <StatusPill facility={facility} />
       </td>
+      {canEdit && (
+        <td className="py-2 pr-3 pl-1 text-right">
+          <EditBuildingLink facility={facility} />
+        </td>
+      )}
     </tr>
   );
 }
 
-function PortfolioCard({ facility, moneyVisible }: { facility: FacilityListItem; moneyVisible: boolean }) {
+// Úprava leží nad kartou jako sourozenec v <li> — odkaz nesmí být uvnitř jiného odkazu
+function PortfolioCard({ facility, moneyVisible, canEdit }: { facility: FacilityListItem; moneyVisible: boolean; canEdit: boolean }) {
   return (
-    <Link href={facilityHref(facility)} className="block rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-hk-red/40">
-      <p className="font-mono text-[11px] text-hk-blue">{facility.code}</p>
-      <p className="mt-0.5 text-[14px] leading-snug font-bold">{facility.name}</p>
-      <p className="mt-0.5 text-xs text-slate-500">
-        {facility.districtName} · {facility.kind}
-      </p>
-      <div className="mt-2.5">
-        <StatusPill facility={facility} />
-      </div>
-      <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-[12px]">
-        <Value label="Teplota" value={formatNumber(facility.temperature, "°C")} />
-        <Value label="CO₂" value={formatNumber(facility.co2, "ppm")} />
-        {moneyVisible ? <Value label="Ztráta / rok" value={facility.annualLossCzk ? formatCzk(facility.annualLossCzk) : "—"} /> : <Value label="Příkon" value={formatNumber(facility.power, "kWh/h")} />}
-      </dl>
-    </Link>
+    <>
+      <Link href={facilityHref(facility)} className="block rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-hk-red/40">
+        <p className="font-mono text-[11px] text-hk-blue">{facility.code}</p>
+        <p className={cn("mt-0.5 text-[14px] leading-snug font-bold", canEdit && "pr-8")}>{facility.name}</p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {facility.districtName} · {facility.kind}
+        </p>
+        <div className="mt-2.5">
+          <StatusPill facility={facility} />
+        </div>
+        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-[12px]">
+          <Value label="Teplota" value={formatNumber(facility.temperature, "°C")} />
+          <Value label="CO₂" value={formatNumber(facility.co2, "ppm")} />
+          {moneyVisible ? <Value label="Ztráta / rok" value={facility.annualLossCzk ? formatCzk(facility.annualLossCzk) : "—"} /> : <Value label="Příkon" value={formatNumber(facility.power, "kWh/h")} />}
+        </dl>
+      </Link>
+      {canEdit && <EditBuildingLink facility={facility} className="absolute top-2 right-2" />}
+    </>
   );
 }
 

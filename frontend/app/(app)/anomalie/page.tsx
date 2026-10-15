@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
-import { getFacilities } from "@/lib/api";
+import { getFacilities, getSession } from "@/lib/api";
 import { STATUS_META, formatCzk } from "@/lib/facility-meta";
 import { facilityMapHref, readParam, withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,9 @@ export default async function AnomaliesPage({ searchParams }: PageProps<"/anomal
   const params = await searchParams;
   const onlyCritical = readParam(params, "kriticke") === "1";
 
-  const facilities = await getFacilities();
+  const [facilities, session] = await Promise.all([getFacilities(), getSession()]);
+  // Správce řeší zjištění svých budov, „anomálie“ je pohled kraje
+  const title = session?.role === "Spravce" ? "Zjištění" : "Anomálie";
   const anomalies = facilities
     .filter((f) => (onlyCritical ? f.status === "Critical" : f.status !== "Nominal"))
     .toSorted((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.annualLossCzk ?? 0) - (a.annualLossCzk ?? 0));
@@ -29,14 +31,14 @@ export default async function AnomaliesPage({ searchParams }: PageProps<"/anomal
 
   return (
     <>
-      <TopBar title="Anomálie">
+      <TopBar title={title}>
         <PortfolioReportLink onlyIssues />
       </TopBar>
 
       <main className="min-h-0 flex-1 overflow-y-auto p-6">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <h1 className="text-[32px] leading-tight font-bold tracking-tight">Anomálie</h1>
+            <h1 className="text-[32px] leading-tight font-bold tracking-tight">{title}</h1>
             <p className="mt-1.5 text-sm text-slate-600">Zjištění z telemetrie seřazená podle odhadovaného finančního dopadu.</p>
           </div>
           <Link

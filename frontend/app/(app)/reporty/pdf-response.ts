@@ -1,10 +1,10 @@
 import "server-only";
 
 // Přepošle PDF z API prohlížeči; chybu API převede na čitelnou českou odpověď
-export async function pdfResponse(upstream: Response) {
+export async function pdfResponse(upstream: Response, errorMessage = "Report se nepodařilo vytvořit.") {
   if (!upstream.ok) {
     const error = (await upstream.json().catch(() => null)) as { message?: string } | null;
-    return new Response(error?.message ?? "Report se nepodařilo vytvořit.", {
+    return new Response(error?.message ?? errorMessage, {
       status: upstream.status,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });

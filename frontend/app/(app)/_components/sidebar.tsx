@@ -20,6 +20,9 @@ type SidebarProps = {
 };
 
 export function Sidebar({ session, counts, className }: SidebarProps) {
+  // Hledání a filtr „jen se zjištěním“ jsou pro stovky budov kraje, správce jich má pár
+  const ownBuildings = session.role === "Spravce";
+
   return (
     <aside className={cn("flex w-58 shrink-0 flex-col overflow-y-auto bg-hk-navy px-4 pt-7 pb-5 text-white", className)}>
       <Link href="/mapa" className="block px-2">
@@ -28,19 +31,23 @@ export function Sidebar({ session, counts, className }: SidebarProps) {
         <span className="mt-0.5 block text-[11px] text-white/55">Královéhradecký kraj</span>
       </Link>
 
-      <SidebarNav counts={counts} />
+      <SidebarNav counts={counts} role={session.role} />
 
       <div className="mx-2 my-5 h-px bg-white/10" aria-hidden />
 
       <nav className="flex flex-col gap-0.5" aria-label="Rychlé akce">
-        <Link
-          href="/portfolio?hledat=1"
-          className="flex h-10.5 items-center gap-3 rounded-lg px-3 text-sm text-white/55 transition-colors hover:text-white"
-        >
-          <Search className="size-4.5" strokeWidth={1.75} aria-hidden />
-          Hledat objekt
-        </Link>
-        <IssuesToggle />
+        {!ownBuildings && (
+          <>
+            <Link
+              href="/portfolio?hledat=1"
+              className="flex h-10.5 items-center gap-3 rounded-lg px-3 text-sm text-white/55 transition-colors hover:text-white"
+            >
+              <Search className="size-4.5" strokeWidth={1.75} aria-hidden />
+              Hledat objekt
+            </Link>
+            <IssuesToggle />
+          </>
+        )}
         <Link
           href="/mapa?pruvodce=1"
           data-tour="pruvodce"

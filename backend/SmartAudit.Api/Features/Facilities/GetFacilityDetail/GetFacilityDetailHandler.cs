@@ -3,8 +3,10 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using SmartAudit.Api.Extentions;
+using SmartAudit.Api.Services.Sensors;
 using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
+using SmartAudit.Core.Data.Tables;
 using SmartAudit.Core.Domain;
 using SmartAudit.Core.Domain.Enums;
 using SmartAudit.Core.Domain.Helpers;
@@ -32,13 +34,36 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
         MunicipalityContactDto? MunicipalityContact,
         AssessmentDto? Assessment,
         int ZoneCount,
-        int SensorCount);
+        int SensorCount,
+        // Budovu přidal do mapy správce (není v otevřených datech) — jen takovou může také odebrat
+        bool AddedByManager,
+        IReadOnlyCollection<BuildingPartDto> AddedBuildingParts);
+
+    // Přilehlá budova doplněná správcem (katastr ji k objektu nevede) — její plocha vstupuje do výpočtu ztráty
+    public record BuildingPartDto(Guid Id, double AreaSquareMeters, string Source, DateTimeOffset AddedAt);
 
     public record AddressDto(string? Street, string? HouseNumber, string? Psc, string Municipality, string MunicipalityCode, string Orp, string OrpCode, string District, string DistrictCode, string Label);
 
     public record OrganizationDto(Guid Id, string Ico, string Name, string? LegalForm, string? Web, string? PhotoUrl, string? RelationType);
 
-    public record BuildingDto(bool Found, Geometry? Footprint, double? BuiltUpArea, int? ConstructionYear, string EnergyCategory, int EstimatedFloors, string? CurrentUse, string? RuianCode, string? CadastreUrl, string? ParcelRef);
+    // BuiltUpArea, ConstructionYear, EnergyCategory, EstimatedFloors = údaje z ČÚZK a odhadu; *Override = opravy od správce
+    // (mají přednost ve výpočtu ztráty), EditedEnergyCategory = kategorie podle opraveného roku výstavby
+    public record BuildingDto(
+        bool Found,
+        Geometry? Footprint,
+        double? BuiltUpArea,
+        int? ConstructionYear,
+        string EnergyCategory,
+        int EstimatedFloors,
+        string? CurrentUse,
+        string? RuianCode,
+        string? CadastreUrl,
+        string? ParcelRef,
+        double? AreaOverride,
+        int? FloorsOverride,
+        int? YearOverride,
+        string? EditedEnergyCategory,
+        DateTimeOffset? EditedAt);
 
     public record OccupancyDto(string SchoolYear, int? Students, int? Graduates, int? Admitted, int? BedCapacity, int? Residents, double? OccupancyPercent, int? Applicants, int? OfferedPlaces, double? DemandRatio);
 
@@ -64,7 +89,12 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
         double WeeklyEnergyKwh,
         decimal? AnnualLossCzk,
         double? SavingPercent,
-        DateTimeOffset EvaluatedAt);
+        DateTimeOffset EvaluatedAt,
+        SensorCorrectionDto? SensorCorrection);
+
+    // Jak skutečná čidla opravila odhad ztráty: ztráta před prvním čidlem teploty (odhad ze simulace) a kolik místností měří.
+    // VirtualHistory = aspoň jedno čidlo je virtuální a dodalo týden historie; skutečné čidlo ztrátu upřesňuje postupně 7 dní.
+    public record SensorCorrectionDto(decimal LossBeforeCzk, int MeasuredZones, int ZoneCount, bool VirtualHistory, DateTimeOffset Since);
 
     public record FindingDto(string Title, string Detail, string Tag, string Severity);
 
@@ -112,7 +142,23 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
             var zoneCount = await _dbContext.Zones.CountAsync(z => z.FacilityId == facility.Id, ct);
             var sensorCount = await _dbContext.Sensors.CountAsync(s => s.FacilityId == facility.Id, ct);
 
+            var buildingParts = await _dbContext.FacilityBuildingParts
+                .AsNoTracking()
+                .Where(p => p.FacilityId == facility.Id)
+                .OrderBy(p => p.AddedAt)
+                .Select(p => new BuildingPartDto(p.Id, p.AreaSquareMeters, p.Source, p.AddedAt))
+                .ToListAsync(ct);
+
             var canSeeMoney = request.Viewer.CanSeeMoney;
+
+            // Oprava ztráty čidly — jen pro ty, kdo vidí peníze
+            SensorCorrectionDto? correction = null;
+            if (canSeeMoney && facility.Assessment is { LossBeforeSensorsCzk: { } lossBefore, SensorsSince: { } since })
+            {
+                var measured = (await MeasuredZones.QueryAsync(_dbContext, [facility.Id], ct)).GetValueOrDefault(facility.Id);
+                correction = new SensorCorrectionDto(lossBefore, measured?.Count ?? 0, zoneCount, measured?.Virtual ?? false, since);
+            }
+
             var houseNumber = facility.HouseNumber;
             var street = facility.Street ?? facility.MunicipalityName;
 
@@ -147,7 +193,12 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 facility.Building.CurrentUse,
                 facility.Building.RuianCode,
                 facility.Building.RuianCode == null ? null : $"https://vdp.cuzk.gov.cz/vdp/ruian/stavebniobjekty/{facility.Building.RuianCode}",
-                facility.Building.ParcelRef);
+                facility.Building.ParcelRef,
+                facility.Building.AreaOverride,
+                facility.Building.FloorsOverride,
+                facility.Building.YearOverride,
+                facility.Building.YearOverride == null ? null : BuildingEstimator.CategoryLabel(facility.Building.EffectiveEnergyCategory),
+                facility.Building.EditedAt);
 
             var occupancy = facility.Metrics
                 .OrderByDescending(m => m.SchoolYear)
@@ -185,7 +236,8 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 facility.Assessment.WeeklyEnergyKwh,
                 canSeeMoney ? facility.Assessment.AnnualLossCzk : null,
                 canSeeMoney ? facility.Assessment.SavingPercent : null,
-                facility.Assessment.EvaluatedAt);
+                facility.Assessment.EvaluatedAt,
+                correction);
 
             var dto = new GetFacilityDetailDto(
                 facility.Id,
@@ -206,7 +258,9 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 municipalityContact,
                 assessment,
                 zoneCount,
-                sensorCount);
+                sensorCount,
+                facility.SourceKey.StartsWith(Facility.ManagerSourcePrefix),
+                buildingParts);
 
             return Response.Success(dto);
         }

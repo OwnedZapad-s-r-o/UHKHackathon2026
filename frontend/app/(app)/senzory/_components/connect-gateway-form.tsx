@@ -139,7 +139,7 @@ export function ConnectGatewayForm({ facilities, suggestedGatewayId }: ConnectGa
       <button
         type="submit"
         disabled={isPending}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-hk-accent px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red disabled:opacity-60"
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-hk-red px-4 text-sm font-bold text-white transition-colors hover:bg-hk-red-dark disabled:opacity-60"
       >
         <PlugZap className="size-4" aria-hidden />
         {isPending ? "Připojuji…" : "Připojit gateway"}

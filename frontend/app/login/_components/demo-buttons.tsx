@@ -22,33 +22,11 @@ const PERSONAS = [
   },
 ] as const;
 
-// Demo přihlášení podle role. publicOnly = nenápadný odkaz „vyzkoušet aplikaci jako veřejnost“ v kartě pro veřejnost.
-export function DemoButtons({ publicOnly = false }: { publicOnly?: boolean }) {
+// Demo přihlášení podle role — kraj a správce budovy (veřejnost účet nepotřebuje, má portál /objekty)
+export function DemoButtons() {
   const [state, formAction, isPending] = useActionState(demoLogin, null);
   // Která volba se právě přihlašuje — točící kolečko jen u ní, ostatní se zašedí
   const [chosen, setChosen] = useState<string | null>(null);
-
-  if (publicOnly) {
-    return (
-      <form action={formAction} className="mt-2 text-center">
-        <button
-          type="submit"
-          name="role"
-          value="Verejnost"
-          disabled={isPending}
-          className="inline-flex items-center gap-1.5 text-[12.5px] text-amber-900 underline-offset-2 hover:underline disabled:opacity-60"
-        >
-          {isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
-          nebo vyzkoušet celou aplikaci jako veřejnost
-        </button>
-        {state?.error && (
-          <p role="alert" className="mt-1 text-[12.5px] text-red-700">
-            {state.error}
-          </p>
-        )}
-      </form>
-    );
-  }
 
   return (
     <form action={formAction} className="mt-6 space-y-3">

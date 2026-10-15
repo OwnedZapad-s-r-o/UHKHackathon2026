@@ -55,6 +55,10 @@ namespace SmartAudit.Api.Services.Sensors
             if (response.IsOk && response.BondedNodes != null)
                 device.SetNodes(response.BondedNodes);
 
+            // Čidlo přidané do sítě kódem z nálepky — od příštího dotazu se načtou jeho senzory
+            if (response.IsOk && response.AssignedAddress is { } assigned)
+                device.SetNodes([.. device.NodeAddresses, assigned]);
+
             var toStore = new List<(Guid SensorId, double Value)>();
 
             foreach (var reading in response.IsOk ? response.Readings : [])

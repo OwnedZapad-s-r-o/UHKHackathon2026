@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using SmartAudit.Api.Services.Contracts;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain.Enums;
 using SmartAudit.Core.Domain.Helpers;
@@ -7,7 +8,7 @@ using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Services.Import
 {
-    // Start aplikace: migrace → katalog zdrojů → stažení sad → portfolio → ČÚZK → počasí → demo uživatelé
+    // Start aplikace: migrace → katalog zdrojů → stažení sad → portfolio → ČÚZK → počasí → demo uživatelé → (na pozadí) smlouvy
     public class DataPipelineService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -61,6 +62,8 @@ namespace SmartAudit.Api.Services.Import
                 await provider.GetRequiredService<IDemoUserService>().SeedAsync(ct);
 
                 _state.MarkReady();
+
+                await SyncContractsAsync(provider, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -69,6 +72,20 @@ namespace SmartAudit.Api.Services.Import
             {
                 _logger.LogError(ex, "Příprava dat selhala");
                 _state.SetPhase($"Chyba: {ex.Message}");
+            }
+        }
+
+        // Smlouvy z Registru smluv až po startu — živé stahování trvá desítky minut a aplikace na něj nečeká.
+        // Chyba tady nesmí přepsat fázi „Připraveno“, aplikace běží dál se snímkem.
+        private async Task SyncContractsAsync(IServiceProvider provider, CancellationToken ct)
+        {
+            try
+            {
+                await provider.GetRequiredService<IContractSyncService>().SyncAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Stažení smluv z Registru smluv selhalo");
             }
         }
 
