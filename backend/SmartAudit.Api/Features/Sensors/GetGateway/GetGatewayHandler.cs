@@ -7,6 +7,7 @@ using SmartAudit.Core.Common;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain;
 using SmartAudit.Core.Domain.Enums;
+using SmartAudit.Core.Domain.Helpers;
 using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Features.Sensors.GetGateway
@@ -23,6 +24,8 @@ namespace SmartAudit.Api.Features.Sensors.GetGateway
         DateTimeOffset? LastSeenAt,
         GatewayFacilityDto Facility,
         BrokerDto Broker,
+        // Jméno a heslo gatewaye k brokeru — vidí je jen kraj a správce této budovy (kontrola níže)
+        MqttCredentials? Credentials,
         IReadOnlyCollection<ChannelDto> Channels,
         IReadOnlyCollection<ZoneOptionDto> Zones,
         IReadOnlyCollection<GatewayMessageDto> Messages);
@@ -149,6 +152,7 @@ namespace SmartAudit.Api.Features.Sensors.GetGateway
                 device.LastSeenAt,
                 new GatewayFacilityDto(device.FacilityId, device.FacilityCode, device.FacilityName),
                 GatewayStatus.Broker(_state, _settings),
+                string.IsNullOrEmpty(_settings.DeviceSecret) ? null : GatewayCredentials.For(_settings.DeviceSecret, device.GatewayId),
                 channels,
                 zones,
                 messages);

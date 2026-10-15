@@ -13,7 +13,8 @@ namespace SmartAudit.Api.Features.Sensors.GetGateways
 
     public record GetGatewaysDto(BrokerDto Broker, IReadOnlyCollection<GatewayListItemDto> Gateways, IReadOnlyCollection<UnknownGatewayDto> Unknown);
 
-    public record BrokerDto(bool Connected, string? Error, string? PublicHost, int PublicPort, string ResponseTopicFilter, string RequestTopicTemplate);
+    // PublicTls = gatewaye se připojují šifrovaně; CaAvailable = certifikát CA brokeru jde stáhnout
+    public record BrokerDto(bool Connected, string? Error, string? PublicHost, int PublicPort, bool PublicTls, bool CaAvailable, string ResponseTopicFilter, string RequestTopicTemplate);
 
     public record GatewayListItemDto(Guid Id, string Name, string GatewayId, Guid FacilityId, string FacilityCode, string FacilityName, bool Online, DateTimeOffset? LastSeenAt, int NodeCount, int ChannelCount, int AssignedCount);
 

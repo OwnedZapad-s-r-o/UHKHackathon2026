@@ -59,7 +59,7 @@ docker compose up --build
 | **API Backend (ASP.NET)** | [http://localhost:8080](http://localhost:8080) | REST API backend |
 | **Otevřené API Docs** | [http://localhost:3000/api/open/docs/](http://localhost:3000/api/open/docs/) | Interaktivní OpenAPI (Scalar) |
 | **PostgreSQL / PostGIS** | `localhost:5432` | Databáze (`smartaudit` / `smartaudit`) |
-| **MQTT broker (Mosquitto)** | `localhost:1883` | Připojení IQRF gateway (skutečná čidla) |
+| **MQTT broker (Mosquitto)** | `IP-počítače:8883` (TLS) | Připojení IQRF gateway — jen s účtem gatewaye; `localhost:1883` jen z tohoto počítače |
 
 > ℹ️ **První spuštění:** Při prvním startu API automaticky stáhne otevřená data, sestaví portfolio objektů, dotáhne katastrální karty z ČÚZK, počasí z Open-Meteo a dopočítá 7 dní telemetrie. Trvá to zhruba 1 minutu, stav je vidět na `GET /health`.
 
