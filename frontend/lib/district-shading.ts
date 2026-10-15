@@ -2,8 +2,9 @@ import type { FacilityListItem } from "@/types/api";
 
 // Stejná škála jako mapa okresů v PDF (backend ReportCharts.DistrictMap):
 // podíl objektů se zjištěním, 5 tříd sekvenční modré — světlá = málo problémů, tmavá = hodně
+// (nejsvětlejší třída je záměrně ještě viditelně modrá — okres s málo problémy nesmí splynout s podkladem)
 export const ISSUE_SHARE_BREAKS = [0.15, 0.22, 0.29, 0.36];
-export const ISSUE_SHARE_COLORS = ["#EEF3F8", "#CBDAEA", "#9DB8D5", "#6A8FB8", "#3F6592"];
+export const ISSUE_SHARE_COLORS = ["#D5E1EE", "#B3C8E0", "#8DAACD", "#6687B5", "#3F6592"];
 export const ISSUE_SHARE_LABELS = ["< 15 %", "15–22 %", "22–29 %", "29–36 %", "≥ 36 %"];
 
 export type DistrictStats = {
