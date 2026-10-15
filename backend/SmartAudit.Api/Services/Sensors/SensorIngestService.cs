@@ -38,6 +38,8 @@ namespace SmartAudit.Api.Services.Sensors
             _state.RecordMessage(gatewayId, GatewayMessageDirection.Response, response.MessageType, payload);
 
             var now = DateTimeOffset.UtcNow;
+            if (!payload.Contains(VirtualGatewayResponder.InstanceId, StringComparison.Ordinal))
+                _state.RecordExternalResponse(gatewayId, now);
             var device = await _dbContext.SensorDevices
                 .Include(d => d.Channels)
                 .FirstOrDefaultAsync(d => d.GatewayId == gatewayId, ct);

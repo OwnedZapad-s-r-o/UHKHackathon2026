@@ -789,6 +789,9 @@ namespace SmartAudit.Core.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("IsVirtual")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset?>("LastSeenAt")
                         .HasColumnType("timestamp with time zone");
 

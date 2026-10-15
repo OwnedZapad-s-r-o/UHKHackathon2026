@@ -16,6 +16,9 @@ namespace SmartAudit.Core.Data.Tables
         // Adresy spárovaných uzlů IQMESH (zjistí se z koordinátoru, nebo je zadá uživatel)
         public int[] NodeAddresses { get; private set; } = [];
 
+        // Virtuální gateway (testovací síť, jednoklikové demo): odpovídá za ni aplikace sama přes MQTT, jinak se chová jako skutečná
+        public bool IsVirtual { get; private set; }
+
 
         // Cizí klíče
         public Guid FacilityId { get; private set; }
@@ -33,7 +36,7 @@ namespace SmartAudit.Core.Data.Tables
 
         private SensorDevice() { }
 
-        public SensorDevice(Guid facilityId, string name, string gatewayId, int pollSeconds, int[] nodeAddresses)
+        public SensorDevice(Guid facilityId, string name, string gatewayId, int pollSeconds, int[] nodeAddresses, bool isVirtual = false)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Název gatewaye nesmí být prázdný.", nameof(name));
@@ -48,6 +51,7 @@ namespace SmartAudit.Core.Data.Tables
             Name = name.Trim();
             GatewayId = gatewayId.Trim();
             PollSeconds = pollSeconds;
+            IsVirtual = isVirtual;
             SetNodes(nodeAddresses);
         }
 
