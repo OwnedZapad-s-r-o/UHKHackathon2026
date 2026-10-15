@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { LogOut, Search } from "lucide-react";
 import { logout } from "@/app/login/actions";
+import { cn } from "@/lib/utils";
 import type { Role, Session } from "@/types/api";
 import { IssuesToggle } from "./issues-toggle";
 import { SidebarNav } from "./sidebar-nav";
@@ -15,11 +16,12 @@ const ROLE_LABEL: Record<Role, string> = {
 type SidebarProps = {
   session: Session;
   counts: { portfolio: number; anomalies: number };
+  className?: string;
 };
 
-export function Sidebar({ session, counts }: SidebarProps) {
+export function Sidebar({ session, counts, className }: SidebarProps) {
   return (
-    <aside className="flex w-58 shrink-0 flex-col bg-black px-4 pt-7 pb-5 text-white">
+    <aside className={cn("flex w-58 shrink-0 flex-col overflow-y-auto bg-black px-4 pt-7 pb-5 text-white", className)}>
       <Link href="/" className="block px-2">
         <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-11 w-auto" />
         <span className="mt-4.5 block text-[15px] font-bold tracking-tight">SmartAudit</span>
