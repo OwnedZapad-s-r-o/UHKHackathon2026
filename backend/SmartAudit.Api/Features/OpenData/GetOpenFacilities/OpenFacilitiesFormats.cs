@@ -17,7 +17,7 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
         [
             "id", "kod", "nazev", "kategorie", "druh", "ico", "ulice", "cislo_domu", "psc",
             "obec_kod", "obec", "orp_kod", "orp", "okres_kod", "okres", "lat", "lon",
-            "pamatkova_ochrana", "ma_pudorys", "stav", "zjisteni", "teplota_c", "co2_ppm", "prikon_kw", "vyhodnoceno",
+            "pamatkova_ochrana", "ma_pudorys", "stav", "zjisteni", "teplota_c", "co2_ppm", "prikon_kw", "co2_hodin_nad_limitem_7d", "zive_cidlo", "vyhodnoceno",
         ];
 
         public static OpenFeatureCollectionDto ToGeoJson(IReadOnlyCollection<OpenFacilityDto> facilities)
@@ -43,7 +43,8 @@ namespace SmartAudit.Api.Features.OpenData.GetOpenFacilities
                     f.MunicipalityCode, f.MunicipalityName, f.OrpCode, f.OrpName, f.DistrictCode, f.DistrictName,
                     Number(f.Latitude), Number(f.Longitude),
                     f.HeritageStatus.ToString(), f.HasFootprint ? "true" : "false", f.Status.ToString(), f.Headline,
-                    Number(f.Temperature), Number(f.Co2), Number(f.Power), f.EvaluatedAt?.ToString("O", CultureInfo.InvariantCulture),
+                    Number(f.Temperature), Number(f.Co2), Number(f.Power), Number(f.Co2HoursOverLimit), f.HasLiveSensors ? "true" : "false",
+                    f.EvaluatedAt?.ToString("O", CultureInfo.InvariantCulture),
                 ];
 
                 csv.AppendJoin(',', row.Select(Escape)).Append("\r\n");

@@ -38,7 +38,7 @@ export function GatewayLive({ initial, guide }: { initial: GatewayDetail; guide:
         <div className="min-w-0">
           <p className="font-mono text-[11px] text-hk-blue">gateway/{gateway.gatewayId}/iqrf</p>
           <h1 className="mt-1 text-[28px] leading-tight font-bold tracking-tight">{gateway.name}</h1>
-          <Link href={`/?objekt=${gateway.facility.id}`} className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-hk-red hover:underline">
+          <Link href={`/mapa?objekt=${gateway.facility.id}`} className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-hk-red hover:underline">
             <MapPin className="size-3.5" aria-hidden />
             {gateway.facility.code} · {gateway.facility.name}
           </Link>

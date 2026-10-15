@@ -299,3 +299,26 @@ export type GatewayDetail = {
   zones: { id: string; name: string; floor: number }[];
   messages: { timestamp: string; direction: "Request" | "Response"; messageType: string; payload: string }[];
 };
+
+// Otevřené API — GET /api/open/v1/facilities (veřejný pohled, bez Kč)
+export type OpenFacility = {
+  id: string;
+  code: string;
+  name: string;
+  category: FacilityCategory;
+  kind: string;
+  street: string | null;
+  houseNumber: string | null;
+  municipalityName: string;
+  districtCode: string;
+  districtName: string;
+  latitude: number;
+  longitude: number;
+  status: AuditStatus;
+  headline: string;
+  temperature: number | null;
+  co2: number | null;
+  co2HoursOverLimit: number | null;
+  hasLiveSensors: boolean;
+  evaluatedAt: string | null;
+};

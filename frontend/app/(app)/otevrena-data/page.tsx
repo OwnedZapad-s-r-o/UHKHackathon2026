@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { BookOpen, Braces, ExternalLink, FileSpreadsheet, Map as MapIcon } from "lucide-react";
 import { getFacilities } from "@/lib/api";
+import { requestOrigin } from "@/lib/request-origin";
 import { CATEGORY_META, DISTRICTS, STATUS_META } from "@/lib/facility-meta";
 import type { AuditStatus, FacilityCategory } from "@/types/api";
 import { TopBar } from "../_components/top-bar";
@@ -40,17 +40,8 @@ const METRICS = [
   { value: "Power", label: "příkon, kWh/h (po dnech kWh/den)" },
 ];
 
-// Adresa, na které uživatel aplikaci právě otevřel — ukázky volání pak jdou rovnou zkopírovat
-async function publicOrigin() {
-  const list = await headers();
-  const host = list.get("x-forwarded-host") ?? list.get("host") ?? "localhost:3000";
-  const protocol = list.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-
-  return `${protocol}://${host}`;
-}
-
 export default async function OpenDataPage() {
-  const [origin, facilities] = await Promise.all([publicOrigin(), getFacilities()]);
+  const [origin, facilities] = await Promise.all([requestOrigin(), getFacilities()]);
   const example = facilities.find((f) => f.status !== "Nominal") ?? facilities[0];
   const base = `${origin}${BASE_PATH}`;
 

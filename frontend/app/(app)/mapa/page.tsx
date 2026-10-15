@@ -3,12 +3,12 @@ import { MousePointerClick } from "lucide-react";
 import { getFacilities } from "@/lib/api";
 import { districtStats } from "@/lib/district-shading";
 import { readParam } from "@/lib/search-params";
-import { FacilityMap } from "./_components/facility-map";
-import { InspectionPanel, PANEL_TABS, type PanelTab } from "./_components/inspection/inspection-panel";
-import { MapFilterBar } from "./_components/map-filter-bar";
-import { TopBar } from "./_components/top-bar";
+import { FacilityMap } from "../_components/facility-map";
+import { InspectionPanel, PANEL_TABS, type PanelTab } from "../_components/inspection/inspection-panel";
+import { MapFilterBar } from "../_components/map-filter-bar";
+import { TopBar } from "../_components/top-bar";
 
-export default async function MapPage({ searchParams }: PageProps<"/">) {
+export default async function MapPage({ searchParams }: PageProps<"/mapa">) {
   const params = await searchParams;
 
   const filter = {

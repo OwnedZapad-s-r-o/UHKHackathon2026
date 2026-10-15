@@ -136,7 +136,7 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
 }
 
 function facilityHref(facility: FacilityListItem) {
-  return `/?objekt=${facility.id}&panel=telemetrie`;
+  return `/mapa?objekt=${facility.id}&panel=telemetrie`;
 }
 
 function StatusPill({ facility }: { facility: FacilityListItem }) {
