@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kam se dostanu — přístupnost míst v Královéhradeckém kraji</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --bg:#101416;--card:#181E21;--line:#2A3438;--line2:#212A2D;
+    --tx:#E6ECEE;--tx2:#A9B6BA;--tx3:#7C8A8E;
+    --ano:#4CAF7D;--pomoc:#D9A03F;--ne:#CF5A4C;--nevim:#6B7A80;--acc:#4E9FD1;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--tx);font:15px/1.55 "Segoe UI",system-ui,sans-serif;
+    display:flex;flex-direction:column;overflow:hidden}
+
+  /* ── horní lišta: kdo jsem ── */
+  header{flex:none;padding:12px 16px 0;border-bottom:1px solid var(--line);background:var(--card)}
+  h1{font-size:1.12rem;margin:0 0 2px;font-weight:600}
+  .claim{font-size:.8rem;color:var(--tx3);margin:0 0 12px}
+  .profil{display:flex;gap:7px;overflow-x:auto;padding-bottom:12px}
+  .profil button{flex:none;padding:9px 13px;background:transparent;border:1px solid var(--line);
+    border-radius:999px;color:var(--tx2);font:inherit;font-size:.85rem;cursor:pointer;white-space:nowrap}
+  .profil button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#08161D;font-weight:600}
+
+  /* ── tělo ── */
+  main{flex:1;display:flex;min-height:0}
+  #vlevo{width:min(52%,560px);flex:none;display:flex;flex-direction:column;min-height:0;
+    border-right:1px solid var(--line)}
+  #map{flex:1;background:#0F1416}
+  .leaflet-container{background:#0F1416;font:inherit}
+  @media(max-width:860px){main{flex-direction:column}#vlevo{width:100%;flex:1}#map{height:38%;flex:none;border-top:1px solid var(--line)}}
+
+  .filtr{flex:none;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+  .radek{display:flex;gap:8px;align-items:center}
+  input,select{width:100%;padding:9px 11px;background:var(--bg);color:var(--tx);
+    border:1px solid var(--line);border-radius:7px;font:inherit;font-size:.88rem}
+  .btn{flex:none;padding:9px 12px;background:var(--line);color:var(--tx);border:0;
+    border-radius:7px;font:inherit;font-size:.85rem;cursor:pointer;white-space:nowrap}
+  .btn.hl{background:var(--acc);color:#08161D;font-weight:600}
+  .kat{display:flex;gap:6px;overflow-x:auto;margin-top:9px;padding-bottom:2px}
+  .kat button{flex:none;padding:5px 11px;background:transparent;border:1px solid var(--line);
+    border-radius:999px;color:var(--tx3);font:inherit;font-size:.79rem;cursor:pointer;white-space:nowrap}
+  .kat button[aria-pressed="true"]{border-color:var(--acc);color:var(--acc)}
+
+  #seznam{flex:1;overflow-y:auto;min-height:0;padding:8px 0}
+  .misto{padding:12px 16px;border-bottom:1px solid var(--line2);cursor:pointer;display:flex;gap:12px}
+  .misto:hover{background:#1C2427}
+  .misto.akt{background:#1C2427;box-shadow:inset 3px 0 0 var(--acc)}
+  .verdikt{flex:none;width:74px;text-align:center;padding-top:2px}
+  .verdikt b{display:block;font-size:.72rem;font-weight:700;letter-spacing:.03em;
+    padding:3px 0;border-radius:5px;text-transform:uppercase}
+  .v-ano b{background:#1B3B2C;color:var(--ano)}
+  .v-pomoc b{background:#3B2F16;color:var(--pomoc)}
+  .v-ne b{background:#3B1F1B;color:var(--ne)}
+  .v-nevim b{background:#252D30;color:var(--nevim)}
+  .verdikt span{display:block;font-size:.7rem;color:var(--tx3);margin-top:3px;
+    font-variant-numeric:tabular-nums}
+  .info{flex:1;min-width:0}
+  .info h3{margin:0 0 2px;font-size:.95rem;font-weight:600;line-height:1.3}
+  .info .kde{font-size:.77rem;color:var(--tx3);margin:0 0 5px}
+  .info .proc{font-size:.83rem;color:var(--tx2);margin:0}
+  .znaky{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .znaky span{font-size:.71rem;padding:2px 8px;border-radius:999px;background:#1E2B31;color:var(--tx2)}
+  .znaky span.dobre{background:#1B3B2C;color:var(--ano)}
+  .znaky span.spatne{background:#3B1F1B;color:var(--ne)}
+  .hvezda{flex:none;align-self:flex-start;background:none;border:0;color:var(--tx3);
+    font-size:1.05rem;cursor:pointer;padding:0 2px}
+  .hvezda.on{color:var(--pomoc)}
+
+  .prazdno{padding:26px 18px;color:var(--tx3);font-size:.88rem;line-height:1.6}
+  .hlaska{padding:10px 16px;font-size:.78rem;color:var(--tx3);border-bottom:1px solid var(--line2)}
+  .hlaska b{color:var(--tx2)}
+
+  /* detail */
+  #detail{position:absolute;inset:auto 0 0 0;background:var(--card);border-top:1px solid var(--line);
+    max-height:72%;overflow-y:auto;transform:translateY(101%);transition:transform .22s;z-index:900}
+  #detail.open{transform:none}
+  .dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+    padding:15px 18px 0}
+  .dhead h2{margin:0;font-size:1.06rem;font-weight:600;line-height:1.3}
+  .zavri{background:none;border:0;color:var(--tx3);font-size:1.3rem;cursor:pointer;line-height:1}
+  .dbody{padding:10px 18px 20px}
+  .shrnuti{font-size:.95rem;line-height:1.6;margin:8px 0 14px}
+  .fakta{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);margin:0 0 14px}
+  .fakt{background:var(--card);padding:9px 12px}
+  .fakt b{display:block;font-size:.88rem}
+  .fakt span{font-size:.7rem;color:var(--tx3)}
+  .cit{font-size:.8rem;color:var(--tx3);font-style:italic;border-left:2px solid var(--line);
+    padding-left:11px;margin:10px 0}
+  .nahlas{width:100%;padding:10px;background:transparent;border:1px dashed var(--line);
+    border-radius:7px;color:var(--tx2);font:inherit;font-size:.83rem;cursor:pointer;margin-top:6px}
+  a{color:var(--acc)}
+
+  #load{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:13px}
+  #load .track{width:240px;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+  #load .fill{height:100%;width:0;background:var(--acc);transition:width .3s}
+  .leaflet-tooltip{background:var(--card);border:1px solid var(--line);color:var(--tx);
+    box-shadow:none;font-size:.8rem;padding:5px 8px;max-width:260px;white-space:normal}
+</style>
+</head>
+<body>
+
+<div id="load">
+  <div id="load-t" style="color:var(--tx2);font-size:.9rem">Načítám otevřená data…</div>
+  <div class="track"><div class="fill" id="load-f"></div></div>
+</div>
+
+<header>
+  <h1>Kam se dostanu</h1>
+  <p class="claim">Přístupnost míst v Královéhradeckém kraji · z otevřených dat</p>
+  <div class="profil" id="profil" role="group" aria-label="Kdo jsem"></div>
+</header>
+
+<main>
+  <div id="vlevo">
+    <div class="filtr">
+      <div class="radek">
+        <input id="kde" list="obce" placeholder="Odkud jdu? Např. Hradec Králové">
+        <button class="btn" id="gps" title="Použít moji polohu">📍</button>
+      </div>
+      <datalist id="obce"></datalist>
+      <div class="kat" id="kat"></div>
+    </div>
+    <div class="hlaska" id="hlaska"></div>
+    <div id="seznam"></div>
+  </div>
+  <div id="map"></div>
+</main>
+
+<div id="detail">
+  <div class="dhead"><h2 id="d-nazev"></h2><button class="zavri" id="d-zavri">✕</button></div>
+  <div class="dbody" id="d-body"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   Kam se dostanu — nástroj pro člověka, ne dashboard.
+   Ptá se: kdo jsi → odkud jdeš → kam chceš. Odpovídá: dostaneš se tam, a proč.
+   Data: 802 míst kraje (živě z ArcGIS API) + 1 021 objektů Hradce (CC0,
+   předem převedeno z S-JTSK Křovák skriptem Analyza/hk/prevod.py).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const SVC='https://services6.arcgis.com/ogJAiK65nXL1mXAW/arcgis/rest/services';
+const KRAJ=[
+ {k:'knihovny',n:'Knihovna',kat:'skola',api:SVC+'/Knihovny/FeatureServer/0',
+  f:'nazev,bezbarierovost,nazev_obce,x,y',bez:'bezbarierovost',pozn:null},
+ {k:'muzea',n:'Muzeum / galerie',kat:'kultura',api:SVC+'/Muzea_a_galerie/FeatureServer/0',
+  f:'nazev,bezbarierovost,pozn_bezbarierovost,nazev_obce,x,y',bez:'bezbarierovost',pozn:'pozn_bezbarierovost'},
+ {k:'kd',n:'Kulturní dům',kat:'kultura',api:SVC+'/Kulturn%C3%AD_domy/FeatureServer/0',
+  f:'nazev,bezbarierovost,bezbarierovost_poznamka,nazev_obce,x,y',bez:'bezbarierovost',pozn:'bezbarierovost_poznamka'},
+ {k:'kina',n:'Kino',kat:'kultura',api:SVC+'/Kina/FeatureServer/0',
+  f:'nazev,bezbarierovost,pozn_bezbarierovost,nazev_obce,x,y',bez:'bezbarierovost',pozn:'pozn_bezbarierovost'},
+ {k:'kluby',n:'Hudební klub',kat:'kultura',api:SVC+'/Hudebn%C3%AD_kluby_a_festival_parky/FeatureServer/0',
+  f:'nazev,bezbari%C3%A9rovost,bezbari%C3%A9rovost_pozn,nazev_obce,x,y',bez:'bezbariérovost',pozn:'bezbariérovost_pozn'},
+ {k:'divadla',n:'Divadlo',kat:'kultura',api:SVC+'/Divadla_a_filharmonie/FeatureServer/0',
+  f:'nazev,bezbarierovost,typ_bezbarierovosti,nazev_obce,x,y',bez:'bezbarierovost',pozn:'typ_bezbarierovosti'},
+ {k:'zus',n:'ZUŠ',kat:'skola',api:SVC+'/Z%C3%A1kladn%C3%AD_um%C4%9Bleck%C3%A9_%C5%A1koly/FeatureServer/0',
+  f:'nazev,bezbarierovost,pozn_bezbarierovost,nazev_obce,x,y',bez:'bezbarierovost',pozn:'pozn_bezbarierovost'}
+];
+
+const PROFILY=[
+ {id:'vozik',   nazev:'🦽 Vozík',        popis:'potřebuji bez schodů, širší dveře a bezbariérové WC'},
+ {id:'kocarek', nazev:'👶 Kočárek',      popis:'schod nebo dva zvládnu, ale ne schodiště'},
+ {id:'hul',     nazev:'🦯 Hůl, chodítko',popis:'pár schodů ano, potřebuji zábradlí a odpočinek'},
+ {id:'zrak',    nazev:'👁 Nevidím',      popis:'hledám majáček, hmatné prvky a vodicí linie'},
+ {id:'sluch',   nazev:'👂 Neslyším',     popis:'hledám indukční smyčku'}
+];
+const KATEGORIE=[
+ ['vse','Vše'],['zdravi','Zdraví'],['urad','Úřady a pošta'],['penize','Banky'],
+ ['nakup','Nákupy'],['doprava','Doprava'],['kultura','Kultura'],['skola','Školy a knihovny'],
+ ['ostatni','Ostatní']];
+const KLIC={
+ zdravi:/lékárn|lekarn|poliklin|nemocnic|ordinac|zdravot|^fn |klinik|pavilon|hospic|ústav|rehabilit/i,
+ urad:/úřad|urad|magistrát|magistrat|pošt|post|matrik|soud|policie|katastr|správa|sprava|finanč/i,
+ penize:/bank|spořiteln|sporiteln|pojišť|pojist|čsob|csob|\bfio\b|\bera\b|unicredit|komerční/i,
+ nakup:/tesco|kaufland|lidl|billa|obchod|market|nákup|nakup|prodejn|atrium|galerie moravia/i,
+ doprava:/nádraž|nadraz|terminál|terminal|zastávk|zastavk|letišt|autobus/i,
+ skola:/univerzit|škol|skol|knihovn|fakult|gymn|učilišt|mládež/i,
+ kultura:/divadl|kino|muze|galeri|kostel|klub|filharm|adalbertinum|bio |věž|vez$/i
+};
+function kategorie(nazev,vychozi){
+  for(const [k,re] of Object.entries(KLIC)) if(re.test(nazev||'')) return k;
+  return vychozi||'ostatni';
+}
+
+const $=id=>document.getElementById(id);
+const norm=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const R=6371,rad=Math.PI/180;
+const hav=(a,b)=>2*R*Math.asin(Math.sqrt(
+  Math.sin((b[0]-a[0])*rad/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin((b[1]-a[1])*rad/2)**2));
+
+let MISTA=[], OBCE=new Map(), map, vrstva, znacky=new Map();
+let profil='vozik', kat='vse', odkud=null, aktivni=null;
+let oblibene=new Set(JSON.parse(localStorage.getItem('kammuzu.oblibene')||'[]'));
+
+/* ───────── načtení ───────── */
+async function jget(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();if(j.error)throw new Error(j.error.message);return j;}
+async function page(api,f){const out=[];
+  for(let o=0;;o+=2000){const j=await jget(`${api}/query?where=1%3D1&outFields=${f}&returnGeometry=false&resultRecordCount=2000&resultOffset=${o}&f=json`);
+    const x=j.features||[];out.push(...x.map(y=>y.attributes));if(x.length<2000)break;}
+  return out;}
+const stav=v=>{const s=norm(v);if(!s)return 'nevim';
+  if(s.startsWith('ano'))return 'ano';if(s.startsWith('c'))return 'castecne';
+  if(s.startsWith('ne')&&!s.startsWith('nezj'))return 'ne';return 'nevim';};
+
+let krok=0; const tick=t=>{$('load-t').textContent='Načítám '+t+'…';
+  $('load-f').style.width=Math.round(++krok/11*100)+'%';};
+
+(async function(){
+ try{
+  for(const s of KRAJ){
+    tick(s.n);
+    for(const r of await page(s.api,s.f)){
+      if(!r.x||!r.y) continue;
+      MISTA.push({id:'k'+s.k+MISTA.length,nazev:r.nazev||s.n,typ:s.n,
+        kat:kategorie(r.nazev,s.kat),obec:r.nazev_obce,lat:+r.y,lon:+r.x,
+        zdroj:'kraj',stav:stav(r[s.bez]),pozn:s.pozn?(r[s.pozn]||'').trim():'',syrova:{}});
+    }
+  }
+  tick('pasport Hradce');
+  for(const [soubor,vrstvaN] of [['objekty_vozicky','vozik'],['objekty_nevidomi','zrak'],
+                                  ['indukcni_smycky','sluch'],['zastavky_vozicky','vozik'],
+                                  ['zastavky_nevidomi','zrak']]){
+    let fc; try{ fc=await (await fetch('data/'+soubor+'.geojson')).json(); }catch(e){ continue; }
+    for(const f of fc.features||[]){
+      if(f.geometry?.type!=='Point') continue;
+      const p=f.properties||{}, nz=p.INSTITUCE||p.ZASTAVKA||p.NAZEV||p.ULICE||'Místo';
+      MISTA.push({id:soubor+p.ID,nazev:nz,typ:vrstvaN==='sluch'?'Indukční smyčka':(p.ZASTAVKA?'Zastávka':'Objekt'),
+        kat:p.ZASTAVKA?'doprava':kategorie(nz),obec:'Hradec Králové',
+        lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],
+        zdroj:'hradec',pro:vrstvaN,stav:null,
+        pozn:(p.POZNAMKA||p.POZN||p.PROBLEM||'').trim(),syrova:p});
+    }
+  }
+  tick('obce');
+  for(const m of MISTA) if(m.obec&&!OBCE.has(m.obec)) OBCE.set(m.obec,[m.lat,m.lon]);
+  $('obce').innerHTML=[...OBCE.keys()].sort((a,b)=>a.localeCompare(b,'cs'))
+    .map(o=>`<option value="${o}">`).join('');
+  const ulozene=localStorage.getItem('kammuzu.odkud');
+  if(ulozene&&OBCE.has(ulozene)){ $('kde').value=ulozene; odkud=OBCE.get(ulozene); }
+  else { $('kde').value='Hradec Králové'; odkud=OBCE.get('Hradec Králové')||[50.209,15.832]; }
+  initMap(); renderProfil(); renderKat(); render();
+  $('load').remove();
+ }catch(e){
+  $('load').innerHTML=`<div style="max-width:520px;padding:18px"><h1>Data se nepodařilo načíst</h1>
+   <p style="color:#7C8A8E">${e.message}</p>
+   <p style="color:#7C8A8E">Spusť přes <code>python -m http.server 8080</code>.
+   Vrstvy Hradce vyrobí <code>python Analyza/hk/prevod.py</code>.</p></div>`;
+ }
+})();
+
+/* ───────── VERDIKT: srdce aplikace ─────────
+   Stejné místo má jinou odpověď podle toho, kdo se ptá.                      */
+function verdikt(m){
+  const p=m.syrova;
+  if(m.zdroj==='hradec'){
+    if(profil==='sluch') return m.pro==='sluch'
+      ? {v:'ano',proc:'Je tu indukční smyčka.'}
+      : {v:'nevim',proc:'O smyčce pro neslyšící tu nemáme údaj.'};
+    if(profil==='zrak'){
+      if(m.pro!=='zrak') return {v:'nevim',proc:'Pro nevidomé tohle místo nikdo neposuzoval.'};
+      const h=+p.HODNOCENI;
+      if(p.MAJACEK==='1') return {v:'ano',proc:'Je tu hlasový majáček.'};
+      if(h===1) return {v:'ano',proc:'Posouzeno jako bez problémů.'};
+      if(h===2) return {v:'pomoc',proc:'Jde to, ale s obtížemi.'};
+      if(h===3) return {v:'ne',proc:'Označeno jako nepřístupné.'};
+      return {v:'nevim',proc:'Hodnocení chybí.'};
+    }
+    if(m.pro!=='vozik') return {v:'nevim',proc:'Pro vozík tohle místo nikdo neposuzoval.'};
+    const schod=p.SCHODY==='1', uzke=p.DO_80CM==='1', wc=p.WC_BEZBAR==='1', h=+p.HODNOCENI;
+    if(profil==='vozik'){
+      if(h===3||(schod&&!/rampa|plošin|zvonek|nájezd/i.test(m.pozn)))
+        return {v:'ne',proc:schod?'Schod u vstupu a nic, co by ho obešlo.':'Označeno jako nepřístupné.'};
+      if(h===1&&!schod) return {v:'ano',proc:wc?'Bez schodů a s bezbariérovým WC.':'Vstup bez schodů.'};
+      return {v:'pomoc',proc:schod?'Je tu schod, ale dá se obejít (rampa, plošina nebo zvonek).'
+                                  :'Přístupné s obtížemi.'};
+    }
+    // kočárek a hůl: schod navíc nevadí tolik, ale nesmíme tvrdit „bez překážek“,
+    // když je v datech schod — verdikt a štítky si nesmí odporovat
+    const pomucka=/rampa|plošin|plosin|zvonek|nájezd|najezd|výtah|vytah/i.test(m.pozn);
+    if(h===3&&!pomucka) return {v:'pomoc',proc:profil==='kocarek'
+      ? 'Označeno jako nepřístupné — s kočárkem jen s pomocí další osoby.'
+      : 'Označeno jako nepřístupné — počítejte s obtížemi.'};
+    if(schod) return {v:'pomoc',proc:pomucka
+      ? 'Je tu schod, ale dá se obejít (rampa, plošina nebo zvonek).'
+      : (profil==='kocarek' ? 'Jeden schod u vstupu — s kočárkem zvládnutelný.'
+                            : 'Schod u vstupu — s holí to jde, ale pomalu.')};
+    if(uzke) return {v:'pomoc',proc:'Úzké dveře (do 80 cm) — se širším kočárkem problém.'};
+    if(h===1) return {v:'ano',proc:'Bez překážek.'};
+    return {v:'pomoc',proc:'Menší překážka, dá se zvládnout.'};
+  }
+  // místa z kraje: máme jen ano/částečně/ne + poznámku
+  if(profil==='sluch'){
+    if(m.typ==='Divadlo'&&/sluch/i.test(m.pozn)) return {v:'ano',proc:'Divadlo uvádí úpravy pro sluchově postižené.'};
+    return {v:'nevim',proc:'Pro neslyšící tenhle údaj v datech kraje není.'};
+  }
+  if(profil==='zrak'){
+    if(m.typ==='Divadlo'&&/zrak/i.test(m.pozn)) return {v:'ano',proc:'Divadlo uvádí úpravy pro zrakově postižené.'};
+    return {v:'nevim',proc:'Pro nevidomé tenhle údaj v datech kraje není.'};
+  }
+  if(m.stav==='ano') return {v:'ano',proc:'Uvedeno jako bezbariérové.'};
+  if(m.stav==='castecne') return {v:'pomoc',proc:'Přístupné jen zčásti — podrobnosti níže.'};
+  if(m.stav==='ne') return {v:profil==='vozik'?'ne':'pomoc',
+    proc:profil==='vozik'?'Uvedeno jako nepřístupné.':'Uvedeno jako nepřístupné — s pomocí možná půjde.'};
+  return {v:'nevim',proc:'O tomhle místě nikdo přístupnost nezjišťoval.'};
+}
+const NAZEV_V={ano:'Dostanu se',pomoc:'S pomocí',ne:'Nedostanu se',nevim:'Nevíme'};
+
+/* ───────── co mě tam čeká: převod poznámky do lidské řeči ───────── */
+function znaky(m){
+  const p=m.syrova,t=norm(m.pozn),out=[];
+  if(p.WC_BEZBAR==='1') out.push(['dobre','bezbariérové WC']);
+  if(p.VNITR_BEZB==='1') out.push(['dobre','uvnitř bez bariér']);
+  if(p.MAJACEK==='1') out.push(['dobre','hlasový majáček']);
+  if(p.SIGNAL_PAS==='1') out.push(['dobre','signální pás']);
+  if(p.AKUST_SIG==='1') out.push(['dobre','akustická signalizace']);
+  if(p.SCHODY==='1') out.push(['spatne','schod u vstupu']);
+  if(p.DO_80CM==='1') out.push(['spatne','úzké dveře (do 80 cm)']);
+  if(/rampa|nájezd|najezd/.test(t)) out.push(['dobre','rampa']);
+  if(/plošin|plosin/.test(t)) out.push(['dobre','plošina']);
+  if(/zvonek/.test(t)) out.push(['','zvonek u vstupu']);
+  if(/výtah|vytah/.test(t)) out.push(['','výtah']);
+  if(/braill/.test(t)) out.push(['dobre','Braillovo písmo']);
+  const cm=t.match(/(\d{2,3})\s*cm/); if(cm) out.push([+cm[1]<80?'spatne':'', cm[1]+' cm dveře']);
+  if(/nedoporuč|nedoporuc/.test(t)) out.push(['spatne','samostatný pohyb nedoporučen']);
+  return out;
+}
+/* lidská věta z útržkovité poznámky — bez klíče pravidly, s klíčem model */
+function shrnuti(m){
+  const z=znaky(m), v=verdikt(m);
+  if(!m.pozn&&!z.length) return v.proc;
+  const dobre=z.filter(x=>x[0]==='dobre').map(x=>x[1]);
+  const spatne=z.filter(x=>x[0]==='spatne').map(x=>x[1]);
+  const ostatni=z.filter(x=>!x[0]).map(x=>x[1]);
+  let s=v.proc;
+  if(spatne.length) s+=' Počítejte s tím, že tu je '+spatne.join(' a ')+'.';
+  if(dobre.length) s+=' K dispozici je '+dobre.join(', ')+'.';
+  if(ostatni.length) s+=' Dál je tu '+ostatni.join(', ')+'.';
+  return s;
+}
+
+/* ───────── seznam ───────── */
+function vyber(){
+  let l=MISTA.filter(m=>m.lat&&m.lon);
+  if(kat!=='vse') l=l.filter(m=>m.kat===kat);
+  if(profil==='sluch') l=l.filter(m=>m.pro==='sluch'||m.typ==='Divadlo'||verdikt(m).v!=='nevim');
+  if(profil==='zrak')  l=l.filter(m=>m.pro==='zrak'||m.zdroj==='kraj');
+  if(odkud) l.forEach(m=>m.km=hav(odkud,[m.lat,m.lon]));
+  const rank={ano:0,pomoc:1,nevim:3,ne:2};
+  return l.map(m=>({...m,v:verdikt(m)}))
+    .sort((a,b)=>{
+      const oa=oblibene.has(a.id)?-1:0, ob=oblibene.has(b.id)?-1:0;
+      if(oa!==ob) return oa-ob;
+      if(rank[a.v.v]!==rank[b.v.v]) return rank[a.v.v]-rank[b.v.v];
+      return (a.km||0)-(b.km||0);
+    });
+}
+function render(){
+  const l=vyber(), zobraz=l.slice(0,120);
+  const p=PROFILY.find(x=>x.id===profil);
+  const ano=l.filter(x=>x.v.v==='ano').length, nevim=l.filter(x=>x.v.v==='nevim').length;
+  $('hlaska').innerHTML=`<b>${p.nazev.replace(/^\S+\s/,'')}</b> — ${p.popis}.
+    Z ${l.length} míst se dostanete do <b>${ano}</b>`+
+    (nevim?`, u <b>${nevim}</b> to nikdo nezjišťoval`:'')+'.';
+  $('seznam').innerHTML = zobraz.length? zobraz.map(m=>`
+    <div class="misto ${aktivni===m.id?'akt':''}" data-id="${m.id}">
+      <div class="verdikt v-${m.v.v}"><b>${NAZEV_V[m.v.v]}</b>
+        <span>${m.km!=null?m.km.toFixed(m.km<10?1:0)+' km':''}</span></div>
+      <div class="info">
+        <h3>${m.nazev}</h3>
+        <p class="kde">${m.typ} · ${m.obec||''}</p>
+        <p class="proc">${m.v.proc}</p>
+        ${znaky(m).length?`<div class="znaky">${znaky(m).slice(0,4)
+          .map(([c,t])=>`<span class="${c}">${t}</span>`).join('')}</div>`:''}
+      </div>
+      <button class="hvezda ${oblibene.has(m.id)?'on':''}" data-hv="${m.id}"
+        title="Uložit mezi moje místa">${oblibene.has(m.id)?'★':'☆'}</button>
+    </div>`).join('')
+   : `<div class="prazdno">Pro tenhle profil a kategorii nemáme žádné místo.<br><br>
+      U profilu <b>Neslyším</b> je to samo o sobě odpověď: v celém kraji je
+      <b>5 indukčních smyček</b> a jinde tenhle údaj nikdo nesbírá.</div>`;
+  kresliMapu(zobraz);
+  document.querySelectorAll('.misto').forEach(el=>el.onclick=e=>{
+    if(e.target.dataset.hv) return;
+    otevri(el.dataset.id);
+  });
+  document.querySelectorAll('[data-hv]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const id=b.dataset.hv;
+    oblibene.has(id)?oblibene.delete(id):oblibene.add(id);
+    localStorage.setItem('kammuzu.oblibene',JSON.stringify([...oblibene]));
+    render();
+  });
+}
+
+/* ───────── detail ───────── */
+function otevri(id){
+  const m=MISTA.find(x=>x.id===id); if(!m) return;
+  aktivni=id;
+  const v=verdikt(m), z=znaky(m);
+  $('d-nazev').textContent=m.nazev;
+  $('d-body').innerHTML=`
+    <div class="verdikt v-${v.v}" style="width:auto;text-align:left;display:inline-block">
+      <b style="padding:4px 12px">${NAZEV_V[v.v]}</b></div>
+    <p class="shrnuti">${shrnuti(m)}</p>
+    <div class="fakta">
+      <div class="fakt"><b>${m.typ}</b><span>druh místa</span></div>
+      <div class="fakt"><b>${m.obec||'—'}</b><span>obec</span></div>
+      ${m.km!=null?`<div class="fakt"><b>${m.km.toFixed(1)} km</b><span>od vás</span></div>`:''}
+      <div class="fakt"><b>${m.zdroj==='hradec'?'pasport Hradce':'data kraje'}</b><span>zdroj údaje</span></div>
+    </div>
+    ${z.length?`<div class="znaky">${z.map(([c,t])=>`<span class="${c}">${t}</span>`).join('')}</div>`:''}
+    ${m.pozn?`<div class="cit">Původní zápis: „${m.pozn}"</div>`:''}
+    ${v.v==='nevim'?`<button class="nahlas" onclick="alert('V ostré verzi by tady šlo poslat kraji podnět, že o tomhle místě chybí údaj.')">
+      Chybí tu údaj — nahlásit kraji</button>`:''}
+    <p style="font-size:.75rem;color:var(--tx3);margin-top:14px">
+      Data z ${m.zdroj==='hradec'
+        ?'<a href="https://ckan.mmhk.cz/dataset/bezbarierovy-hradec" target="_blank" rel="noopener">Bezbariérový Hradec</a> (CC0, stav 2020)'
+        :'<a href="https://www.datakhk.cz" target="_blank" rel="noopener">Data KHK</a>'}.
+      Pokud jste na místě zjistili něco jiného, dejte vědět kraji — data žijí z lidí.</p>`;
+  $('detail').classList.add('open');
+  render();
+  if(map) map.setView([m.lat,m.lon],15);
+}
+$('d-zavri').onclick=()=>{$('detail').classList.remove('open');aktivni=null;render();};
+
+/* ───────── mapa ───────── */
+const BARVA={ano:'#4CAF7D',pomoc:'#D9A03F',ne:'#CF5A4C',nevim:'#6B7A80'};
+function initMap(){
+  map=L.map('map',{attributionControl:false,zoomControl:true}).setView(odkud||[50.21,15.83],12);
+  vrstva=L.layerGroup().addTo(map);
+}
+function kresliMapu(l){
+  if(!vrstva) return;
+  vrstva.clearLayers();
+  if(odkud) L.circleMarker(odkud,{radius:7,fillColor:'#4E9FD1',color:'#fff',weight:2,fillOpacity:1})
+    .bindTooltip('Vy jste tady').addTo(vrstva);
+  for(const m of l.slice(0,120))
+    L.circleMarker([m.lat,m.lon],{radius:aktivni===m.id?8:5,fillColor:BARVA[m.v.v],
+      color:aktivni===m.id?'#fff':'#101416',weight:aktivni===m.id?2:1,fillOpacity:.92})
+     .bindTooltip(`<b>${m.nazev}</b><br>${NAZEV_V[m.v.v]} · ${m.v.proc}`)
+     .on('click',()=>otevri(m.id)).addTo(vrstva);
+  const b=l.slice(0,60).map(m=>[m.lat,m.lon]);
+  if(odkud) b.push(odkud);
+  if(b.length>1) try{ map.fitBounds(L.latLngBounds(b),{padding:[24,24],maxZoom:14}); }catch(e){}
+}
+
+/* ───────── ovládání ───────── */
+function renderProfil(){
+  $('profil').innerHTML=PROFILY.map(p=>
+    `<button data-p="${p.id}" aria-pressed="${p.id===profil}">${p.nazev}</button>`).join('');
+  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
+    profil=b.dataset.p; localStorage.setItem('kammuzu.profil',profil);
+    renderProfil(); render();});
+}
+function renderKat(){
+  $('kat').innerHTML=KATEGORIE.map(([k,n])=>
+    `<button data-k="${k}" aria-pressed="${k===kat}">${n}</button>`).join('');
+  document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
+    kat=b.dataset.k; renderKat(); render();});
+}
+$('kde').onchange=e=>{
+  const o=e.target.value.trim();
+  if(OBCE.has(o)){ odkud=OBCE.get(o); localStorage.setItem('kammuzu.odkud',o); render(); }
+};
+$('gps').onclick=()=>{
+  if(!navigator.geolocation) return alert('Prohlížeč neumí zjistit polohu.');
+  navigator.geolocation.getCurrentPosition(
+    p=>{odkud=[p.coords.latitude,p.coords.longitude];$('kde').value='moje poloha';render();},
+    ()=>alert('Polohu se nepodařilo zjistit. Vyberte obec ručně.'));
+};
+const ulozenyProfil=localStorage.getItem('kammuzu.profil');
+if(ulozenyProfil&&PROFILY.some(p=>p.id===ulozenyProfil)) profil=ulozenyProfil;
+</script>
+</body>
+</html>
