@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { RadioTower } from "lucide-react";
-import { getHeatmap, getTelemetry } from "@/lib/api";
+import { getHeatmap, getSection, getTelemetry } from "@/lib/api";
 import { formatNumber } from "@/lib/facility-meta";
 import type { FacilityDetail, Telemetry, TelemetryPoint } from "@/types/api";
 import { EnergyBars } from "./energy-bars";
 import { HeatmapGrid } from "./heatmap-grid";
 import { PanelCard, StatTile } from "./panel-card";
+import { RoomsNow } from "./rooms-now";
 import { TemperatureChart } from "./temperature-chart";
 
 export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
-  const [temperature, energy, heatmap] = await Promise.all([
+  const [temperature, energy, heatmap, section] = await Promise.all([
     getTelemetry(facility.id, "Temperature", { hours: 48 }),
     getTelemetry(facility.id, "Power", { bucket: "Day", hours: 24 * 7 }),
     getHeatmap(facility.id, "Power"),
+    getSection(facility.id),
   ]);
 
   const averageTemperature = averageAcrossZones(temperature);
@@ -43,6 +45,8 @@ export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
         <StatTile label="CO₂" value={formatNumber(assessment?.co2)} note="ppm · nejhorší zóna" tone={(assessment?.co2 ?? 0) > 1500 ? "warning" : "default"} />
         <StatTile label="Příkon" value={formatNumber(assessment?.power)} note="kWh/h" />
       </div>
+
+      <RoomsNow section={section} />
 
       <PanelCard title="Teplota za 48 h" meta={`${temperature.series.length} zón · hodinový průměr`}>
         <TemperatureChart points={averageTemperature} setback={18} />

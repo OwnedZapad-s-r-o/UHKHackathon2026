@@ -1,5 +1,7 @@
 import { ExternalLink, MapPinned } from "lucide-react";
+import { LiveBadge } from "@/components/live-badge";
 import { getSection } from "@/lib/api";
+import { FEATURES } from "@/lib/features";
 import { STATUS_META, formatNumber } from "@/lib/facility-meta";
 import { cn } from "@/lib/utils";
 import type { BuildingSection, FacilityDetail } from "@/types/api";
@@ -14,7 +16,7 @@ const USE_LABEL: Record<string, string> = {
 };
 
 export async function BuildingTab({ facility }: { facility: FacilityDetail }) {
-  const section = await getSection(facility.id);
+  const section = FEATURES.buildingSection ? await getSection(facility.id) : null;
   const building = facility.building;
 
   return (
@@ -49,12 +51,14 @@ export async function BuildingTab({ facility }: { facility: FacilityDetail }) {
         )}
       </PanelCard>
 
-      <PanelCard title="Řez budovou" meta={`${section.zones.length} zón · ${section.floors} podl.`}>
-        <SectionGrid section={section} />
-        <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-          Schéma podle druhu zařízení a odhadu podlaží — otevřená data vnitřní dispozici budov neobsahují, nejde o skutečný plán.
-        </p>
-      </PanelCard>
+      {section && (
+        <PanelCard title="Řez budovou" meta={`${section.zones.length} zón · ${section.floors} podl.`}>
+          <SectionGrid section={section} />
+          <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+            Schéma podle druhu zařízení a odhadu podlaží — otevřená data vnitřní dispozici budov neobsahují, nejde o skutečný plán.
+          </p>
+        </PanelCard>
+      )}
     </>
   );
 }
@@ -100,7 +104,7 @@ function SectionGrid({ section }: { section: BuildingSection }) {
                     <p className="flex items-center gap-1 truncate text-[11px] font-bold">
                       {StatusIcon && <StatusIcon className="size-3 shrink-0" aria-hidden />}
                       {zone.name}
-                      {zone.live && <LiveBadge />}
+                      {zone.live && <LiveBadge className="ml-auto" />}
                     </p>
                     <p className="mt-0.5 font-mono text-[11px]">
                       {formatNumber(zone.temperature, "°C")} · {formatNumber(zone.co2, "ppm")}
@@ -114,16 +118,6 @@ function SectionGrid({ section }: { section: BuildingSection }) {
         );
       })}
     </div>
-  );
-}
-
-// Zónu měří skutečné čidlo — odliší ji od simulovaných hodnot
-function LiveBadge() {
-  return (
-    <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-1.5 py-px text-[9px] font-bold tracking-wide text-white uppercase">
-      <span className="size-1 animate-pulse rounded-full bg-white" aria-hidden />
-      živě
-    </span>
   );
 }
 
