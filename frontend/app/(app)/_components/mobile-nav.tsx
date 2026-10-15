@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 
 // Mobilní lišta: postranní panel se na úzké obrazovce vysune zleva přes obsah
 export function MobileNav({ children }: { children: ReactNode }) {
@@ -24,8 +25,7 @@ export function MobileNav({ children }: { children: ReactNode }) {
         >
           <Menu className="size-5" />
         </button>
-        <span className="text-[15px] font-bold tracking-tight">SmartAudit</span>
-        <span className="text-[11px] text-white/55">Královéhradecký kraj</span>
+        <Logo tone="dark" className="h-5.5 w-auto" />
       </div>
 
       {open && (

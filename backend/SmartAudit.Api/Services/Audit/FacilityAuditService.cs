@@ -77,6 +77,7 @@ namespace SmartAudit.Api.Services.Audit
             var facilities = await _dbContext.Facilities
                 .Where(f => ids == null || ids.Contains(f.Id))
                 .Include(f => f.Assessment)
+                .Include(f => f.PreAudit)
                 .Include(f => f.Building)
                 .Include(f => f.Zones)
                 .AsSplitQuery()
@@ -114,7 +115,9 @@ namespace SmartAudit.Api.Services.Audit
                     .ToList();
 
                 var zoneNames = facility.Zones.ToDictionary(z => z.Id, z => z.Name);
-                var evaluation = FacilityStatusEvaluator.Evaluate(facility.Category, values, zoneNames, _settings.Co2LimitPpm);
+                var live = measured.Contains(facility.Id);
+                var evaluation = FacilityStatusEvaluator.Evaluate(facility.Category, values, zoneNames, _settings.Co2LimitPpm, live ? FacilityStatusEvaluator.LiveOrigin : FacilityStatusEvaluator.ModelOrigin);
+                var (status, headline, summary, findings) = MergePreAudit(evaluation, facility.PreAudit, live);
 
                 var heatPrice = facility.OrganizationId is { } organizationId && heatPrices.TryGetValue(organizationId, out var contractPrice) ? contractPrice : _settings.HeatPriceCzkPerKwh;
                 var (annualLoss, savingPercent) = EstimateLoss(facility, values, evaluation, heatPrice, addedAreas.GetValueOrDefault(facility.Id));
@@ -127,10 +130,10 @@ namespace SmartAudit.Api.Services.Audit
                 }
 
                 assessment.Update(
-                    evaluation.Status,
-                    evaluation.Headline,
-                    evaluation.Summary,
-                    JsonSerializer.Serialize(evaluation.Findings.Select(f => new { f.Title, f.Detail, f.Tag, Severity = f.Severity.ToString() }), JsonOptions),
+                    status,
+                    headline,
+                    summary,
+                    JsonSerializer.Serialize(findings.Select(f => new { f.Title, f.Detail, f.Tag, Severity = f.Severity.ToString(), f.Source }), JsonOptions),
                     evaluation.LatestTemperature,
                     evaluation.LatestCo2,
                     evaluation.LatestPower,
@@ -147,6 +150,43 @@ namespace SmartAudit.Api.Services.Audit
 
             return byFacility.Count;
         }
+
+        private record PreAuditFindingJson(string Title, string Detail, string Tag, string Severity, string? Source);
+
+        // Stav objektu = horší z (telemetrie, pre-audit z otevřených dat). Když teplotu měří skutečné čidlo IQRF,
+        // rozhoduje měření — zjištění pre-auditu zůstanou jako hypotézy z otevřených dat, které čidlo ověřuje.
+        private static (AuditStatus Status, string Headline, string Summary, List<AuditFinding> Findings) MergePreAudit(AuditEvaluation evaluation, FacilityPreAudit? preAudit, bool live)
+        {
+            var findings = evaluation.Findings.ToList();
+            if (preAudit == null)
+                return (evaluation.Status, evaluation.Headline, evaluation.Summary, findings);
+
+            var fromOpenData = (JsonSerializer.Deserialize<List<PreAuditFindingJson>>(preAudit.FindingsJson, JsonOptions) ?? [])
+                .Select(f => new AuditFinding(
+                    f.Title,
+                    live ? $"{f.Detail} (Hypotéza z otevřených dat — ověřuje ji živé měření IQRF.)" : f.Detail,
+                    f.Tag,
+                    live ? AuditStatus.Nominal : Enum.Parse<AuditStatus>(f.Severity),
+                    f.Source))
+                .Where(f => findings.All(t => t.Title != f.Title))
+                .ToList();
+
+            findings.AddRange(fromOpenData);
+
+            var status = live ? evaluation.Status : (AuditStatus)Math.Max((int)evaluation.Status, (int)preAudit.Status);
+            var headline = evaluation.Findings.Count > 0
+                ? evaluation.Headline
+                : fromOpenData.OrderByDescending(f => f.Severity).FirstOrDefault(f => f.Severity != AuditStatus.Nominal)?.Title ?? evaluation.Headline;
+
+            var preAuditSentence = $"Pre-audit z otevřených dat: {preAudit.Score}/100 bodů, hlavní příčina {preAudit.DominantDriver.ToLowerInvariant()}.";
+            var summary = evaluation.Findings.Count > 0 || fromOpenData.Count == 0
+                ? $"{evaluation.Summary} {preAuditSentence}"
+                : $"{string.Join(" ", fromOpenData.Where(f => f.Severity != AuditStatus.Nominal).Select(f => f.Detail))} {preAuditSentence}";
+
+            return (status, Truncate(headline, 200), Truncate(summary.Trim(), 2000), findings);
+        }
+
+        private static string Truncate(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
 
         // Cena tepla ze smluv organizace v Registru smluv (dodávka tepla, jinak plynu) — organizace bez ceny ve smlouvě
         // v seznamu nejsou a počítá se s paušální cenou z AuditSettings

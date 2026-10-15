@@ -12,7 +12,7 @@ export function RoomsNow({ section }: { section: BuildingSection }) {
   const liveCount = section.zones.filter((z) => z.live).length;
 
   return (
-    <PanelCard title="Místnosti teď" meta={liveCount > 0 ? `${liveCount} se skutečným čidlem` : "modelová data"}>
+    <PanelCard title="Místnosti teď" meta={liveCount > 0 ? `${liveCount} se skutečným čidlem` : "fyzikální model z otevřených dat"}>
       <ul className="divide-y divide-slate-100">
         {section.zones.map((zone) => {
           const level = airLevel(zone.co2);

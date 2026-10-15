@@ -41,7 +41,7 @@ namespace SmartAudit.Core.Data.Tables
         public string? HeritageName { get; private set; }
 
 
-        // Simulace telemetrie
+        // Profil fyzikálního modelu telemetrie — odvozuje ho pre-audit z otevřených dat (OpenDataPreAudit), ne náhoda
         public SimulationProfile SimulationProfile { get; private set; }
 
 
@@ -58,6 +58,7 @@ namespace SmartAudit.Core.Data.Tables
         public Organization? Organization { get; set; }
         public FacilityBuilding? Building { get; set; }
         public FacilityAssessment? Assessment { get; set; }
+        public FacilityPreAudit? PreAudit { get; set; }
         public ICollection<FacilityMetric> Metrics { get; private set; } = new List<FacilityMetric>();
         public ICollection<Zone> Zones { get; private set; } = new List<Zone>();
         public ICollection<Sensor> Sensors { get; private set; } = new List<Sensor>();

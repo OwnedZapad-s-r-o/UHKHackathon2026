@@ -43,5 +43,10 @@ namespace SmartAudit.Core.Data.Tables
             Order = order;
             IsHotspot = isHotspot;
         }
+
+        public void SetHotspot(bool isHotspot)
+        {
+            IsHotspot = isHotspot;
+        }
     }
 }

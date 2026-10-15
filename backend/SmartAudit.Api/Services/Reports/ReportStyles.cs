@@ -22,7 +22,7 @@ namespace SmartAudit.Api.Services.Reports
 
         public static byte[] Logo => _logo ?? throw new InvalidOperationException("Zdroje reportů nejsou načtené");
 
-        // Písmo Hradec (TTF převedené z webových WOFF2) a černé logo HK — načítá se jednou při startu
+        // Písmo Hradec (TTF převedené z webových WOFF2) a logo SmartAudit — načítá se jednou při startu
         public static void Initialize(string contentRoot)
         {
             var resources = Path.Combine(contentRoot, "Resources");
@@ -30,7 +30,7 @@ namespace SmartAudit.Api.Services.Reports
             FontManager.RegisterFontFromFile(Path.Combine(resources, "Fonts", "Hradec-Regular.ttf"));
             FontManager.RegisterFontFromFile(Path.Combine(resources, "Fonts", "Hradec-Bold.ttf"));
 
-            _logo = File.ReadAllBytes(Path.Combine(resources, "hk-logo-black.png"));
+            _logo = File.ReadAllBytes(Path.Combine(resources, "smartaudit-logo.png"));
         }
 
         public static (string Label, string Foreground, string Background) Status(AuditStatus status)
@@ -66,7 +66,7 @@ namespace SmartAudit.Api.Services.Reports
             {
                 column.Item().Row(row =>
                 {
-                    row.ConstantItem(70).Image(Logo);
+                    row.ConstantItem(112).AlignMiddle().Image(Logo);
                     row.RelativeItem().AlignRight().AlignMiddle().Column(text =>
                     {
                         text.Item().AlignRight().Text(title).FontSize(11).Bold().FontColor(Navy);

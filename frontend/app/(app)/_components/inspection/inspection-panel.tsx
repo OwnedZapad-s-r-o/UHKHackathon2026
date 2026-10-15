@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, ExternalLink, FileDown, X } from "lucide-react";
+import { DataModeBadge } from "@/components/data-mode-badge";
 import { getFacilityDetail, getSession } from "@/lib/api";
 import { STATUS_META, formatMillionsCzk, formatNumber } from "@/lib/facility-meta";
 import { withParams, type RawSearchParams } from "@/lib/search-params";
@@ -108,6 +109,7 @@ function FacilityHeader({ facility }: { facility: FacilityDetail }) {
           </span>
           <h2 className="mt-2.5 text-2xl leading-tight font-bold tracking-tight">{facility.name}</h2>
           <p className="mt-1.5 text-xs text-slate-500">{facility.address.label}</p>
+          <DataModeBadge mode={facility.dataMode} className="mt-2.5" />
         </div>
         <span className={cn("inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-bold", STATUS_META[status].pill)}>
           <StatusIcon className="size-3" aria-hidden />

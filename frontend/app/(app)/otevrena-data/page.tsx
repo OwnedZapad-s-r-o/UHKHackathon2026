@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { BookOpen, Braces, ExternalLink, FileSpreadsheet, Library, Map as MapIcon } from "lucide-react";
+import { BadgeCheck, BookOpen, Braces, ExternalLink, FileSpreadsheet, Gauge, Library, Map as MapIcon } from "lucide-react";
 import { getFacilities } from "@/lib/api";
-import { requestOrigin } from "@/lib/request-origin";
+import { publicBaseUrl } from "@/lib/public-url";
 import { CATEGORY_META, DISTRICTS, STATUS_META } from "@/lib/facility-meta";
 import type { AuditStatus, FacilityCategory } from "@/types/api";
 import { TopBar } from "../_components/top-bar";
 import { CopyButton } from "../_components/copy-button";
 
 export const metadata: Metadata = {
-  title: "Otevřené API · SmartAudit KHK",
+  title: "Otevřené API · SmartAudit",
   description: "Data SmartAuditu jako otevřená data — JSON, GeoJSON a CSV bez přihlášení a bez klíče.",
 };
 
@@ -20,7 +20,12 @@ const DOWNLOADS = [
   { href: `${BASE_PATH}/facilities`, label: "Objekty (JSON)", note: "pro aplikace a skripty", icon: Braces },
   { href: `${BASE_PATH}/facilities.geojson`, label: "Objekty (GeoJSON)", note: "body pro QGIS a webové mapy", icon: MapIcon },
   { href: `${BASE_PATH}/facilities.csv`, label: "Objekty (CSV)", note: "tabulka pro Excel", icon: FileSpreadsheet },
+  { href: `${BASE_PATH}/preaudit`, label: "Pre-audit budov (JSON)", note: "parametry A–E se zdroji a sada IQRF", icon: Gauge },
+  { href: `${BASE_PATH}/preaudit.csv`, label: "Pre-audit budov (CSV)", note: "skóre, fyzika budovy, IQRF", icon: FileSpreadsheet },
 ];
+
+// Co SmartAudit sám publikuje jako nová otevřená data (Čl. 5.2b pravidel hackathonu)
+const PUBLISHED_FORMATS = ["JSON", "GeoJSON", "CSV", "DCAT-AP-CZ JSON-LD"];
 
 const ENDPOINTS = [
   { path: "/facilities", description: "Seznam objektů, které zřizuje kraj — adresa, poloha, stav auditu, poslední měření", cache: "5 min" },
@@ -29,8 +34,11 @@ const ENDPOINTS = [
   { path: "/facilities/{id}", description: "Detail objektu — organizace, budova z ČÚZK, obsazenost, zjištění auditu", cache: "5 min" },
   { path: "/facilities/{id}/footprint", description: "Půdorys budovy z ČÚZK jako GeoJSON Feature s odhadem výšky", cache: "2 dny" },
   { path: "/facilities/{id}/telemetry", description: "Časová řada měření po zónách — metric, from, to, bucket (nejvýš 31 dní)", cache: "5 min" },
+  { path: "/preaudit", description: "Pre-audit budov z otevřených dat — skóre 0–100, parametry A–E s vysvětlením a klíči zdrojových sad, sada IQRF", cache: "5 min" },
+  { path: "/preaudit.csv", description: "Totéž jako CSV — body parametrů, měrná ztráta, denostupně, potřeba tepla, velikost a cena sady IQRF", cache: "5 min" },
   { path: "/datasets", description: "Použité zdroje dat a stav jejich posledního stažení", cache: "5 min" },
   { path: "/catalog", description: "Lokální katalog otevřených dat DCAT-AP-CZ (JSON-LD) pro Národní katalog otevřených dat", cache: "—" },
+  { path: "/catalog/datasets/{id}", description: "Záznam datové sady v katalogu (budovy-a-energeticky-audit, predaudit-budov-a-navratnost-iqrf)", cache: "—" },
 ];
 
 // Lokální katalog DCAT-AP-CZ — adresu stačí zaregistrovat v NKOD (data.gov.cz), ten si metadata sklízí sám
@@ -45,7 +53,7 @@ const METRICS = [
 ];
 
 export default async function OpenDataPage() {
-  const [origin, facilities] = await Promise.all([requestOrigin(), getFacilities()]);
+  const [origin, facilities] = await Promise.all([publicBaseUrl(), getFacilities()]);
   const example = facilities.find((f) => f.status !== "Nominal") ?? facilities[0];
   const base = `${origin}${BASE_PATH}`;
 
@@ -80,12 +88,39 @@ console.log(objekty.features.length, "objektů");`;
         <h1 className="text-[32px] leading-tight font-bold tracking-tight">Otevřená data SmartAuditu</h1>
         <p className="mt-1.5 max-w-2xl text-sm leading-normal text-slate-600">
           Objekty, které zřizuje Královéhradecký kraj, jejich budovy a stav energetického auditu. API je jen pro čtení, funguje bez
-          přihlášení a bez klíče a dá se volat i z jiného webu (CORS). Částky v Kč neobsahuje. Data můžete volně použít pod licencí{" "}
+          přihlášení a bez klíče a dá se volat i z jiného webu (CORS). Ztráty ani úspory v Kč neobsahuje (jen ceníkovou cenu sady čidel IQRF). Data můžete volně použít pod licencí{" "}
           <a href="https://creativecommons.org/licenses/by/4.0/deed.cs" target="_blank" rel="noreferrer" className="font-bold text-hk-navy underline hover:text-hk-red">
             CC BY 4.0
           </a>{" "}
-          s uvedením zdroje „SmartAudit KHK“ a původních zdrojů ze stránky Zdroje dat.
+          s uvedením zdroje „SmartAudit“ a původních zdrojů ze stránky Zdroje dat.
         </p>
+
+        <section aria-labelledby="publisher" className="mt-5 rounded-2xl border border-hk-blue/20 bg-[#EFF4FA] p-4.5">
+          <div className="flex items-start gap-3">
+            <BadgeCheck className="mt-0.5 size-5 shrink-0 text-hk-blue" aria-hidden />
+            <div className="min-w-0">
+              <h2 id="publisher" className="text-[15px] font-bold text-hk-navy">
+                SmartAudit KHK sám publikuje nová otevřená data (Čl. 5.2b pravidel)
+              </h2>
+              <p className="mt-1 text-[13px] leading-normal text-slate-700">
+                Spojená a vypočtená data — budovy kraje s kartou ČÚZK, stav auditu, pre-audit z 30+ sad otevřených dat a kalkulace sady čidel MICRORISC IQRF —
+                vydáváme pod licencí <b>CC BY 4.0</b> a popisujeme je lokálním katalogem podle OFN <b>DCAT-AP-CZ</b>, který si Národní katalog otevřených dat
+                (data.gov.cz) umí sám sklízet.
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                {PUBLISHED_FORMATS.map((format) => (
+                  <span key={format} className="rounded-md border border-hk-blue/20 bg-white px-1.5 py-0.5 font-mono text-[11px] font-bold text-hk-blue">
+                    {format}
+                  </span>
+                ))}
+                <a href={CATALOG_PATH} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-1 font-mono text-[11.5px] font-bold text-hk-navy hover:text-hk-red hover:underline">
+                  {CATALOG_PATH}
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section aria-labelledby="downloads" className="mt-6">
           <h2 id="downloads" className="mb-2 text-[11px] font-bold tracking-wide text-slate-500 uppercase">
@@ -108,6 +143,7 @@ console.log(objekty.features.length, "objektů");`;
                   <span className="block text-xs text-slate-500">
                     {facilities.length} objektů · {note}
                   </span>
+                  <span className="mt-0.5 block font-mono text-[10.5px] text-slate-400">CC BY 4.0 · stáhnout jedním klikem</span>
                 </span>
               </a>
             ))}

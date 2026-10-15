@@ -1,0 +1,121 @@
+# SmartAudit KHK — produkční stack z exportovaných image (docker load -i smartaudit-stack.tar).
+# Nic se tu nesestavuje: image vyrobil export-docker-images.ps1. Ven vede jediný port — nginx (HTTP_PORT, výchozí 8088),
+# na který míří Cloudflare Tunnel. Databáze, API i web jsou jen ve vnitřní síti Dockeru.
+#
+#   docker compose -f docker-compose.prod.yml up -d                      # bez tunelu (http://localhost:8088)
+#   docker compose -f docker-compose.prod.yml --profile tunnel up -d     # + Cloudflare Tunnel s tokenem (vlastní doména)
+#   docker compose -f docker-compose.prod.yml --profile quicktunnel up -d  # + dočasná adresa *.trycloudflare.com
+#   docker compose -f docker-compose.prod.yml logs -f nginx              # kdo přistupuje na web
+
+name: smartaudit
+
+services:
+  db:
+    image: ${POSTGIS_IMAGE:-postgis/postgis:17-3.5}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: smartaudit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Nastavte POSTGRES_PASSWORD v .env}
+      POSTGRES_DB: smartaudit
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartaudit -d smartaudit"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # MQTT broker pro IQRF gatewaye — port 8883 (TLS) je potřeba jen tehdy, když se připojují skutečné gatewaye
+  mqtt:
+    image: smartaudit-mqtt:${SMARTAUDIT_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      MQTT_BACKEND_USERNAME: smartaudit-backend
+      MQTT_BACKEND_PASSWORD: ${MQTT_BACKEND_PASSWORD:?Nastavte MQTT_BACKEND_PASSWORD v .env}
+      MQTT_TLS_HOSTS: ${IQRF_BROKER_PUBLIC_HOST:-}
+    volumes:
+      - mqtt_data:/mosquitto/data
+      - mqtt_certs:/mosquitto/certs
+    ports:
+      - "${MQTT_TLS_PORT:-8883}:8883"
+
+  api:
+    image: smartaudit-api:${SMARTAUDIT_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=smartaudit;Username=smartaudit;Password=${POSTGRES_PASSWORD}"
+      JwtSettings__Secret: ${JWT_SECRET:?Nastavte JWT_SECRET v .env}
+      OpenDataSettings__SnapshotPath: /seed/opendata
+      OpenDataSettings__PublicBaseUrl: ${PUBLIC_URL:-}
+      AzureOpenAiSettings__Endpoint: ${AZURE_OPENAI_ENDPOINT:-}
+      AzureOpenAiSettings__ApiKey: ${AZURE_OPENAI_API_KEY:-}
+      AzureOpenAiSettings__Deployment: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AzureOpenAiSettings__EmbeddingDeployment: ${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-}
+      OpenAiSettings__ApiKey: ${OPENAI_API_KEY:-}
+      OpenAiSettings__Model: ${OPENAI_MODEL:-gpt-4o}
+      OpenAiSettings__EmbeddingModel: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      IqrfSettings__Host: mqtt
+      IqrfSettings__Username: smartaudit-backend
+      IqrfSettings__Password: ${MQTT_BACKEND_PASSWORD}
+      IqrfSettings__DeviceSecret: ${MQTT_DEVICE_SECRET:?Nastavte MQTT_DEVICE_SECRET v .env}
+      IqrfSettings__ProvisioningPassword: ${MQTT_PROVISIONING_PASSWORD:-}
+      IqrfSettings__PublicHost: ${IQRF_BROKER_PUBLIC_HOST:-}
+      IqrfSettings__CaCertificatePath: /mqtt-certs/ca.crt
+    volumes:
+      # Snímky otevřených dat pro start bez sítě (a místo, kam aplikace ukládá čerstvě stažená data)
+      - ./seed:/seed
+      - mqtt_certs:/mqtt-certs:ro
+
+  web:
+    image: smartaudit-web:${SMARTAUDIT_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_INTERNAL_URL: http://api:8080
+      PUBLIC_URL: ${PUBLIC_URL:-}
+
+  # Jediný vstup zvenku — přístupové logy: docker compose logs -f nginx, soubor logs/nginx/access.json.log
+  nginx:
+    image: smartaudit-nginx:${SMARTAUDIT_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    ports:
+      - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-8088}:80"
+    volumes:
+      - ./logs/nginx:/var/log/nginx
+
+  # Cloudflare Tunnel s vlastní doménou: v Zero Trust → Networks → Tunnels vytvořte tunel, zkopírujte token do .env
+  # (CLOUDFLARE_TUNNEL_TOKEN) a jako Public Hostname nastavte službu HTTP → nginx:80
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared:latest}
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - nginx
+
+  # Bez účtu Cloudflare: dočasná veřejná adresa — najdete ji v logu (docker compose ... logs cloudflared-quick)
+  cloudflared-quick:
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared:latest}
+    profiles: ["quicktunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://nginx:80
+    depends_on:
+      - nginx
+
+volumes:
+  db_data:
+  mqtt_data:
+  mqtt_certs:

@@ -45,7 +45,7 @@ export function AiAuditCard({ facilityId, configured, initialAnalysis }: AiAudit
       {!configured ? (
         <p className="mt-3 flex gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-[13px] leading-relaxed text-slate-600">
           <KeyRound className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden />
-          AI analýza zatím není nastavená. Po doplnění klíče Azure OpenAI (proměnné AZURE_OPENAI_* v souboru .env) se tu objeví tlačítko
+          AI analýza zatím není nastavená. Po doplnění klíče OpenAI (OPENAI_API_KEY) nebo Azure OpenAI (AZURE_OPENAI_*) v souboru .env se tu objeví tlačítko
           pro vygenerování auditu.
         </p>
       ) : (

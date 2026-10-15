@@ -182,6 +182,9 @@ export function BuildingEditor({ facilityId, mode }: BuildingEditorProps) {
   useEffect(() => {
     if (!map || !isLoaded || stage !== "edit") return;
 
+    // Obrys z API může dorazit až po přidání vrstev (editor otevřený nad už načtenou mapou) — nakreslit ho tady
+    drawOutline(map, ringRef.current, true);
+
     let dragging: number | null = null;
 
     function handleDown(event: MapLayerMouseEvent) {

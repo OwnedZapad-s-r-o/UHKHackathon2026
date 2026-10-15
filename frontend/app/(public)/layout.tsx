@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { Logo, LogoSymbol } from "@/components/brand/logo";
 import { getSession } from "@/lib/api";
 import { PUBLIC_LINKS } from "./_components/public-links";
 import { PublicMenu } from "./_components/public-menu";
@@ -13,15 +13,11 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
 
   return (
-    <div className="scrollbar-hk min-h-0 flex-1 overflow-y-auto scroll-smooth bg-white text-hk-navy motion-reduce:scroll-auto print:overflow-visible">
+    <div className="min-h-0 flex-1 overflow-y-auto scroll-smooth bg-white text-hk-navy motion-reduce:scroll-auto print:overflow-visible">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/94 backdrop-blur-md print:hidden">
         <div className="relative mx-auto flex h-17 max-w-300 items-center gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3.5">
-            <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-8.5 w-auto invert" />
-            <span className="leading-[1.15]">
-              <span className="block text-[15px] font-bold">SmartAudit</span>
-              <span className="block text-[11px] text-slate-500">Královéhradecký kraj</span>
-            </span>
+          <Link href="/" aria-label="SmartAudit — úvodní stránka">
+            <Logo className="h-8 w-auto" />
           </Link>
 
           <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Veřejná navigace">
@@ -49,7 +45,7 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto max-w-300 px-6 pt-14 pb-8">
           <div className="grid gap-9 text-[14px] sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} className="h-9 w-auto invert" />
+              <Logo className="h-8 w-auto" />
               <p className="mt-4.5 max-w-[34ch] leading-[1.55] text-slate-600">
                 Energetický audit a kvalita vnitřního vzduchu v budovách, které zřizuje Královéhradecký kraj.
               </p>
@@ -83,8 +79,11 @@ export default async function PublicLayout({ children }: LayoutProps<"/">) {
             </FooterColumn>
           </div>
           <div className="mt-12 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-5 text-[12px] text-slate-500">
-            <span>SmartAudit KHK</span>
-            <span>Hodnoty bez čidla jsou modelová data a jsou tak označené.</span>
+            <span className="flex items-center gap-2.5">
+              <LogoSymbol small className="size-4" />
+              SmartAudit · pro Královéhradecký kraj
+            </span>
+            <span>Hodnoty bez čidla počítá fyzikální model z otevřených dat (ČÚZK + Data KHK + Open-Meteo) a jsou tak označené.</span>
           </div>
         </div>
       </footer>

@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="cs" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartAudit KHK — živý vzorník designu</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Firemní písmo Hradce Králové — stejné soubory, jaké používá aplikace.
+   Cesta je relativní vůči tomuto souboru (/analyza/ → /frontend/app/fonts/).
+   ═══════════════════════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: "Hradec";
+  src: url("../frontend/app/fonts/Hradec-Regular.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Hradec";
+  src: url("../frontend/app/fonts/Hradec-Bold.woff2") format("woff2");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+
+/* ─── Tokeny: shodné s frontend/app/globals.css ─────────────────────────── */
+:root {
+  /* značka KHK */
+  --hk-red: #d90429;
+  --hk-red-dark: #b00321;
+  --hk-navy: #0b192c;
+  --hk-blue: #1e3e62;
+  --hk-accent: #e63946;
+
+  /* plochy a text — světlý motiv */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+
+  /* grafy */
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+
+  /* jediný zdroj zaoblení */
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  /* stíny */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* stavové barvy (Tailwind 500 / 50 / 200 / 800) */
+  --ok-500: #10b981; --ok-50: #ecfdf5; --ok-200: #a7f3d0; --ok-800: #065f46;
+  --warn-500: #f59e0b; --warn-50: #fffbeb; --warn-200: #fde68a; --warn-800: #92400e;
+  --bad-500: #ef4444; --bad-50: #fef2f2; --bad-200: #fecaca; --bad-800: #991b1b;
+
+  --font-sans: "Hradec", "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+html[data-theme="dark"] {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-border: oklch(1 0 0 / 10%);
+}
+
+/* ─── Základ ────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--background); color: var(--foreground);
+  font-family: var(--font-sans); font-size: 1rem; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px; }
+
+/* hlavička vzorníku */
+header.top {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--background); border-bottom: 1px solid var(--border);
+  padding: 18px 0 14px; margin-bottom: 36px;
+}
+header.top .inner { max-width: 1120px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.brandline { display: flex; align-items: center; gap: 12px; }
+.brandmark { width: 34px; height: 34px; border-radius: var(--radius-md);
+  background: var(--hk-navy); display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 7px; }
+.brandmark i { display: block; border-radius: 1px; background: var(--hk-red); opacity: .25; }
+.brandmark i:nth-child(1) { opacity: 1; }
+.brandmark i:nth-child(4) { opacity: .7; }
+h1.title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.2; }
+.ver { font-size: .75rem; color: var(--muted-foreground); margin: 2px 0 0; }
+
+section { margin: 0 0 56px; }
+h2.sec {
+  font-size: 1.5rem; line-height: 2rem; font-weight: 700; margin: 0 0 6px;
+  padding-top: 10px; border-top: 2px solid var(--foreground);
+}
+.sec-note { color: var(--muted-foreground); font-size: .875rem; margin: 0 0 22px; max-width: 70ch; }
+h3.sub { font-size: 1rem; font-weight: 600; margin: 26px 0 12px; }
+
+/* ─── Typografie ────────────────────────────────────────────────────────── */
+.type-row { display: grid; grid-template-columns: 150px 1fr; gap: 18px;
+  padding: 12px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+.type-row:last-child { border-bottom: 0; }
+.type-meta { font-family: var(--font-mono); font-size: .7rem; color: var(--muted-foreground); line-height: 1.5; }
+.t-h1 { font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; margin: 0; }
+.t-h2 { font-size: 1.5rem;  line-height: 2rem;     font-weight: 700; margin: 0; }
+.t-h3 { font-size: 1.25rem; line-height: 1.75rem;  font-weight: 600; margin: 0; }
+.t-h4 { font-size: 1.125rem;line-height: 1.75rem;  font-weight: 600; margin: 0; }
+.t-h5 { font-size: 1rem;    line-height: 1.5rem;   font-weight: 600; margin: 0; }
+.t-h6 { font-size: .875rem; line-height: 1.25rem;  font-weight: 600; margin: 0; }
+.t-body { font-size: 1rem; line-height: 1.5rem; margin: 0; }
+.t-small { font-size: .875rem; line-height: 1.25rem; margin: 0; }
+.t-caption { font-size: .75rem; line-height: 1rem; color: var(--muted-foreground); margin: 0; }
+.t-code { font-family: var(--font-mono); font-size: .875rem; line-height: 1.25rem;
+  background: var(--muted); padding: 2px 6px; border-radius: var(--radius-sm); }
+blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--border);
+  color: var(--muted-foreground); font-style: italic; }
+ul.demo, ol.demo { margin: 0; padding-left: 20px; }
+ul.demo li, ol.demo li { margin-bottom: 4px; }
+
+/* ─── Paleta ────────────────────────────────────────────────────────────── */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; }
+.sw { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--card); }
+.sw .chip { height: 62px; }
+.sw .meta { padding: 8px 10px; }
+.sw .nm { font-size: .8rem; font-weight: 600; display: block; }
+.sw .tok, .sw .hex { font-family: var(--font-mono); font-size: .68rem; color: var(--muted-foreground); display: block; }
+.sw .hex { text-transform: uppercase; }
+
+/* ─── Tlačítka ──────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .375rem;
+  flex-shrink: 0; height: 2rem; padding: 0 .625rem;
+  border: 1px solid transparent; border-radius: var(--radius-lg);
+  background-clip: padding-box; font-family: inherit; font-size: .875rem; font-weight: 500;
+  white-space: nowrap; transition: all .15s; outline: none; user-select: none; cursor: pointer;
+}
+.btn:active:not(.is-menu) { transform: translateY(1px); }
+.btn svg { width: 16px; height: 16px; flex-shrink: 0; pointer-events: none; }
+
+.btn-default { background: var(--primary); color: var(--primary-foreground); }
+.btn-default:hover, .btn-default.is-hover { background: color-mix(in oklch, var(--primary) 80%, transparent); }
+
+.btn-outline { border-color: var(--border); background: var(--background); color: var(--foreground); }
+.btn-outline:hover, .btn-outline.is-hover { background: var(--muted); }
+
+.btn-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+.btn-secondary:hover, .btn-secondary.is-hover { background: color-mix(in oklch, var(--secondary), var(--foreground) 5%); }
+
+.btn-ghost { background: transparent; color: var(--foreground); }
+.btn-ghost:hover, .btn-ghost.is-hover { background: var(--muted); }
+
+.btn-destructive { background: color-mix(in oklch, var(--destructive) 10%, transparent); color: var(--destructive); }
+.btn-destructive:hover, .btn-destructive.is-hover { background: color-mix(in oklch, var(--destructive) 20%, transparent); }
+.btn-destructive.is-focus { border-color: color-mix(in oklch, var(--destructive) 40%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent); }
+
+.btn-link { background: transparent; color: var(--primary); padding: 0; height: auto; }
+.btn-link:hover, .btn-link.is-hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.btn:focus-visible, .btn.is-focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+}
+.btn[disabled], .btn.is-disabled { pointer-events: none; opacity: .5; }
+
+.btn-xs { height: 1.5rem; padding: 0 .5rem; font-size: .75rem; border-radius: min(var(--radius-md), 10px); gap: .25rem; }
+.btn-xs svg { width: 12px; height: 12px; }
+.btn-sm { height: 1.75rem; padding: 0 .625rem; font-size: .8rem; border-radius: min(var(--radius-md), 12px); gap: .25rem; }
+.btn-sm svg { width: 14px; height: 14px; }
+.btn-lg { height: 2.25rem; padding: 0 .625rem; }
+.btn-icon { width: 2rem; padding: 0; }
+.btn-icon-xs { width: 1.5rem; height: 1.5rem; padding: 0; border-radius: min(var(--radius-md), 10px); }
+.btn-icon-sm { width: 1.75rem; height: 1.75rem; padding: 0; border-radius: min(var(--radius-md), 12px); }
+.btn-icon-lg { width: 2.25rem; height: 2.25rem; padding: 0; }
+
+.spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 999px; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-grid { display: grid; grid-template-columns: 112px repeat(5, 1fr); gap: 10px; align-items: center; }
+.btn-grid .lbl { font-family: var(--font-mono); font-size: .7rem; color: var(--muted-foreground); }
+.btn-grid .hdr { font-family: var(--font-mono); font-size: .66rem; color: var(--muted-foreground);
+  text-transform: uppercase; letter-spacing: .08em; }
+
+/* ─── Formuláře ─────────────────────────────────────────────────────────── */
+.field { display: flex; flex-direction: column; gap: 5px; }
+label.fl { font-size: .875rem; font-weight: 500; }
+.hint { font-size: .75rem; color: var(--muted-foreground); }
+.err { font-size: .75rem; color: var(--destructive); }
+.inp, select.inp, textarea.inp {
+  height: 2rem; width: 100%; min-width: 0; padding: .25rem .625rem;
+  border: 1px solid var(--input); border-radius: var(--radius-lg);
+  background: transparent; color: var(--foreground);
+  font-family: inherit; font-size: 1rem; transition: border-color .15s, box-shadow .15s; outline: none;
+}
+@media (min-width: 768px) { .inp, select.inp, textarea.inp { font-size: .875rem; } }
+textarea.inp { height: auto; min-height: 72px; padding: .5rem .625rem; resize: vertical; }
+.inp::placeholder { color: var(--muted-foreground); }
+.inp:focus-visible, .inp.is-focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent); }
+.inp.is-error { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent); }
+.inp[disabled] { pointer-events: none; cursor: not-allowed; background: color-mix(in oklch, var(--input) 50%, transparent); opacity: .5; }
+.forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+
+.choice { display: flex; align-items: center; gap: 9px; font-size: .875rem; }
+.box { width: 16px; height: 16px; border: 1px solid var(--input); border-radius: var(--radius-sm);
+  display: grid; place-items: center; flex: none; }
+.box.on { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.box.on::after { content: "✓"; font-size: 11px; line-height: 1; }
+.radio { width: 16px; height: 16px; border: 1px solid var(--input); border-radius: 999px;
+  display: grid; place-items: center; flex: none; }
+.radio.on::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--primary); }
+.switch { width: 34px; height: 20px; border-radius: 999px; background: var(--input); position: relative; flex: none; transition: background .15s; }
+.switch.on { background: var(--primary); }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 999px; background: var(--background); transition: left .15s; }
+.switch.on::after { left: 16px; }
+
+/* ─── Karty ─────────────────────────────────────────────────────────────── */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); overflow: hidden; }
+.card .hd { padding: 14px 16px 0; }
+.card .hd h4 { font-size: 1rem; font-weight: 600; margin: 0; }
+.card .hd p { font-size: .75rem; color: var(--muted-foreground); margin: 2px 0 0; }
+.card .bd { padding: 12px 16px; font-size: .875rem; }
+.card .ft { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+.card.sh-md { box-shadow: var(--shadow-md); }
+.card.sh-lg { box-shadow: var(--shadow-lg); }
+.kpi { font-size: 1.875rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: .75rem; color: var(--muted-foreground); }
+
+/* ─── Navigace ──────────────────────────────────────────────────────────── */
+.nav { background: var(--sidebar); border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-xl); padding: 8px; width: 230px; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius-md);
+  color: var(--sidebar-foreground); text-decoration: none; font-size: .875rem; }
+.nav a:hover { background: var(--sidebar-accent); }
+.nav a.on { background: var(--sidebar-primary); color: var(--sidebar-primary-foreground); font-weight: 500; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px;
+  font: inherit; font-size: .875rem; color: var(--muted-foreground); cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--foreground); border-bottom-color: var(--foreground); font-weight: 600; }
+.crumbs { font-size: .875rem; color: var(--muted-foreground); }
+.crumbs a { color: var(--muted-foreground); text-decoration: none; }
+.crumbs a:hover { color: var(--foreground); text-decoration: underline; }
+.pager { display: flex; gap: 5px; align-items: center; }
+
+/* ─── Zpětná vazba ──────────────────────────────────────────────────────── */
+.alert { display: flex; gap: 11px; padding: 11px 14px; border-radius: var(--radius-lg);
+  border: 1px solid; font-size: .875rem; align-items: flex-start; }
+.alert .ic { flex: none; font-size: 1rem; line-height: 1.2; }
+.alert strong { display: block; margin-bottom: 2px; }
+.a-ok  { background: var(--ok-50);   border-color: var(--ok-200);   color: var(--ok-800); }
+.a-warn{ background: var(--warn-50); border-color: var(--warn-200); color: var(--warn-800); }
+.a-bad { background: var(--bad-50);  border-color: var(--bad-200);  color: var(--bad-800); }
+.a-info{ background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid; font-size: .75rem; font-weight: 500; }
+.p-ok  { background: var(--ok-50);   border-color: var(--ok-200);   color: var(--ok-800); }
+.p-warn{ background: var(--warn-50); border-color: var(--warn-200); color: var(--warn-800); }
+.p-bad { background: var(--bad-50);  border-color: var(--bad-200);  color: var(--bad-800); }
+.dot { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.d-ok { background: var(--ok-500); } .d-warn { background: var(--warn-500); } .d-bad { background: var(--bad-500); }
+
+.toast { display: flex; gap: 11px; align-items: flex-start; background: var(--popover);
+  color: var(--popover-foreground); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 12px 14px; box-shadow: var(--shadow-lg); max-width: 380px; }
+.sk { background: var(--muted); border-radius: var(--radius-sm); animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+
+/* ─── Modální okno ──────────────────────────────────────────────────────── */
+.modal-demo { position: relative; height: 300px; border: 1px solid var(--border);
+  border-radius: var(--radius-xl); overflow: hidden; background: var(--muted); }
+.backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / .5); display: grid; place-items: center; }
+.modal { background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-modal); width: min(420px, 86%); }
+.modal .hd { padding: 16px 18px 0; } .modal .bd { padding: 10px 18px; font-size: .875rem; }
+.modal .ft { padding: 12px 18px 16px; display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ─── Choroplet a termo škála ───────────────────────────────────────────── */
+.scale { display: flex; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+.scale div { flex: 1; height: 46px; display: grid; place-items: end center; padding-bottom: 5px;
+  font-family: var(--font-mono); font-size: .62rem; color: #1b2b3a; }
+.thermal { height: 20px; border-radius: 999px;
+  background: linear-gradient(to right, #3b82f6 0%, #8b5cf6 30%, #ec4899 55%, #f59e0b 80%, #d90429 100%); }
+
+/* tabulka */
+table.t { width: 100%; border-collapse: collapse; font-size: .875rem; }
+table.t th { text-align: left; font-family: var(--font-mono); font-size: .66rem; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted-foreground); font-weight: 500;
+  padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table.t td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+table.t tr:last-child td { border-bottom: 0; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spin, .sk { animation: none; }
+}
+
+/* ─── Rozšíření pro prostorové uspořádání, 3D model a inspekční panel ────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 14px 16px; position: relative; }
+.kpi-card .lbl { font-size: .75rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.kpi-card .val { font-size: 1.6rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-card .sub { font-size: .72rem; color: var(--muted-foreground); margin-top: 5px; }
+
+.zoom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+.zoom-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 16px; }
+.zoom-card h4 { margin: 0 0 6px; font-size: .95rem; font-weight: 600; display: flex; justify-content: space-between; }
+.zoom-card p { font-size: .8rem; color: var(--muted-foreground); margin: 0 0 10px; }
+.zoom-preview { height: 120px; border-radius: var(--radius-lg); background: var(--muted); border: 1px solid var(--border); position: relative; overflow: hidden; display: grid; place-items: center; font-size: .8rem; }
+
+.section-diagram { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin: 12px 0; background: var(--card); }
+.floor-row { display: flex; border-bottom: 1px solid var(--border); min-height: 44px; }
+.floor-row:last-child { border-bottom: none; }
+.floor-lbl { width: 70px; background: var(--secondary); padding: 8px 10px; font-family: var(--font-mono); font-size: .75rem; font-weight: 600; border-right: 1px solid var(--border); display: flex; align-items: center; }
+.floor-rooms { display: flex; flex: 1; gap: 6px; padding: 6px; }
+.room-cell { flex: 1; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 8px; font-size: .72rem; display: flex; flex-direction: column; justify-content: space-between; }
+.room-cell.room-ok { border-left: 3px solid var(--ok-500); }
+.room-cell.room-warn { border-left: 3px solid var(--warn-500); background: var(--warn-50); }
+.room-cell.room-bad { border-left: 3px solid var(--bad-500); background: var(--bad-50); }
+.room-sensor { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: .68rem; margin-top: 2px; }
+
+.badge-est { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; background: var(--warn-50); color: var(--warn-800); border: 1px solid var(--warn-200); font-size: .68rem; font-weight: 600; }
+.badge-verified { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; background: var(--ok-50); color: var(--ok-800); border: 1px solid var(--ok-200); font-size: .68rem; font-weight: 600; }
+
+.thermal-demo-wrap { display: flex; gap: 24px; align-items: center; margin: 14px 0; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); }
+.thermal-track-box { width: 14px; height: 180px; background: rgba(30, 62, 98, 0.2); border-radius: 999px; position: relative; padding: 2px; display: flex; justify-content: center; }
+.thermal-thumb-demo { width: 10px; height: 50px; border-radius: 999px; position: absolute; top: 35%; background: linear-gradient(to bottom, #ec4899, #f59e0b); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+.thermal-stops-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; flex: 1; }
+.stop-card { padding: 8px 10px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--background); }
+.stop-card .pos { font-family: var(--font-mono); font-size: .7rem; color: var(--muted-foreground); }
+.stop-card .swatch { height: 12px; border-radius: 4px; margin: 4px 0; }
+.stop-card .name { font-size: .75rem; font-weight: 600; }
+
+.qr-poster-preview { max-width: 380px; background: #ffffff; color: #0b192c; border: 2px solid #0b192c; border-radius: var(--radius-lg); padding: 20px; text-align: center; box-shadow: var(--shadow-md); margin: 12px 0; }
+.qr-poster-preview .poster-hdr { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--hk-red); margin-bottom: 4px; }
+.qr-poster-preview h3 { font-size: 1.15rem; font-weight: 700; margin: 4px 0 2px; }
+.qr-poster-preview p { font-size: .75rem; color: #475569; margin: 0 0 14px; }
+.qr-box-mock { width: 140px; height: 140px; margin: 0 auto 14px; border: 3px solid #0b192c; padding: 6px; display: grid; place-items: center; background: #fff; font-family: var(--font-mono); font-size: .7rem; }
+.qr-poster-preview .poster-note { font-size: .7rem; color: #64748b; line-height: 1.3; }
+
+.inspect-tabs-content { margin-top: 12px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); min-height: 220px; }
+.inspect-pane { display: none; }
+.inspect-pane.active { display: block; }
+
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div class="brandline">
+      <div class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div>
+        <h1 class="title">SmartAudit KHK — designový systém</h1>
+        <p class="ver">Živý vzorník · verze 1.0 · vizuální dvojče aplikace 1:1</p>
+      </div>
+    </div>
+    <div class="row">
+      <span class="t-caption">Motiv:</span>
+      <button class="btn btn-outline btn-sm" id="theme">Přepnout na tmavý</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ══ TYPOGRAFIE ══ -->
+<section>
+  <h2 class="sec">1 · Typografie</h2>
+  <p class="sec-note">
+    Hlavní rodina je firemní písmo <strong>Hradec</strong> (400 a 700), za ním Geist pro znaky,
+    které Hradec nemá — typicky dolní index v CO₂. Nadpisy nemají vlastní rodinu, liší se
+    jen velikostí a tloušťkou.
+  </p>
+
+  <div class="type-row"><div class="type-meta">H1<br>30 / 36 px<br>700</div><p class="t-h1">Energetický audit budov kraje</p></div>
+  <div class="type-row"><div class="type-meta">H2<br>24 / 32 px<br>700</div><p class="t-h2">Portfolio objektů</p></div>
+  <div class="type-row"><div class="type-meta">H3<br>20 / 28 px<br>600</div><p class="t-h3">Gymnázium Broumov, Hradební 218</p></div>
+  <div class="type-row"><div class="type-meta">H4<br>18 / 28 px<br>600</div><p class="t-h4">Zjištění z posledního týdne</p></div>
+  <div class="type-row"><div class="type-meta">H5<br>16 / 24 px<br>600</div><p class="t-h5">Vnitřní prostředí</p></div>
+  <div class="type-row"><div class="type-meta">H6<br>14 / 20 px<br>600</div><p class="t-h6">Měření ze senzorů</p></div>
+  <div class="type-row"><div class="type-meta">Body<br>16 / 24 px<br>400</div>
+    <p class="t-body">Objekt přetápí o víkendu na 24,5 °C, přestože má být prázdný. Koncentrace CO₂ ve druhém
+    podlaží překročila hygienický limit 1 500 ppm po dobu tří a půl hodiny.</p></div>
+  <div class="type-row"><div class="type-meta">Body Small<br>14 / 20 px<br>400</div>
+    <p class="t-small">Zdroj: Data KHK — Školy a školská zařízení, ČÚZK INSPIRE Budovy, Open-Meteo.</p></div>
+  <div class="type-row"><div class="type-meta">Caption<br>12 / 16 px<br>400</div>
+    <p class="t-caption">Naposledy aktualizováno před 4 minutami</p></div>
+  <div class="type-row"><div class="type-meta">Kód<br>14 / 20 px<br>mono</div>
+    <p class="t-body"><span class="t-code">AuditSettings__HeatPriceCzkPerKwh</span></p></div>
+  <div class="type-row"><div class="type-meta">Citace</div>
+    <blockquote>Neptáme se, kolik stupňů má budova. Ptáme se, ve které třídě se dneska tři hodiny učilo v dusnu.</blockquote></div>
+  <div class="type-row"><div class="type-meta">Seznamy</div>
+    <div class="row" style="gap:40px;align-items:flex-start">
+      <ul class="demo t-small"><li>Seřízení ekvitermní regulace</li><li>Termostatické hlavice</li><li>Víkendový útlum</li></ul>
+      <ol class="demo t-small"><li>Vyberte objekt v mapě</li><li>Otevřete kartu auditu</li><li>Spusťte analýzu</li></ol>
+    </div></div>
+  <div class="type-row"><div class="type-meta">Inline štítky</div>
+    <div class="row">
+      <span class="pill p-ok"><span class="dot d-ok"></span>Optimální chod</span>
+      <span class="pill p-warn"><span class="dot d-warn"></span>Varování</span>
+      <span class="pill p-bad"><span class="dot d-bad"></span>Kritická anomálie</span>
+    </div></div>
+</section>
+
+<!-- ══ PALETA ══ -->
+<section>
+  <h2 class="sec">2 · Paleta barev</h2>
+  <p class="sec-note">
+    Tokeny jsou v aplikaci zapsané v <code class="t-code">oklch</code>; hexadecimální hodnota
+    je přesný převod do sRGB. Značkové barvy KHK jsou pevné hexadecimální hodnoty už ve zdroji.
+  </p>
+
+  <h3 class="sub">Značka Královéhradeckého kraje</h3>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#d90429"></div><div class="meta"><span class="nm">Červená KHK</span><span class="tok">--color-hk-red</span><span class="hex">#d90429</span></div></div>
+    <div class="sw"><div class="chip" style="background:#b00321"></div><div class="meta"><span class="nm">Červená tmavá</span><span class="tok">--color-hk-red-dark</span><span class="hex">#b00321</span></div></div>
+    <div class="sw"><div class="chip" style="background:#0b192c"></div><div class="meta"><span class="nm">Námořní modř</span><span class="tok">--color-hk-navy</span><span class="hex">#0b192c</span></div></div>
+    <div class="sw"><div class="chip" style="background:#1e3e62"></div><div class="meta"><span class="nm">Modrá KHK</span><span class="tok">--color-hk-blue</span><span class="hex">#1e3e62</span></div></div>
+    <div class="sw"><div class="chip" style="background:#e63946"></div><div class="meta"><span class="nm">Akcent</span><span class="tok">--color-hk-accent</span><span class="hex">#e63946</span></div></div>
+  </div>
+
+  <h3 class="sub">Plochy a text (aktuální motiv)</h3>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:var(--background);border-bottom:1px solid var(--border)"></div><div class="meta"><span class="nm">Plátno</span><span class="tok">--background</span><span class="hex" data-hex="--background"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--card);border-bottom:1px solid var(--border)"></div><div class="meta"><span class="nm">Karta</span><span class="tok">--card</span><span class="hex" data-hex="--card"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--muted)"></div><div class="meta"><span class="nm">Ztlumená plocha</span><span class="tok">--muted</span><span class="hex" data-hex="--muted"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--foreground)"></div><div class="meta"><span class="nm">Text primární</span><span class="tok">--foreground</span><span class="hex" data-hex="--foreground"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--muted-foreground)"></div><div class="meta"><span class="nm">Text ztlumený</span><span class="tok">--muted-foreground</span><span class="hex" data-hex="--muted-foreground"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--primary)"></div><div class="meta"><span class="nm">Primární</span><span class="tok">--primary</span><span class="hex" data-hex="--primary"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--destructive)"></div><div class="meta"><span class="nm">Destruktivní</span><span class="tok">--destructive</span><span class="hex" data-hex="--destructive"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--border)"></div><div class="meta"><span class="nm">Ohraničení</span><span class="tok">--border</span><span class="hex" data-hex="--border"></span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--ring)"></div><div class="meta"><span class="nm">Prstenec zaměření</span><span class="tok">--ring</span><span class="hex" data-hex="--ring"></span></div></div>
+  </div>
+
+  <h3 class="sub">Stavové barvy</h3>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#10b981"></div><div class="meta"><span class="nm">Optimální · 500</span><span class="tok">tečka</span><span class="hex">#10b981</span></div></div>
+    <div class="sw"><div class="chip" style="background:#f59e0b"></div><div class="meta"><span class="nm">Varování · 500</span><span class="tok">tečka</span><span class="hex">#f59e0b</span></div></div>
+    <div class="sw"><div class="chip" style="background:#ef4444"></div><div class="meta"><span class="nm">Kritické · 500</span><span class="tok">tečka</span><span class="hex">#ef4444</span></div></div>
+    <div class="sw"><div class="chip" style="background:#3b82f6"></div><div class="meta"><span class="nm">Informace</span><span class="tok">alert info</span><span class="hex">#3b82f6</span></div></div>
+  </div>
+
+  <h3 class="sub">Choroplet okresů — podíl objektů se zjištěním</h3>
+  <p class="sec-note">Stejná škála se používá v aplikaci i v mapě okresů v PDF reportu.</p>
+  <div class="scale">
+    <div style="background:#D5E1EE">&lt; 15 %</div>
+    <div style="background:#B3C8E0">15–22 %</div>
+    <div style="background:#8DAACD">22–29 %</div>
+    <div style="background:#6687B5">29–36 %</div>
+    <div style="background:#3F6592;color:#fff">≥ 36 %</div>
+  </div>
+
+  <h3 class="sub">Termo škála posuvníku (`thermal-scrollbar`)</h3>
+  <p class="sec-note">Posuvník se s posunem uživatele dolů plynule „ohřívá“ — 5 kotevních bodů s lineárním prolnutím v sRGB a svislým přechodem žhavého termo jádra.</p>
+  
+  <div class="thermal-demo-wrap">
+    <div style="text-align:center">
+      <div class="thermal-track-box">
+        <div class="thermal-thumb-demo"></div>
+      </div>
+      <span class="t-caption" style="display:block;margin-top:6px">Dráha 6 px</span>
+    </div>
+    
+    <div style="flex:1">
+      <div class="thermal" style="margin-bottom:12px"></div>
+      <div class="thermal-stops-grid">
+        <div class="stop-card">
+          <span class="pos">P = 0.00 (vrchol)</span>
+          <div class="swatch" style="background:#3B82F6"></div>
+          <div class="name">Studená modrá</div>
+          <span class="t-caption">#3B82F6 · klid/útlum</span>
+        </div>
+        <div class="stop-card">
+          <span class="pos">P = 0.30</span>
+          <div class="swatch" style="background:#8B5CF6"></div>
+          <div class="name">Fialová</div>
+          <span class="t-caption">#8B5CF6 · náběh</span>
+        </div>
+        <div class="stop-card">
+          <span class="pos">P = 0.55</span>
+          <div class="swatch" style="background:#EC4899"></div>
+          <div class="name">Purpurová</div>
+          <span class="t-caption">#EC4899 · provoz</span>
+        </div>
+        <div class="stop-card">
+          <span class="pos">P = 0.80</span>
+          <div class="swatch" style="background:#F59E0B"></div>
+          <div class="name">Jantar / varování</div>
+          <span class="t-caption">#F59E0B · zvýšená zátěž</span>
+        </div>
+        <div class="stop-card">
+          <span class="pos">P = 1.00 (spodek)</span>
+          <div class="swatch" style="background:#D90429"></div>
+          <div class="name">Červená KHK</div>
+          <span class="t-caption">#D90429 · kritická ztráta</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub">Neutrální řada grafů</h3>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:var(--chart-1)"></div><div class="meta"><span class="nm">chart-1</span><span class="hex">#d4d4d4</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--chart-2)"></div><div class="meta"><span class="nm">chart-2</span><span class="hex">#737373</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--chart-3)"></div><div class="meta"><span class="nm">chart-3</span><span class="hex">#525252</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--chart-4)"></div><div class="meta"><span class="nm">chart-4</span><span class="hex">#404040</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--chart-5)"></div><div class="meta"><span class="nm">chart-5</span><span class="hex">#262626</span></div></div>
+  </div>
+</section>
+
+<!-- ══ TLAČÍTKA ══ -->
+<section>
+  <h2 class="sec">3 · Tlačítka</h2>
+  <p class="sec-note">
+    Šest variant × šest stavů. Stav „po najetí“, „zaměření“ a „zakázáno“ je zde vynucen třídou,
+    aby byly všechny vidět naráz; v aplikaci vznikají přirozeně.
+  </p>
+
+  <div class="btn-grid">
+    <span class="lbl"></span>
+    <span class="hdr">Normální</span><span class="hdr">Po najetí</span><span class="hdr">Zaměření</span>
+    <span class="hdr">Zakázáno</span><span class="hdr">Načítání</span>
+
+    <span class="lbl">Primární</span>
+    <button class="btn btn-default">Spustit audit</button>
+    <button class="btn btn-default is-hover">Spustit audit</button>
+    <button class="btn btn-default is-focus">Spustit audit</button>
+    <button class="btn btn-default is-disabled">Spustit audit</button>
+    <button class="btn btn-default"><span class="spin"></span>Počítám…</button>
+
+    <span class="lbl">Obrysová</span>
+    <button class="btn btn-outline">Exportovat</button>
+    <button class="btn btn-outline is-hover">Exportovat</button>
+    <button class="btn btn-outline is-focus">Exportovat</button>
+    <button class="btn btn-outline is-disabled">Exportovat</button>
+    <button class="btn btn-outline"><span class="spin"></span>Exportuji…</button>
+
+    <span class="lbl">Druhotná</span>
+    <button class="btn btn-secondary">Zobrazit vše</button>
+    <button class="btn btn-secondary is-hover">Zobrazit vše</button>
+    <button class="btn btn-secondary is-focus">Zobrazit vše</button>
+    <button class="btn btn-secondary is-disabled">Zobrazit vše</button>
+    <button class="btn btn-secondary"><span class="spin"></span>Načítám…</button>
+
+    <span class="lbl">Průhledná</span>
+    <button class="btn btn-ghost">Zrušit</button>
+    <button class="btn btn-ghost is-hover">Zrušit</button>
+    <button class="btn btn-ghost is-focus">Zrušit</button>
+    <button class="btn btn-ghost is-disabled">Zrušit</button>
+    <button class="btn btn-ghost"><span class="spin"></span>Ruším…</button>
+
+    <span class="lbl">Destruktivní</span>
+    <button class="btn btn-destructive">Odebrat budovu</button>
+    <button class="btn btn-destructive is-hover">Odebrat budovu</button>
+    <button class="btn btn-destructive is-focus">Odebrat budovu</button>
+    <button class="btn btn-destructive is-disabled">Odebrat budovu</button>
+    <button class="btn btn-destructive"><span class="spin"></span>Mažu…</button>
+
+    <span class="lbl">Odkaz</span>
+    <button class="btn btn-link">Zdroj dat</button>
+    <button class="btn btn-link is-hover">Zdroj dat</button>
+    <button class="btn btn-link is-focus">Zdroj dat</button>
+    <button class="btn btn-link is-disabled">Zdroj dat</button>
+    <span class="t-caption">—</span>
+  </div>
+
+  <h3 class="sub">Velikosti</h3>
+  <div class="row">
+    <button class="btn btn-default btn-xs">xs · 24 px</button>
+    <button class="btn btn-default btn-sm">sm · 28 px</button>
+    <button class="btn btn-default">default · 32 px</button>
+    <button class="btn btn-default btn-lg">lg · 36 px</button>
+  </div>
+
+  <h3 class="sub">Jen ikona</h3>
+  <div class="row">
+    <button class="btn btn-outline btn-icon-xs" aria-label="Zavřít">✕</button>
+    <button class="btn btn-outline btn-icon-sm" aria-label="Zavřít">✕</button>
+    <button class="btn btn-outline btn-icon" aria-label="Zavřít">✕</button>
+    <button class="btn btn-outline btn-icon-lg" aria-label="Zavřít">✕</button>
+    <button class="btn btn-ghost btn-icon" aria-label="Nastavení">⚙</button>
+    <button class="btn btn-destructive btn-icon" aria-label="Smazat">🗑</button>
+  </div>
+</section>
+
+<!-- ══ FORMULÁŘE ══ -->
+<section>
+  <h2 class="sec">4 · Formuláře</h2>
+  <p class="sec-note">
+    Pole má výšku 32 px — shodnou s výchozím tlačítkem, aby se daly postavit vedle sebe.
+    Text v poli je 16 px a teprve od šířky <code class="t-code">md</code> klesá na 14 px:
+    menší text by na mobilu vyvolal přiblížení stránky.
+  </p>
+
+  <div class="forms">
+    <div class="field"><label class="fl" for="f1">Název objektu</label>
+      <input class="inp" id="f1" placeholder="Např. Gymnázium Broumov"><span class="hint">Prázdný stav se zástupným textem</span></div>
+    <div class="field"><label class="fl" for="f2">Název objektu</label>
+      <input class="inp" id="f2" value="Gymnázium, Broumov, Hradební 218"><span class="hint">Vyplněný stav</span></div>
+    <div class="field"><label class="fl" for="f3">Název objektu</label>
+      <input class="inp is-focus" id="f3" value="Gymnázium Broumov"><span class="hint">Zaměření klávesnicí</span></div>
+    <div class="field"><label class="fl" for="f4">Cena tepla (Kč/kWh)</label>
+      <input class="inp is-error" id="f4" value="-2,2" aria-invalid="true"><span class="err">Cena musí být kladné číslo.</span></div>
+    <div class="field"><label class="fl" for="f5">Kód objektu</label>
+      <input class="inp" id="f5" value="600012271" disabled><span class="hint">Zakázané — hodnota z otevřených dat</span></div>
+    <div class="field"><label class="fl" for="f6">Heslo</label>
+      <input class="inp" id="f6" type="password" value="tajneheslo123"><span class="hint">Typ heslo</span></div>
+    <div class="field"><label class="fl" for="f7">Hledat objekt</label>
+      <input class="inp" id="f7" type="search" placeholder="Hledat podle názvu nebo obce"><span class="hint">Typ hledání</span></div>
+    <div class="field"><label class="fl" for="f8">Počet žáků</label>
+      <input class="inp" id="f8" type="number" value="342"><span class="hint">Typ číslo</span></div>
+    <div class="field"><label class="fl" for="f9">Okres</label>
+      <select class="inp" id="f9"><option>Hradec Králové</option><option>Jičín</option><option>Náchod</option>
+        <option>Rychnov n. Kn.</option><option>Trutnov</option></select><span class="hint">Výběr z nabídky</span></div>
+    <div class="field" style="grid-column:span 2"><label class="fl" for="f10">Poznámka k objektu</label>
+      <textarea class="inp" id="f10" placeholder="Např. kotelna po rekonstrukci v roce 2023"></textarea></div>
+  </div>
+
+  <h3 class="sub">Přepínače</h3>
+  <div class="row" style="gap:28px">
+    <span class="choice"><span class="box"></span>Jen objekty se zjištěním</span>
+    <span class="choice"><span class="box on"></span>Jen objekty se zjištěním</span>
+    <span class="choice" style="opacity:.5"><span class="box"></span>Zakázaná volba</span>
+    <span class="choice"><span class="radio on"></span>Celý kraj</span>
+    <span class="choice"><span class="radio"></span>Jen moje objekty</span>
+    <span class="choice"><span class="switch on"></span>Zobrazit hranice okresů</span>
+    <span class="choice"><span class="switch"></span>3D budovy</span>
+  </div>
+</section>
+
+<!-- ══ KARTY ══ -->
+<section>
+  <h2 class="sec">5 · Karty a kontejnery</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="hd"><h4>Roční ztráta</h4><p>Odhad podle měření za 7 dní</p></div>
+      <div class="bd"><div class="kpi">148 300 Kč</div><div class="kpi-sub">při ceně 2,20 Kč/kWh</div></div>
+    </div>
+    <div class="card sh-md">
+      <div class="hd"><h4>Gymnázium Broumov</h4><p>Broumov · okres Náchod</p></div>
+      <div class="bd">Objekt drží o víkendu 24,5 °C. Noční útlum nefunguje.</div>
+      <div class="ft"><button class="btn btn-ghost btn-sm">Detail</button><button class="btn btn-default btn-sm">Audit</button></div>
+    </div>
+    <div class="card sh-lg">
+      <div class="hd"><h4>Kostra načítání</h4><p>Stav před dotažením dat</p></div>
+      <div class="bd stack" style="gap:8px">
+        <div class="sk" style="height:12px;width:70%"></div>
+        <div class="sk" style="height:12px;width:92%"></div>
+        <div class="sk" style="height:12px;width:48%"></div>
+        <div class="sk" style="height:34px;width:100%;margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ NAVIGACE A PROSTOROVÉ USPOŘÁDÁNÍ ══ -->
+<section>
+  <h2 class="sec">6 · Navigace, prostorové uspořádání a inspekční panel</h2>
+  
+  <h3 class="sub">Horní KPI lišta (`kpi-row`)</h3>
+  <p class="sec-note">Čtyři klíčové krajské metriky umístěné nad mapou. Finanční ukazatele se zobrazují pouze rolím Kraj a Správce.</p>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="lbl">Celkem budov <span>🏫</span></div>
+      <div class="val">342</div>
+      <div class="sub">Ve 48 obcích a městech kraje</div>
+    </div>
+    <div class="kpi-card">
+      <div class="lbl">Objekty se zjištěním <span>⚠️</span></div>
+      <div class="val" style="color:var(--bad-500)">78</div>
+      <div class="sub"><span class="pill p-bad" style="font-size:.65rem;padding:1px 6px">22 kritických</span> 56 varování</div>
+    </div>
+    <div class="kpi-card">
+      <div class="lbl">Odhadovaná roční ztráta <span>🔥</span></div>
+      <div class="val">18,4 mil. Kč</div>
+      <div class="sub">Podle 7denní telemetrie a Open-Meteo</div>
+    </div>
+    <div class="kpi-card">
+      <div class="lbl">Průměrná úspora <span>💡</span></div>
+      <div class="val" style="color:var(--ok-500)">23,5 %</div>
+      <div class="sub">Až 124 000 Kč / objekt ročně</div>
+    </div>
+  </div>
+
+  <h3 class="sub">Mapa se třemi úrovněmi zoomu (LOD)</h3>
+  <div class="zoom-grid">
+    <div class="zoom-card">
+      <h4>Úroveň 1 — Kraj <span class="t-caption">zoom &lt; 9</span></h4>
+      <p>Polygony 5 okresů s pětitřídním choropletem (#D5E1EE až #3F6592) a souhrnnými bublinami okresů.</p>
+      <div class="zoom-preview" style="background:#0b192c;color:#fff">
+        <span>🗺️ Celý Královéhradecký kraj</span>
+      </div>
+    </div>
+    <div class="zoom-card">
+      <h4>Úroveň 2 — Okres <span class="t-caption">9 ≤ zoom ≤ 14</span></h4>
+      <p>Rozpad na jednotlivé školy a budovy, špendlíky `facility-pin` obarvené podle stavu auditu.</p>
+      <div class="zoom-preview">
+        <span>📍 Špendlíky budov (zelená / jantar / červená)</span>
+      </div>
+    </div>
+    <div class="zoom-card">
+      <h4>Úroveň 3 — Objekt <span class="t-caption">zoom &gt; 14</span></h4>
+      <p>Půdorys budovy z ČÚZK INSPIRE + 3D extruze (`fill-extrusion`, výška = podlaží × 3,2 m).</p>
+      <div class="zoom-preview" style="background:#1e3e62;color:#fff">
+        <span>🏢 3D model budovy · <span class="badge-est">Odhadováno</span></span>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub">Inspekční panel s 5 záložkami (šířka 440 px)</h3>
+  <p class="sec-note">Kliknutím na záložku můžete přepínat její ukázkový obsah:</p>
+  
+  <div class="row" style="align-items:flex-start;gap:24px">
+    <nav class="nav">
+      <a href="#" class="on">◻ Mapa kraje</a>
+      <a href="#">◻ Portfolio</a>
+      <a href="#">◻ Anomálie</a>
+      <a href="#">◻ Senzory</a>
+      <a href="#">◻ Smlouvy</a>
+      <a href="#">◻ Reporty</a>
+      <a href="#">◻ Zdroje dat</a>
+    </nav>
+
+    <div class="stack" style="flex:1;min-width:320px;max-width:540px">
+      <!-- Hlavička inspekčního panelu -->
+      <div class="card" style="padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <span class="t-caption" style="text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground)">Školství · Náchod · ORP Broumov</span>
+            <h3 style="margin:2px 0 0;font-size:1.15rem;font-weight:700">Gymnázium Broumov</h3>
+            <p class="t-caption" style="margin:2px 0 0">Hradební 218, 550 01 Broumov</p>
+          </div>
+          <span class="pill p-bad"><span class="dot d-bad"></span>Kritická anomálie</span>
+        </div>
+
+        <div class="tabs" role="tablist" id="inspectTabs">
+          <button role="tab" class="tab-btn" data-target="tab-overview" aria-selected="true">Přehled</button>
+          <button role="tab" class="tab-btn" data-target="tab-building" aria-selected="false">Budova</button>
+          <button role="tab" class="tab-btn" data-target="tab-telemetry" aria-selected="false">Telemetrie</button>
+          <button role="tab" class="tab-btn" data-target="tab-audit" aria-selected="false">Audit</button>
+          <button role="tab" class="tab-btn" data-target="tab-contracts" aria-selected="false">Smlouvy</button>
+        </div>
+
+        <!-- 1. Přehled -->
+        <div id="tab-overview" class="inspect-pane active" style="margin-top:14px">
+          <div class="alert a-bad" style="margin-bottom:12px">
+            <span class="ic">✕</span>
+            <div><strong>Víkendové přetápění na 24,5 °C</strong>Budova topí v plném komfortním režimu v sobotu i v neděli. Odhad roční ztráty: <strong>148 300 Kč</strong>.</div>
+          </div>
+          <div class="row" style="gap:10px;margin-bottom:12px">
+            <div style="flex:1;background:var(--secondary);padding:10px;border-radius:var(--radius-md)">
+              <span class="t-caption">Aktuální teplota</span>
+              <div style="font-size:1.2rem;font-weight:700">22,8 °C</div>
+            </div>
+            <div style="flex:1;background:var(--secondary);padding:10px;border-radius:var(--radius-md)">
+              <span class="t-caption">CO₂ (třídy)</span>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--warn-800)">1 340 ppm</div>
+            </div>
+            <div style="flex:1;background:var(--secondary);padding:10px;border-radius:var(--radius-md)">
+              <span class="t-caption">Památková ochrana</span>
+              <div style="font-size:.9rem;font-weight:600;margin-top:3px">Zóna (ČÚZK)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Budova -->
+        <div id="tab-building" class="inspect-pane" style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span class="t-h6">Schematický řez budovy s čidly IQRF</span>
+            <span class="badge-est">3 nadzemní podlaží · Odhadováno</span>
+          </div>
+
+          <!-- Schematický vertikální řez -->
+          <div class="section-diagram">
+            <div class="floor-row">
+              <div class="floor-lbl">3. NP</div>
+              <div class="floor-rooms">
+                <div class="room-cell room-warn">
+                  <strong>Učebna 302</strong>
+                  <div class="room-sensor"><span>IQRF #04</span><span>23.1°C · 1340 ppm</span></div>
+                </div>
+                <div class="room-cell room-ok">
+                  <strong>Kabinet</strong>
+                  <div class="room-sensor"><span>IQRF #05</span><span>21.4°C · 820 ppm</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="floor-row">
+              <div class="floor-lbl">2. NP</div>
+              <div class="floor-rooms">
+                <div class="room-cell room-bad">
+                  <strong>Učebna 201</strong>
+                  <div class="room-sensor"><span>IQRF #02</span><span>24.8°C · 1580 ppm</span></div>
+                </div>
+                <div class="room-cell room-ok">
+                  <strong>Laboratoř</strong>
+                  <div class="room-sensor"><span>IQRF #03</span><span>20.9°C · 740 ppm</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="floor-row">
+              <div class="floor-lbl">1. NP</div>
+              <div class="floor-rooms">
+                <div class="room-cell room-ok">
+                  <strong>Ředitelna</strong>
+                  <div class="room-sensor"><span>IQRF #01</span><span>21.2°C · 690 ppm</span></div>
+                </div>
+                <div class="room-cell room-ok">
+                  <strong>Šatny / Vstup</strong>
+                  <div class="room-sensor"><span>Chodba</span><span>19.5°C · 610 ppm</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="floor-row">
+              <div class="floor-lbl">1. PP</div>
+              <div class="floor-rooms">
+                <div class="room-cell room-ok">
+                  <strong>Plynová kotelna</strong>
+                  <div class="room-sensor"><span>MaR</span><span>Tepelný spád 70/50</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--secondary);padding:10px 12px;border-radius:var(--radius-md);margin-top:10px">
+            <span class="t-caption" style="display:block;margin-bottom:4px">Oprava údajů správcem (`building-data-form`):</span>
+            <div class="row" style="gap:8px">
+              <input type="text" class="input" style="width:110px;height:28px;font-size:.78rem" value="3 podlaží">
+              <input type="text" class="input" style="width:130px;height:28px;font-size:.78rem" value="2 450 m²">
+              <button class="btn btn-default btn-xs">Uložit ověřené</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Telemetrie -->
+        <div id="tab-telemetry" class="inspect-pane" style="margin-top:14px">
+          <span class="t-h6" style="display:block;margin-bottom:6px">Týdenní průběh teploty (°C)</span>
+          <div style="height:90px;background:var(--muted);border-radius:var(--radius-md);display:grid;place-items:center;font-size:.8rem;color:var(--muted-foreground)">
+            [ Časová řada: Po–Pá 21 °C, So–Ne 24,5 °C (anomálie) ]
+          </div>
+          <span class="t-h6" style="display:block;margin:12px 0 6px">Teplotní heatmapa 24×7 (dny × hodiny)</span>
+          <div style="height:55px;background:linear-gradient(to right, #3B82F6 0%, #3B82F6 70%, #D90429 70%, #D90429 100%);border-radius:var(--radius-sm);display:grid;place-items:center;color:#fff;font-size:.75rem">
+            Pracovní dny (útlum OK) | Víkend (ČERVENÁ ZÓNA — přetápění)
+          </div>
+        </div>
+
+        <!-- 4. Audit -->
+        <div id="tab-audit" class="inspect-pane" style="margin-top:14px">
+          <span class="t-h6" style="display:block;margin-bottom:6px">Doporučená opatření z AI auditu:</span>
+          <table class="t" style="font-size:.78rem">
+            <thead><tr><th>Opatření</th><th>Náklad</th><th>Úspora/rok</th><th>Návratnost</th></tr></thead>
+            <tbody>
+              <tr><td>Seřízení víkendového útlumu MaR</td><td>12 000 Kč</td><td>148 300 Kč</td><td><strong>0,1 roku</strong></td></tr>
+              <tr><td>Instalace termostatických hlavic</td><td>65 000 Kč</td><td>42 000 Kč</td><td>1,5 roku</td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-outline btn-sm" style="margin-top:10px">📄 Vygenerovat dopis zřizovateli</button>
+        </div>
+
+        <!-- 5. Smlouvy -->
+        <div id="tab-contracts" class="inspect-pane" style="margin-top:14px">
+          <span class="t-h6" style="display:block;margin-bottom:6px">Energetické smlouvy (Registr smluv DIA):</span>
+          <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:10px;margin-bottom:8px;font-size:.8rem">
+            <div style="display:flex;justify-content:space-between"><strong>Dodávka zemního plynu 2025/2026</strong><span class="pill p-ok">Aktivní</span></div>
+            <div style="color:var(--muted-foreground);font-size:.75rem;margin:3px 0">Dodavatel: ČEZ Prodej, a.s. · Smlouva č. 849201</div>
+            <div style="font-weight:600;color:var(--hk-blue)">Jednotková cena extrahovaná z PDF: 1 420 Kč/MWh</div>
+          </div>
+          <button class="btn btn-ghost btn-xs">Otevřít přílohu v registru smluv ↗</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub" style="margin-top:24px">Tisknutelný QR štítek pro školy (`facility-qr-label`)</h3>
+  <p class="sec-note">Formát A5 / A4 určený k fyzickému vyvěšení na nástěnkách, v učebnách a ve vestibulu školy.</p>
+  <div class="row" style="align-items:flex-start;gap:20px">
+    <div class="qr-poster-preview">
+      <div class="poster-hdr">Královéhradecký kraj · SmartAudit KHK</div>
+      <h3>Gymnázium Broumov</h3>
+      <p>Hradební 218, Broumov · Budova A</p>
+      
+      <div class="qr-box-mock">
+        <div>
+          <div style="font-size:2rem;line-height:1">📱</div>
+          <span>QR KÓD</span><br>
+          <span style="font-size:.55rem;color:#64748b">/objekty/gymnazium-broumov</span>
+        </div>
+      </div>
+
+      <div class="poster-note">
+        <strong>Zkontrolujte kvalitu vzduchu ve své třídě!</strong><br>
+        Naskenujte fotoaparátem mobilu pro zobrazení koncentrace CO₂, teploty a doporučení k větrání.
+      </div>
+    </div>
+
+    <div style="padding-top:20px">
+      <button class="btn btn-default" onclick="window.print()">🖨️ Vytisknout štítek školy (A4 / A5)</button>
+      <p class="t-caption" style="margin-top:8px;max-width:260px">
+        CSS styl `@media print` automaticky skryje ovládací prvky prohlížeče a vytiskne pouze čistou kartu.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ ZPĚTNÁ VAZBA ══ -->
+<section>
+  <h2 class="sec">7 · Zpětná vazba</h2>
+  <div class="stack">
+    <div class="alert a-ok"><span class="ic">✓</span><div><strong>Audit dokončen</strong>Objekt běží v optimálním režimu, žádné zjištění.</div></div>
+    <div class="alert a-warn"><span class="ic">⚠</span><div><strong>Vysoké CO₂</strong>Ve druhém podlaží bylo dnes 3,5 hodiny nad hygienickým limitem 1 500 ppm.</div></div>
+    <div class="alert a-bad"><span class="ic">✕</span><div><strong>Kritická anomálie</strong>Budova topí o víkendu na 24,5 °C, přestože má být prázdná.</div></div>
+    <div class="alert a-info"><span class="ic">i</span><div><strong>AI není nastavená</strong>Doplňte klíč do proměnné prostředí; zbytek aplikace funguje beze změny.</div></div>
+  </div>
+
+  <h3 class="sub">Oznámení</h3>
+  <div class="row" style="align-items:flex-start">
+    <div class="toast"><span>✓</span><div><strong class="t-h6">Report vytvořen</strong>
+      <p class="t-caption" style="margin:2px 0 0">PDF se stáhlo do složky Stažené.</p></div>
+      <button class="btn btn-ghost btn-icon-xs" aria-label="Zavřít">✕</button></div>
+    <div class="toast"><span>⚠</span><div><strong class="t-h6">Gateway neodpovídá</strong>
+      <p class="t-caption" style="margin:2px 0 0">Poslední kontakt před 14 minutami.</p></div>
+      <button class="btn btn-ghost btn-icon-xs" aria-label="Zavřít">✕</button></div>
+  </div>
+
+  <h3 class="sub">Odznaky</h3>
+  <div class="row">
+    <span class="pill p-ok"><span class="dot d-ok"></span>Optimální chod</span>
+    <span class="pill p-warn"><span class="dot d-warn"></span>Varování</span>
+    <span class="pill p-bad"><span class="dot d-bad"></span>Kritická anomálie</span>
+    <span class="pill" style="background:var(--muted);border-color:var(--border);color:var(--muted-foreground)">Simulováno</span>
+    <span class="pill" style="background:var(--muted);border-color:var(--border);color:var(--foreground)">Živé čidlo</span>
+  </div>
+</section>
+
+<!-- ══ MODÁLNÍ OKNO ══ -->
+<section>
+  <h2 class="sec">8 · Modální okno</h2>
+  <div class="modal-demo">
+    <div class="backdrop">
+      <div class="modal">
+        <div class="hd"><h4 class="t-h4">Opravdu odebrat budovu?</h4></div>
+        <div class="bd">Objekt <strong>Gymnázium Broumov</strong> zmizí z portfolia včetně historie měření.
+          Tahle akce se nedá vrátit.</div>
+        <div class="ft">
+          <button class="btn btn-ghost">Zrušit</button>
+          <button class="btn btn-destructive">Odebrat budovu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PROSTOR ══ -->
+<section>
+  <h2 class="sec">9 · Prostor a zaoblení</h2>
+  <p class="sec-note">Zaoblení se počítá z jediné proměnné <code class="t-code">--radius</code> = 0,625 rem.
+    Změna jednoho čísla posune zaoblení celé aplikace.</p>
+  <div class="row" style="gap:16px;align-items:flex-end">
+    <div style="text-align:center"><div style="width:74px;height:50px;background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-sm)"></div><span class="t-caption">sm · 6 px</span></div>
+    <div style="text-align:center"><div style="width:74px;height:50px;background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-md)"></div><span class="t-caption">md · 8 px</span></div>
+    <div style="text-align:center"><div style="width:74px;height:50px;background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-lg)"></div><span class="t-caption">lg · 10 px</span></div>
+    <div style="text-align:center"><div style="width:74px;height:50px;background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-xl)"></div><span class="t-caption">xl · 14 px</span></div>
+    <div style="text-align:center"><div style="width:74px;height:50px;background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-2xl)"></div><span class="t-caption">2xl · 18 px</span></div>
+    <div style="text-align:center"><div style="width:74px;height:50px;background:var(--muted);border:1px solid var(--border);border-radius:999px"></div><span class="t-caption">pilulka</span></div>
+  </div>
+
+  <h3 class="sub">Stíny</h3>
+  <div class="row" style="gap:20px">
+    <div style="text-align:center"><div style="width:110px;height:60px;background:var(--card);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm)"></div><span class="t-caption">sm</span></div>
+    <div style="text-align:center"><div style="width:110px;height:60px;background:var(--card);border-radius:var(--radius-xl);box-shadow:var(--shadow-md)"></div><span class="t-caption">md</span></div>
+    <div style="text-align:center"><div style="width:110px;height:60px;background:var(--card);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg)"></div><span class="t-caption">lg</span></div>
+    <div style="text-align:center"><div style="width:110px;height:60px;background:var(--card);border-radius:var(--radius-xl);box-shadow:var(--shadow-modal)"></div><span class="t-caption">modal</span></div>
+  </div>
+</section>
+
+</div>
+
+<script>
+// Přepínač motivu — tokeny se mění jako celek, nikdy po jednotlivých barvách
+const root = document.documentElement;
+const btn = document.getElementById("theme");
+btn.addEventListener("click", () => {
+  const dark = root.dataset.theme === "dark";
+  root.dataset.theme = dark ? "light" : "dark";
+  btn.textContent = dark ? "Přepnout na tmavý" : "Přepnout na světlý";
+  paintHex();
+});
+
+// Dopočítá hexadecimální zápis tokenů zapsaných v oklch, aby vzorník ukazoval obojí.
+// Prohlížeč dnes vrací z getComputedStyle rovnou oklch(), takže převod obstará plátno:
+// fillStyle normalizuje libovolný zápis barvy na #rrggbb nebo rgba().
+// Prohlížeče dnes zachovávají oklch i ve fillStyle, proto barvu skutečně vykreslíme
+// na plátno 1×1 a přečteme pixel — ten je vždy v sRGB.
+const canvas = document.createElement("canvas");
+canvas.width = canvas.height = 1;
+const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+function toHex(value) {
+  if (!value) return "—";
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillStyle = value;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+  // Pixel je předpronásobený průhledností — pro čistý odstín ho vrátíme zpět
+  const k = a === 0 ? 0 : 255 / a;
+  const hex = "#" + [r, g, b]
+    .map(c => Math.round(Math.min(255, c * k)).toString(16).padStart(2, "0"))
+    .join("").toUpperCase();
+  return a < 255 ? `${hex} · ${Math.round((a / 255) * 100)} %` : hex;
+}
+
+function paintHex() {
+  const cs = getComputedStyle(root);
+  for (const el of document.querySelectorAll("[data-hex]")) {
+    el.textContent = toHex(cs.getPropertyValue(el.dataset.hex).trim());
+  }
+}
+paintHex();
+
+// Interaktivní přepínání záložek inspekčního panelu v živém vzorníku
+document.querySelectorAll('#inspectTabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#inspectTabs .tab-btn').forEach(b => b.setAttribute('aria-selected', 'false'));
+    btn.setAttribute('aria-selected', 'true');
+    const targetId = btn.dataset.target;
+    document.querySelectorAll('.inspect-pane').forEach(p => p.classList.remove('active'));
+    const targetPane = document.getElementById(targetId);
+    if (targetPane) targetPane.classList.add('active');
+  });
+});
+
+</script>
+</body>
+</html>

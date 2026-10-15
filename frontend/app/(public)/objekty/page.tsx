@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Info } from "lucide-react";
 import { LiveBadge } from "@/components/live-badge";
+import { DataModeBadge } from "@/components/data-mode-badge";
 import { AIR_META, airLevel, type AirLevel } from "@/lib/air-quality";
 import { CATEGORY_META } from "@/lib/facility-meta";
 import { getPublicFacilities } from "@/lib/public-api";
 import { readParam } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import type { OpenFacility } from "@/types/api";
+import { PublicGuide } from "../_components/public-guide";
 import { SchoolSearch } from "../_components/school-search";
 import { toSearchItems } from "../_components/search-items";
 import { ObjectFilters } from "./_components/object-filters";
+import { PublicMap } from "./_components/public-map";
 
 export const metadata: Metadata = {
-  title: "Najdi svou školu · SmartAudit KHK",
+  title: "Najdi svou školu · SmartAudit",
   description: "Jak se dýchá ve školách, domovech a dalších budovách Královéhradeckého kraje — kvalita vnitřního vzduchu bez přihlášení.",
 };
 
@@ -56,6 +59,12 @@ export default async function ObjectsPage({ searchParams }: PageProps<"/objekty"
         />
       </form>
 
+      {/* Mapa výsledku filtru a nad ní průvodce — ukáže v ní objekty, na které se ptáte */}
+      <section className="relative isolate mt-6 h-[540px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100" aria-label="Mapa objektů">
+        <PublicMap facilities={facilities} />
+        <PublicGuide page="objekty" />
+      </section>
+
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <ObjectFilters />
         <AirSummary facilities={facilities} />
@@ -65,7 +74,7 @@ export default async function ObjectsPage({ searchParams }: PageProps<"/objekty"
         <Info className="mt-0.5 size-4 shrink-0 text-hk-blue" aria-hidden />
         <span>
           Nejde o žebříček — budovy se liší provozem i počtem lidí. {liveCount > 0 ? `${liveCount} ${liveCount === 1 ? "objekt měří" : "objekty měří"} skutečnými čidly IQRF (odznak živě), ` : ""}
-          ostatní hodnoty jsou zatím modelové, než kraj čidla nainstaluje.
+          ostatní hodnoty počítá fyzikální model z otevřených dat (ČÚZK + Data KHK + Open-Meteo), než kraj čidla nainstaluje.
         </span>
       </p>
 
@@ -110,7 +119,7 @@ function FacilityCard({ facility }: { facility: OpenFacility }) {
             {AIR_META[level].label}
           </span>
         )}
-        {facility.hasLiveSensors ? <LiveBadge /> : <span className="text-[11px] text-slate-400">modelová data</span>}
+        {facility.hasLiveSensors ? <LiveBadge /> : <DataModeBadge mode="OpenDataModel" compact className="text-[10.5px]" />}
         {facility.co2HoursOverLimit !== null && facility.co2HoursOverLimit > 0 && (
           <span className="ml-auto text-[11.5px] text-slate-500">{Math.round(facility.co2HoursOverLimit)} h nad limitem / týden</span>
         )}

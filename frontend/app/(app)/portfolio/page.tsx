@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, PenLine, Plus, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, DraftingCompass, PenLine, Plus, Radio, Search } from "lucide-react";
+import { LIVE_EXPLANATION, MODEL_EXPLANATION } from "@/components/data-mode-badge";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { getFacilities, getSession } from "@/lib/api";
 import { CATEGORY_META, STATUS_META, formatCzk, formatNumber } from "@/lib/facility-meta";
@@ -14,7 +15,7 @@ import { TopBar } from "../_components/top-bar";
 import { PortfolioSortSelect } from "./_components/portfolio-sort-select";
 
 export const metadata: Metadata = {
-  title: "Portfolio · SmartAudit KHK",
+  title: "Portfolio · SmartAudit",
 };
 
 const STATUS_ORDER = { Critical: 0, Warning: 1, Nominal: 2 } as const;
@@ -28,7 +29,9 @@ const COLUMNS = [
   { key: "temperature", label: "Teplota °C", align: "right", className: "" },
   { key: "co2", label: "CO₂ ppm", align: "right", className: "" },
   { key: "power", label: "kWh/h", align: "right", className: "hidden @5xl:table-cell" },
+  { key: "preaudit", label: "Pre-audit", align: "right", className: "hidden @6xl:table-cell" },
   { key: "loss", label: "Ztráta / rok", align: "right", className: "" },
+  { key: "payback", label: "IQRF návr.", align: "right", className: "hidden @5xl:table-cell" },
   { key: "status", label: "Stav", align: "left", className: "" },
 ] as const;
 
@@ -45,7 +48,7 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
   const [facilities, session] = await Promise.all([getFacilities({ q: query, onlyIssues: readParam(params, "zjisteni") === "1" }), getSession()]);
   const rows = sortFacilities(facilities, sortKey, direction);
   const moneyVisible = facilities.some((f) => f.annualLossCzk !== null);
-  const columns = COLUMNS.filter((c) => c.key !== "loss" || moneyVisible);
+  const columns = COLUMNS.filter((c) => (c.key !== "loss" && c.key !== "payback") || moneyVisible);
   const ownBuildings = session?.role === "Spravce";
   // Upravovat budovy může kraj a správce (stejné pravidlo jako záložka Budova v detailu objektu)
   const canEdit = session !== null && session.role !== "Verejnost";
@@ -93,7 +96,7 @@ export default async function PortfolioPage({ searchParams }: PageProps<"/portfo
         <section className="mt-4 @3xl:hidden" aria-label="Objekty">
           <div className="mb-2.5 flex items-center justify-between gap-3">
             <p className="text-xs text-slate-500">{rows.length} záznamů</p>
-            <PortfolioSortSelect options={SORT_OPTIONS.filter((o) => o.value !== "loss" || moneyVisible)} sortKey={sortKey} direction={direction} />
+            <PortfolioSortSelect options={SORT_OPTIONS.filter((o) => (o.value !== "loss" && o.value !== "payback") || moneyVisible)} sortKey={sortKey} direction={direction} />
           </div>
           <ul className="space-y-2.5">
             {rows.map((facility) => (
@@ -208,8 +211,9 @@ function PortfolioRow({ facility, moneyVisible, canEdit }: { facility: FacilityL
       </td>
       {/* Název zabere zbytek šířky a ořízne se; okres a druh jsou pod ním, dokud nemají vlastní sloupec */}
       <td className="w-full max-w-0 px-3 py-3">
-        <Link href={href} className="block truncate font-bold hover:text-hk-red" title={facility.name}>
-          {facility.name}
+        <Link href={href} className="flex min-w-0 items-center gap-1.5 font-bold hover:text-hk-red" title={facility.name}>
+          <span className="truncate">{facility.name}</span>
+          <DataModeIcon live={facility.liveMeasurement} />
         </Link>
         <span className="block truncate text-[11.5px] text-slate-500 @7xl:hidden">
           <span className="@6xl:hidden">{facility.districtName} · </span>
@@ -226,7 +230,15 @@ function PortfolioRow({ facility, moneyVisible, canEdit }: { facility: FacilityL
       <td className={cn("px-3 py-3 text-right font-mono whitespace-nowrap", (facility.temperature ?? 0) > 23 && "text-red-800")}>{formatNumber(facility.temperature)}</td>
       <td className={cn("px-3 py-3 text-right font-mono whitespace-nowrap", (facility.co2 ?? 0) > 1500 && "text-amber-800")}>{formatNumber(facility.co2)}</td>
       <td className="hidden px-3 py-3 text-right font-mono whitespace-nowrap @5xl:table-cell">{formatNumber(facility.power)}</td>
+      <td className="hidden px-3 py-3 text-right font-mono whitespace-nowrap @6xl:table-cell" title={facility.preAuditDriver ?? undefined}>
+        {facility.preAuditScore ?? "—"}
+      </td>
       {moneyVisible && <td className="px-3 py-3 text-right font-mono whitespace-nowrap">{facility.annualLossCzk ? formatCzk(facility.annualLossCzk) : "—"}</td>}
+      {moneyVisible && (
+        <td className="hidden px-3 py-3 text-right font-mono whitespace-nowrap text-emerald-700 @5xl:table-cell">
+          {facility.iqrfPaybackMonths !== null ? `${formatNumber(facility.iqrfPaybackMonths)} m` : "—"}
+        </td>
+      )}
       <td className={cn("max-w-56 py-3 pl-3", canEdit ? "pr-1" : "pr-4")}>
         <StatusPill facility={facility} />
       </td>
@@ -252,6 +264,11 @@ function PortfolioCard({ facility, moneyVisible, canEdit }: { facility: Facility
         <div className="mt-2.5">
           <StatusPill facility={facility} />
         </div>
+        <p className="mt-2 flex items-center gap-1.5 font-mono text-[11px] text-slate-500">
+          <DataModeIcon live={facility.liveMeasurement} />
+          {facility.preAuditScore !== null && `pre-audit ${facility.preAuditScore}/100`}
+          {moneyVisible && facility.iqrfPaybackMonths !== null && <span className="text-emerald-700"> · IQRF {formatNumber(facility.iqrfPaybackMonths)} měs.</span>}
+        </p>
         <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-[12px]">
           <Value label="Teplota" value={formatNumber(facility.temperature, "°C")} />
           <Value label="CO₂" value={formatNumber(facility.co2, "ppm")} />
@@ -260,6 +277,17 @@ function PortfolioCard({ facility, moneyVisible, canEdit }: { facility: Facility
       </Link>
       {canEdit && <EditBuildingLink facility={facility} className="absolute top-2 right-2" />}
     </>
+  );
+}
+
+// Odkud jsou hodnoty: živé čidlo IQRF, nebo fyzikální model z otevřených dat (vysvětlení v tooltipu)
+function DataModeIcon({ live }: { live: boolean }) {
+  const Icon = live ? Radio : DraftingCompass;
+
+  return (
+    <span title={live ? `Živé měření IQRF — ${LIVE_EXPLANATION}` : `Fyzikální model z otevřených dat — ${MODEL_EXPLANATION}`} className="inline-flex shrink-0">
+      <Icon className={cn("size-3.5", live ? "text-emerald-600" : "text-slate-400")} aria-label={live ? "živé měření IQRF" : "fyzikální model z otevřených dat"} />
+    </span>
   );
 }
 
@@ -300,6 +328,10 @@ function sortFacilities(facilities: FacilityListItem[], key: SortKey, direction:
         return f.power ?? -Infinity;
       case "loss":
         return f.annualLossCzk ?? 0;
+      case "preaudit":
+        return f.preAuditScore ?? -1;
+      case "payback":
+        return f.iqrfPaybackMonths ?? Number.MAX_SAFE_INTEGER;
       case "status":
         return STATUS_ORDER[f.status];
     }

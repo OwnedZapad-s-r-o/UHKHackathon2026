@@ -11,6 +11,11 @@ COPY . .
 # Rewrites /api/* se zapisují při buildu — adresa API musí být známá už teď
 ARG API_INTERNAL_URL=http://api:8080
 ENV API_INTERNAL_URL=$API_INTERNAL_URL
+
+# Veřejná doména pro QR kódy na cedulkách (např. https://smartaudit.nasedomena.cz) — NEXT_PUBLIC_* se vkládá při buildu;
+# za běhu ji jde přebít proměnnou PUBLIC_URL (server) nebo přepínačem na stránce s QR kódem
+ARG NEXT_PUBLIC_PUBLIC_URL=
+ENV NEXT_PUBLIC_PUBLIC_URL=$NEXT_PUBLIC_PUBLIC_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

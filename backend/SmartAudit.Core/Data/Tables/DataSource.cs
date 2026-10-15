@@ -23,6 +23,15 @@ namespace SmartAudit.Core.Data.Tables
         public ImportStatus? LastStatus { get; private set; }
 
 
+        // Živá kontrola zdroje (POST /api/opendata/sync) — dostupnost API, počet záznamů a značky změny na straně poskytovatele
+        public DateTimeOffset? LastSyncedAt { get; private set; }
+        public bool? LiveAvailable { get; private set; }
+        public int? LiveRecordCount { get; private set; }
+        public string? LiveVersion { get; private set; }
+        public int? LiveResponseMs { get; private set; }
+        public string? LiveError { get; private set; }
+
+
         // Navigační vlastnosti
         public ICollection<DataImport> Imports { get; private set; } = new List<DataImport>();
 
@@ -49,6 +58,17 @@ namespace SmartAudit.Core.Data.Tables
             Purpose = purpose;
             DatasetId = datasetId;
             PortalUrl = portalUrl;
+        }
+
+        // version = ETag / Last-Modified / datum poslední editace vrstvy ArcGIS — změna značí nová data u poskytovatele
+        public void MarkLiveCheck(bool available, int? recordCount, string? version, int responseMs, string? error, DateTimeOffset now)
+        {
+            LiveAvailable = available;
+            LiveRecordCount = recordCount ?? LiveRecordCount;
+            LiveVersion = version ?? LiveVersion;
+            LiveResponseMs = responseMs;
+            LiveError = error is { Length: > 500 } ? error[..500] : error;
+            LastSyncedAt = now;
         }
 
         public void MarkImported(ImportStatus status, int recordCount)

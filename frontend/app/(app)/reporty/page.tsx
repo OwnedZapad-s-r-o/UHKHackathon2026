@@ -8,7 +8,7 @@ import { TopBar } from "../_components/top-bar";
 import { FacilityReportPicker } from "./_components/facility-report-picker";
 
 export const metadata: Metadata = {
-  title: "Reporty · SmartAudit KHK",
+  title: "Reporty · SmartAudit",
 };
 
 export default async function ReportsPage() {

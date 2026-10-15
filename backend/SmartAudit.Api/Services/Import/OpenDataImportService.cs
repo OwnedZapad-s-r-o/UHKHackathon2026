@@ -14,6 +14,7 @@ namespace SmartAudit.Api.Services.Import
         Task SyncDataSourcesAsync(CancellationToken ct);
         Task<DatasetImportResult> ImportDatasetAsync(string key, CancellationToken ct);
         Task<IReadOnlyList<DatasetImportResult>> ImportAllAsync(CancellationToken ct);
+        Task<IReadOnlyList<DatasetImportResult>> ImportMissingAsync(CancellationToken ct);
         Task<IReadOnlyList<RawFeature>> LoadAsync(string key, CancellationToken ct);
         Task RecordExternalImportAsync(string key, ImportStatus status, int recordCount, string? error, CancellationToken ct);
     }
@@ -60,6 +61,22 @@ namespace SmartAudit.Api.Services.Import
             var results = new List<DatasetImportResult>();
 
             foreach (var dataset in _settings.Datasets.Where(d => d.Provider == KhkProvider))
+                results.Add(await ImportDatasetAsync(dataset.Key, ct));
+
+            return results;
+        }
+
+        // Sady Data KHK, které ještě nikdy importované nebyly (nové v konfiguraci)
+        public async Task<IReadOnlyList<DatasetImportResult>> ImportMissingAsync(CancellationToken ct)
+        {
+            var imported = await _dbContext.DataSources
+                .Where(d => d.LastImportedAt != null)
+                .Select(d => d.Key)
+                .ToListAsync(ct);
+
+            var results = new List<DatasetImportResult>();
+
+            foreach (var dataset in _settings.Datasets.Where(d => d.Provider == KhkProvider && !imported.Contains(d.Key)))
                 results.Add(await ImportDatasetAsync(dataset.Key, ct));
 
             return results;

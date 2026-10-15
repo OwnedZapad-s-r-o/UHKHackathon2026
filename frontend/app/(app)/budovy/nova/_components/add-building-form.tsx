@@ -166,7 +166,7 @@ export function AddBuildingForm({ organizationName, defaultCategory, ownFaciliti
           <Step number={3} title="Co se stane po přidání" dimmed={!place}>
             <ul className="space-y-1.5 text-[13px] text-slate-600">
               <li>Budova se objeví v mapě a mezi vašimi budovami{organizationName ? ` (${organizationName})` : ""}.</li>
-              <li>Dostane simulovaná čidla teploty, CO₂ a příkonu s týdnem historie — skutečná IQRF čidla připojíte v Senzorech.</li>
+              <li>Dostane fyzikální model z otevřených dat (ČÚZK + Data KHK + Open-Meteo) pro teplotu, CO₂ a příkon s týdnem historie — skutečná IQRF čidla připojíte v Senzorech.</li>
               <li>Energetický audit ji vyhodnotí do minuty a zařadí do reportů.</li>
             </ul>
           </Step>

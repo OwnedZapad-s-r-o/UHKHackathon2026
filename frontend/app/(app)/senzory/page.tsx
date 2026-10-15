@@ -18,7 +18,7 @@ import { SENSOR_STEPS, SensorSteps } from "./_components/sensor-steps";
 import { Code, emulatorCommand } from "./_components/setup-guide";
 
 export const metadata: Metadata = {
-  title: "Senzory · SmartAudit KHK",
+  title: "Senzory · SmartAudit",
   description: "Připojení skutečných čidel IQRF — gateway, uzly, přiřazení do místností.",
 };
 
@@ -61,7 +61,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
             <h1 className="text-[32px] leading-tight font-bold tracking-tight">Skutečná čidla IQRF</h1>
             <p className="mt-1.5 max-w-2xl text-sm leading-normal text-slate-600">
               IQRF gateway v budově posílá přes MQTT hodnoty z čidel. Aplikace sama najde uzly a veličiny, vy jen vyberete místnost — grafy,
-              audit i PDF pak místo simulace ukazují skutečná měření.
+              audit i PDF pak místo fyzikálního modelu z otevřených dat ukazují skutečná měření.
             </p>
           </div>
           <BrokerBadge connected={data.broker.connected} error={data.broker.error} address={`${host}:${data.broker.publicPort}`} />
@@ -184,7 +184,7 @@ export default async function SensorsPage({ searchParams }: PageProps<"/senzory"
 const NEXT_TEXT = [
   "Ukážeme adresu brokeru a hotové nastavení pro IQRF Gateway Webapp — stačí zkopírovat.",
   "Aplikace se sama zeptá na spárované uzly a jejich čidla. Uvidíte je naživo.",
-  "U každého čidla vyberete místnost. Skutečná měření pak nahradí simulaci.",
+  "U každého čidla vyberete místnost. Skutečná měření pak nahradí fyzikální model.",
 ];
 
 function BrokerBadge({ connected, error, address }: { connected: boolean; error: string | null; address: string }) {

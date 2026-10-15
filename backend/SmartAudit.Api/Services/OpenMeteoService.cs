@@ -11,11 +11,13 @@ namespace SmartAudit.Api.Services
     {
         Task<IReadOnlyList<HourlyWeather>> GetTemperatureAsync(IReadOnlyList<WeatherPoint> points, int pastDays, CancellationToken ct);
         Task<IReadOnlyList<HourlyWeather>> GetAirQualityAsync(IReadOnlyList<WeatherPoint> points, int pastDays, CancellationToken ct);
+        Task<IReadOnlyDictionary<string, double>> GetElevationAsync(IReadOnlyList<WeatherPoint> points, CancellationToken ct);
     }
     public class OpenMeteoService : IOpenMeteoService
     {
         private const string ForecastUrl = "https://api.open-meteo.com/v1/forecast";
         private const string AirQualityUrl = "https://air-quality-api.open-meteo.com/v1/air-quality";
+        private const string ElevationUrl = "https://api.open-meteo.com/v1/elevation";
 
         private readonly HttpClient _httpClient;
 
@@ -32,6 +34,26 @@ namespace SmartAudit.Api.Services
         public Task<IReadOnlyList<HourlyWeather>> GetAirQualityAsync(IReadOnlyList<WeatherPoint> points, int pastDays, CancellationToken ct)
         {
             return FetchAsync(AirQualityUrl, "pm10,pm2_5", points, pastDays, ct);
+        }
+
+        // Nadmořská výška (Copernicus DEM 90 m) pro všechny body jedním dotazem — vstup klimatické náročnosti pre-auditu
+        public async Task<IReadOnlyDictionary<string, double>> GetElevationAsync(IReadOnlyList<WeatherPoint> points, CancellationToken ct)
+        {
+            if (points.Count == 0)
+                return new Dictionary<string, double>();
+
+            var latitudes = string.Join(',', points.Select(p => p.Latitude.ToString("0.####", CultureInfo.InvariantCulture)));
+            var longitudes = string.Join(',', points.Select(p => p.Longitude.ToString("0.####", CultureInfo.InvariantCulture)));
+
+            using var response = await _httpClient.GetAsync($"{ElevationUrl}?latitude={latitudes}&longitude={longitudes}", ct);
+            response.EnsureSuccessStatusCode();
+
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var values = document.RootElement.GetProperty("elevation").EnumerateArray().Select(e => e.GetDouble()).ToList();
+
+            return points
+                .Zip(values)
+                .ToDictionary(p => p.First.Key, p => p.Second);
         }
 
         // Open-Meteo umí víc lokalit v jednom dotazu — pro 15 ORP stačí jedno volání

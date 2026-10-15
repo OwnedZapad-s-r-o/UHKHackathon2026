@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { GuideHighlights } from "@/components/guide/guide-highlights";
 import { Map, MapMarker, MarkerContent, MarkerLabel, MarkerTooltip, useMap } from "@/components/ui/map";
 import type { DistrictStats } from "@/lib/district-shading";
 import { MAP_HOME_EVENT } from "@/lib/map-events";
@@ -110,6 +111,9 @@ export function FacilityMap({ facilities, selectedId, selectedDistrict, district
           onDeselectFacility={() => navigate({ objekt: null, panel: null })}
           disabled={editMode !== null}
         />
+
+        {/* Očíslované objekty z odpovědi průvodce — klik otevře objekt i s jeho okresem */}
+        {!editMode && <GuideHighlights onSelect={(item) => navigate({ okres: ownBuildings ? null : item.districtCode, objekt: item.id })} />}
 
         {showPins && !editMode && ordered.map((facility, index) => {
           const isSelected = facility.id === selectedId;

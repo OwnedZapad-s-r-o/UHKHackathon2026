@@ -2,7 +2,8 @@ using System.Text;
 
 namespace SmartAudit.Core.Domain.Helpers
 {
-    // string.GetHashCode() je v .NET náhodný pro každý proces — pro opakovatelnou simulaci potřebujeme stabilní hash
+    // string.GetHashCode() je v .NET náhodný pro každý proces — stabilní hash slouží jen jako semínko šumu čidel (±0,1 °C),
+    // stav budovy z něj nikdy nevzniká (ten počítá OpenDataPreAudit z otevřených dat)
     public static class StableHash
     {
         public static int Of(string value)
@@ -17,12 +18,6 @@ namespace SmartAudit.Core.Domain.Helpers
             }
 
             return unchecked((int)hash);
-        }
-
-        // Rovnoměrné číslo 0–99 pro rozdělení do profilů
-        public static int Percent(string value)
-        {
-            return (int)((uint)Of(value) % 100);
         }
     }
 }

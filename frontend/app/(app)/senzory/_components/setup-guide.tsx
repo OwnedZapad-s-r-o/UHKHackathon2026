@@ -108,7 +108,7 @@ export function SetupGuide({ brokerHost, broker, gatewayId, credentials }: Setup
 
       <Step number={broker.publicTls ? 4 : 3} title="Přiřaďte kanál do místnosti">
         <p className="mt-1 text-slate-600">
-          Od té chvíle se hodnoty ukládají, grafy místnosti pokračují skutečnými daty a simulace pro ni skončí. Audit objektu se přepočítá.
+          Od té chvíle se hodnoty ukládají, grafy místnosti pokračují skutečnými daty a fyzikální model pro ni skončí. Audit objektu se přepočítá.
         </p>
       </Step>
 

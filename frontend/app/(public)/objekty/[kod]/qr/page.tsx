@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import QRCode from "qrcode";
+import { Logo } from "@/components/brand/logo";
 import { CATEGORY_META } from "@/lib/facility-meta";
 import { getPublicFacilityByCode } from "@/lib/public-api";
+import { configuredPublicUrl } from "@/lib/public-url";
 import { requestOrigin } from "@/lib/request-origin";
 import { cn } from "@/lib/utils";
 import { PrintButton } from "./_components/print-button";
+import { QrDomainSwitch, QrImage, QrShortUrl, QrTargetProvider } from "./_components/qr-target";
 
 export const metadata: Metadata = {
-  title: "QR kód na dveře · SmartAudit KHK",
+  title: "QR kód na dveře · SmartAudit",
 };
 
 // Škála kvality vzduchu na cedulce — stejné hranice jako veřejná karta (lib/air-quality)
@@ -21,20 +22,20 @@ const LEVELS = [
   { label: "Vydýchaný vzduch", range: "nad 1 500 ppm", dot: "bg-red-500", tone: "border-red-200 bg-red-50 text-red-900" },
 ];
 
-// Tisková cedulka A5 na dveře třídy nebo ke vchodu — QR vede na veřejnou kartu objektu.
+// Tisková cedulka A5 na dveře třídy nebo ke vchodu — QR vede na veřejnou kartu objektu na veřejné doméně
+// (PUBLIC_URL / NEXT_PUBLIC_PUBLIC_URL, nebo přepínač nad cedulkou), aby fungoval na mobilech diváků, ne na localhostu.
 // Všechny rozměry jsou v cqw (procenta šířky listu), takže náhled na obrazovce je přesně zmenšený tisk.
 export default async function QrPage({ params }: PageProps<"/objekty/[kod]/qr">) {
   const { kod } = await params;
   const facility = await getPublicFacilityByCode(kod);
   if (!facility) notFound();
 
-  const url = `${await requestOrigin()}/objekty/${facility.code}`;
-  const shortUrl = url.replace(/^https?:\/\//, "");
-  const qr = await QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0b192c", light: "#ffffff" } });
+  const path = `/objekty/${facility.code}`;
   const address = [facility.street, facility.houseNumber].filter(Boolean).join(" ");
   const CategoryIcon = CATEGORY_META[facility.category].icon;
 
   return (
+    <QrTargetProvider configuredBase={configuredPublicUrl()} requestBase={await requestOrigin()} path={path}>
     <main className="bg-slate-100 px-4 py-8 print:bg-white print:p-0">
       {/* Tisk bez okrajů prohlížeče, list A5 na výšku, barvy pozadí se vytisknou */}
       <style>{"@page { size: A5 portrait; margin: 0 } @media print { html, body { print-color-adjust: exact; -webkit-print-color-adjust: exact } }"}</style>
@@ -50,14 +51,12 @@ export default async function QrPage({ params }: PageProps<"/objekty/[kod]/qr">)
         </div>
       </div>
 
+      <QrDomainSwitch />
+
       <article className="@container mx-auto flex aspect-148/210 w-full max-w-[148mm] flex-col overflow-hidden bg-white text-hk-navy shadow-[0_24px_60px_-20px_rgba(11,25,44,0.35)] print:h-[210mm] print:w-[148mm] print:max-w-none print:shadow-none">
-        {/* Hlavička v barvách kraje */}
-        <header className="flex items-center justify-between bg-hk-navy px-[7cqw] py-[3.5cqw] text-white">
-          <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} className="h-[8cqw] w-auto" />
-          <span className="text-right leading-tight">
-            <span className="block text-[3.4cqw] font-bold">SmartAudit</span>
-            <span className="block text-[2.4cqw] text-white/65">Královéhradecký kraj</span>
-          </span>
+        {/* Hlavička se značkou SmartAuditu */}
+        <header className="flex items-center bg-hk-navy px-[7cqw] py-[4cqw] text-white">
+          <Logo tone="dark" className="h-[7cqw] w-auto" />
         </header>
         <div className="h-[1.1cqw] bg-hk-red" aria-hidden />
 
@@ -75,8 +74,7 @@ export default async function QrPage({ params }: PageProps<"/objekty/[kod]/qr">)
               <Corner className="top-0 right-0 border-t-[1.1cqw] border-r-[1.1cqw] rounded-tr-[2.5cqw]" />
               <Corner className="bottom-0 left-0 border-b-[1.1cqw] border-l-[1.1cqw] rounded-bl-[2.5cqw]" />
               <Corner className="right-0 bottom-0 border-r-[1.1cqw] border-b-[1.1cqw] rounded-br-[2.5cqw]" />
-              {/* SVG z knihovny qrcode je vlastní výstup na serveru, ne vstup od uživatele */}
-              <div className="w-[34cqw] [&>svg]:block [&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: qr }} />
+              <QrImage label={`QR kód na kartu objektu ${facility.name}`} className="block w-[34cqw]" />
             </div>
 
             <ol className="flex flex-col gap-[3cqw] text-[2.9cqw] leading-snug">
@@ -119,11 +117,12 @@ export default async function QrPage({ params }: PageProps<"/objekty/[kod]/qr">)
         </div>
 
         <footer className="flex items-center justify-between gap-[3cqw] bg-slate-50 px-[7cqw] py-[2.4cqw] text-[2.2cqw] text-slate-500">
-          <span className="truncate font-mono">{shortUrl}</span>
+          <QrShortUrl />
           <span className="shrink-0">Otevřená data kraje · CC BY 4.0</span>
         </footer>
       </article>
     </main>
+    </QrTargetProvider>
   );
 }
 

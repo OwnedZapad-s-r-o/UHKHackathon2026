@@ -29,6 +29,10 @@ namespace SmartAudit.Core.Data.Tables
         public int? ProgramGrantCount { get; private set; }
         public decimal? ProgramGrantTotal { get; private set; }
 
+
+        // ORP — nadmořská výška těžiště z Open-Meteo Elevation API (vstup klimatického parametru pre-auditu)
+        public double? Elevation { get; private set; }
+
         private Region() { }
 
         public Region(RegionType type, string code, string name, Geometry? geometry = null)
@@ -68,6 +72,14 @@ namespace SmartAudit.Core.Data.Tables
 
             IndividualGrantCount = count;
             IndividualGrantTotal = total;
+        }
+
+        public void SetElevation(double? elevation)
+        {
+            if (elevation is < -500 or > 9000)
+                throw new ArgumentException("Nadmořská výška mimo rozsah.", nameof(elevation));
+
+            Elevation = elevation;
         }
 
         public void SetProgramGrants(int count, decimal total)

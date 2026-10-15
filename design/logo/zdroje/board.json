@@ -1,0 +1,57 @@
+{
+  "brand": "SmartAudit",
+  "tagline": "Méně tepla oknem. Víc peněz pro kraj.",
+  "brief": "Aplikace pro Královéhradecký kraj, která z otevřených dat a čidel IQRF najde, kde kraj ve svých 174 budovách plýtvá teplem — pro kraj, správce budov i veřejnost.",
+  "adjectives": [
+    "důvěryhodný",
+    "přesný",
+    "klidný",
+    "otevřený"
+  ],
+  "criteria": "Úspěch: jedna myšlenka říkatelná větou, žádná klišé oboru (dům s listem, blesk, teploměr), čitelnost na 16 px, funguje v jedné barvě.",
+  "mockups": [
+    "website",
+    "favicon-tab",
+    "app-icon",
+    "signage",
+    "badge",
+    "social"
+  ],
+  "nav": [
+    "Mapa",
+    "Portfolio",
+    "Pro veřejnost"
+  ],
+  "brand_color": "#0b192c",
+  "tile_color": "#0b192c",
+  "greyscale": false,
+  "final": true,
+  "deck_title": "logo a identita",
+  "designer": "SmartAudit · hackathon 2026",
+  "concepts": [
+    {
+      "name": "Okno, kterým uniká teplo",
+      "symbol": "master/smartaudit-symbol.svg",
+      "lockup": "master/smartaudit-horizontal.svg",
+      "stacked": "master/smartaudit-stacked.svg",
+      "avatar": "master/smartaudit-symbol.svg",
+      "symbol_on_tile": "master/smartaudit-symbol-on-dark.svg",
+      "symbol_on_dark": "master/smartaudit-symbol-on-dark.svg",
+      "lockup_on_dark": "master/smartaudit-horizontal-on-dark.svg",
+      "stacked_on_dark": "master/smartaudit-stacked-on-dark.svg",
+      "stacked_on_tile": "master/smartaudit-stacked-on-dark.svg",
+      "idea": "Fasáda šesti oken; jedno vyjíždí ven — to je místo, kde kraj ztrácí teplo, a SmartAudit ho najde.",
+      "rationale": [
+        "Přímo nese hlavní sdělení „Méně tepla oknem“ a to, co aplikace dělá: najít jednu problémovou budovu mezi mnoha",
+        "Žádné klišé oboru — posunuté okno je vlastní, zapamatovatelný detail",
+        "Barvy kraje: navy a jediný červený akcent; v jedné barvě drží myšlenku posun okna",
+        "Mřížka 8 jednotek, jeden poloměr, malý řez na pixelové mřížce pro favicon"
+      ]
+    }
+  ],
+  "recommendation": "Finální značka: symbol + slovo SmartAudit v písmu Hradec; jediný červený akcent je vysunuté okno.",
+  "next_steps": [
+    "Ověřit licenci písma Hradec pro použití v logu",
+    "Rešerše ochranných známek"
+  ]
+}

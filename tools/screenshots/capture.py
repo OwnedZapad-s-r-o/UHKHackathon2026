@@ -21,20 +21,29 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Průvodce se pamatuje pro každou roli a stránku zvlášť (app-tour.tsx) — na snímcích nemá co dělat
+SKIP_TOURS = """
+['Kraj', 'Spravce', 'Verejnost'].forEach((role) => {
+  localStorage.setItem(`smartaudit:pruvodce:v1:${role}`, '1');
+  ['senzory', 'gateway'].forEach((phase) => localStorage.setItem(`smartaudit:pruvodce:v1:${role}:${phase}`, '1'));
+})
+"""
 
-def api(base, path, token=None, raw=False):
-    request = urllib.request.Request(base + path)
+
+def api(base, path, token=None, raw=False, method=None, body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    request = urllib.request.Request(base + path, data=data, method=method)
+    if data is not None:
+        request.add_header("Content-Type", "application/json")
     if token:
         request.add_header("Authorization", "Bearer " + token)
     with urllib.request.urlopen(request) as response:
         body = response.read()
-    return body if raw else json.loads(body)
+    return body if raw or not body else json.loads(body)
 
 
-def demo_token(base):
-    request = urllib.request.Request(base + "/api/auth/demo", data=b'{"role":"Kraj"}', headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(request) as response:
-        return json.loads(response.read())["token"]
+def demo_token(base, role="Kraj"):
+    return api(base, "/api/auth/demo", method="POST", body={"role": role})["token"]
 
 
 def save(png_bytes, out, name):
@@ -83,17 +92,19 @@ def main():
         page.goto(args.web + "/login")
         page.get_by_role("button", name="Jsem z kraje").click()
         page.wait_for_url("**/mapa**")
-        # Demo po přihlášení spouští průvodce aplikací — na snímcích nemá co dělat
-        page.evaluate("['Kraj', 'Spravce', 'Verejnost'].forEach((role) => localStorage.setItem(`smartaudit:pruvodce:v1:${role}`, '1'))")
+        page.evaluate(SKIP_TOURS)
 
-        def shot(path, name, wait=2500):
+        def shot(path, name, wait=2500, target=None, prepare=None):
             if args.only and name not in args.only:
                 return
-            page.goto(args.web + path)
-            page.wait_for_load_state("load")
-            page.mouse.move(1430, 890)
-            page.wait_for_timeout(wait)
-            save(page.screenshot(), out, name)
+            target = target or page
+            target.goto(args.web + path)
+            target.wait_for_load_state("load")
+            target.mouse.move(1430, 890)
+            target.wait_for_timeout(wait)
+            if prepare:
+                prepare(target)
+            save(target.screenshot(), out, name)
 
         # Zahřátí: první načtení podkladových dlaždic CARTO je pomalé, snímek by zachytil prázdnou mapu
         page.goto(args.web + f"/mapa?objekt={hero['id']}")
@@ -119,6 +130,58 @@ def main():
         page.set_viewport_size({"width": 390, "height": 844})
         shot(f"/objekty/{hero['code']}", "karta-mobil")
 
+        # Obrazovky správce budovy: párování, demo zařízení a úpravy budov
+        manager = browser.new_page(viewport={"width": 1440, "height": 900})
+        manager.goto(args.web + "/login")
+        manager.get_by_role("button", name="Spravuji budovu").click()
+        manager.wait_for_url("**/mapa**")
+        manager.evaluate(SKIP_TOURS)
+        manager_token = demo_token(args.api, "Spravce")
+
+        shot("/demo", "demo-sprava", 4000, manager)
+
+        if not args.only or "parovani" in args.only:
+            # Čerstvě „vyrobená“ gateway se do 10 s ohlásí v Nových zařízeních online; po snímku se zase smaže
+            device = api(args.api, "/api/demo/gateways", manager_token, method="POST", body={"templates": ["ucebna", "chodba"], "behavior": "Setback"})
+
+            def open_pairing(target):
+                connect = target.get_by_role("button", name="Připojit do mé budovy").first
+                connect.wait_for(timeout=30000)
+                connect.click()
+                target.get_by_text("1. Kam gateway patří").wait_for()
+                target.get_by_text("1. Kam gateway patří").scroll_into_view_if_needed()
+                target.mouse.move(1430, 890)
+                target.wait_for_timeout(800)
+
+            try:
+                shot("/senzory", "parovani", 2000, manager, open_pairing)
+            finally:
+                api(args.api, f"/api/demo/{device['id']}", manager_token, method="DELETE")
+
+        def pick_address(target):
+            target.get_by_role("combobox").fill("Komenského 63 Trutnov")
+            target.get_by_role("option").first.click(timeout=15000)
+            target.mouse.move(1430, 890)
+            target.wait_for_timeout(8000)
+
+        shot("/budovy/nova", "nova-budova", 3000, manager, pick_address)
+
+        # Editor obrysu na první budově správce, která má doplněnou přilehlou budovu
+        own = api(args.api, "/api/facilities", manager_token)
+        edited = next(((f, parts[0]) for f in own if (parts := api(args.api, f"/api/facilities/{f['id']}/building-parts", manager_token))), None)
+        if edited:
+            facility, part = edited
+
+            # Jako uživatel: odkaz v záložce Budova — při přímém otevření URL by přelet k objektu přebil 2D pohled editoru
+            def open_outline(target):
+                target.locator(f'a[href*="budova=obrys%3A{part["id"]}"], a[href*="budova=obrys:{part["id"]}"]').first.click()
+                target.mouse.move(1430, 890)
+                target.wait_for_timeout(3000)
+
+            shot(f"/mapa?objekt={facility['id']}&panel=budova", "budova-obrys", 12000, manager, open_outline)
+
+        manager.close()
+        page.close()
         browser.close()
 
     if not args.only or "pdf" in args.only:

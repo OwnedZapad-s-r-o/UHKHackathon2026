@@ -25,6 +25,8 @@ namespace SmartAudit.Core.Data.EntityConfigurations
             builder.Property(d => d.Group).HasMaxLength(100);
             builder.Property(d => d.Purpose).HasMaxLength(1000);
             builder.Property(d => d.LastStatus).HasConversion<string>().HasMaxLength(20);
+            builder.Property(d => d.LiveVersion).HasMaxLength(200);
+            builder.Property(d => d.LiveError).HasMaxLength(500);
 
             builder.HasIndex(d => d.Key).IsUnique();
         }

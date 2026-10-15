@@ -35,7 +35,7 @@ export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
           </span>
           <span className="min-w-0 text-[12.5px]">
             <span className="block font-bold">Skutečná čidla IQRF</span>
-            <span className="block truncate">{liveZones.join(", ")} — ostatní zóny zatím simulace</span>
+            <span className="block truncate">{liveZones.join(", ")} — ostatní zóny zatím fyzikální model z otevřených dat</span>
           </span>
         </Link>
       )}

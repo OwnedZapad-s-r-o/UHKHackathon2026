@@ -19,6 +19,7 @@ namespace SmartAudit.Core.Data
         public DbSet<FacilityMetric> FacilityMetrics { get; set; }
         public DbSet<FacilityBuilding> FacilityBuildings { get; set; }
         public DbSet<FacilityAssessment> FacilityAssessments { get; set; }
+        public DbSet<FacilityPreAudit> FacilityPreAudits { get; set; }
         public DbSet<Region> Regions { get; set; }
         public DbSet<MunicipalityContact> MunicipalityContacts { get; set; }
         public DbSet<Zone> Zones { get; set; }

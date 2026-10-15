@@ -53,12 +53,14 @@ namespace SmartAudit.Api.Features.Facilities.CreateFacility
         private readonly SmartAuditDbContext _dbContext;
         private readonly IPlaceLookupService _placeLookup;
         private readonly IAuditTrigger _auditTrigger;
+        private readonly IPreAuditService _preAudit;
 
-        public CreateFacilityHandler(SmartAuditDbContext dbContext, IPlaceLookupService placeLookup, IAuditTrigger auditTrigger)
+        public CreateFacilityHandler(SmartAuditDbContext dbContext, IPlaceLookupService placeLookup, IAuditTrigger auditTrigger, IPreAuditService preAudit)
         {
             _dbContext = dbContext;
             _placeLookup = placeLookup;
             _auditTrigger = auditTrigger;
+            _preAudit = preAudit;
         }
 
         public async Task<Response<CreateFacilityDto>> Handle(CreateFacilityCommand request, CancellationToken ct)
@@ -111,7 +113,7 @@ namespace SmartAudit.Api.Features.Facilities.CreateFacility
             var sourceKey = $"{Facility.ManagerSourcePrefix}{Guid.CreateVersion7():N}";
 
             var facility = new Facility(sourceKey, name, request.Category, location);
-            facility.SetSimulationProfile(FacilityDefaults.SimulationProfileFor(sourceKey, request.Category));
+            facility.SetSimulationProfile(SimulationProfile.Nominal);
             facility.SetIdentifiers(kind == null ? [] : [kind], [], null, organization.Ico, organization.Web);
             facility.SetAddress(
                 Clean(request.Street),
@@ -138,6 +140,9 @@ namespace SmartAudit.Api.Features.Facilities.CreateFacility
             _dbContext.FacilityBuildings.Add(building);
 
             await _dbContext.SaveChangesAsync(ct);
+
+            // Pre-audit z otevřených dat (ČÚZK, smlouvy organizace, klima ORP) nastaví profil fyzikálního modelu ještě před založením čidel
+            await _preAudit.ApplyAsync([facility.Id], ct);
 
             _auditTrigger.RequestProvisioning(facility.Id);
 

@@ -8,7 +8,7 @@ import { TopBar } from "../../_components/top-bar";
 import { AddBuildingForm } from "./_components/add-building-form";
 
 export const metadata: Metadata = {
-  title: "Přidat budovu · SmartAudit KHK",
+  title: "Přidat budovu · SmartAudit",
 };
 
 // Onboarding správce budovy: vlastní budovu přidá do mapy sám. Kraj má portfolio z otevřených dat, přidávání je jen pro správce.

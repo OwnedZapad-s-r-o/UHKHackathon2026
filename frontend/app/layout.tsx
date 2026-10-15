@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { ThermalScrollbar } from "@/components/thermal-scrollbar";
 import "./globals.css";
 
 // Firemní písmo Hradce Králové — stejné soubory jako v prototypu
@@ -28,15 +29,12 @@ export const metadata: Metadata = {
   title: "SmartAudit · Královéhradecký kraj",
   description:
     "Energetický audit budov zřizovaných Královéhradeckým krajem nad otevřenými daty KHK.",
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/hkIcon.ico" },
-    ],
-    shortcut: "/icon.svg",
-    apple: "/apple-icon.png",
-  },
+  applicationName: "SmartAudit",
+  // Favicony (icon.svg, favicon.ico, apple-icon.png), manifest a náhled pro sdílení jsou soubory v app/ — Next je vloží sám
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b192c",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -45,12 +43,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="cs"
       className={`${hradec.variable} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-        <link rel="alternate icon" href="/hkIcon.ico" />
-        <link rel="apple-touch-icon" href="/apple-icon.png" />
-      </head>
-      <body className="flex h-dvh flex-col">{children}</body>
+      <body className="flex h-dvh flex-col">
+        <ThermalScrollbar />
+        {children}
+      </body>
     </html>
   );
 }

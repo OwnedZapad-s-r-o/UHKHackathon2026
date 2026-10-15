@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Compass, LogOut, Search } from "lucide-react";
 import { logout } from "@/app/login/actions";
+import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import type { Role, Session } from "@/types/api";
 import { IssuesToggle } from "./issues-toggle";
@@ -25,10 +25,8 @@ export function Sidebar({ session, counts, className }: SidebarProps) {
 
   return (
     <aside className={cn("flex w-58 shrink-0 flex-col overflow-y-auto bg-hk-navy px-4 pt-7 pb-5 text-white", className)}>
-      <Link href="/mapa" className="block px-2">
-        <Image src="/brand/hk-logo-white.png" alt="Hradec Králové" width={330} height={142} priority className="h-11 w-auto" />
-        <span className="mt-4.5 block text-[15px] font-bold tracking-tight">SmartAudit</span>
-        <span className="mt-0.5 block text-[11px] text-white/55">Královéhradecký kraj</span>
+      <Link href="/mapa" className="block px-2" aria-label="SmartAudit — mapa objektů">
+        <Logo tone="dark" className="h-8 w-auto" />
       </Link>
 
       <SidebarNav counts={counts} role={session.role} />

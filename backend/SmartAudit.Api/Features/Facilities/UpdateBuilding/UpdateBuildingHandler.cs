@@ -20,11 +20,13 @@ namespace SmartAudit.Api.Features.Facilities.UpdateBuilding
     {
         private readonly SmartAuditDbContext _dbContext;
         private readonly IAuditTrigger _auditTrigger;
+        private readonly IPreAuditService _preAudit;
 
-        public UpdateBuildingHandler(SmartAuditDbContext dbContext, IAuditTrigger auditTrigger)
+        public UpdateBuildingHandler(SmartAuditDbContext dbContext, IAuditTrigger auditTrigger, IPreAuditService preAudit)
         {
             _dbContext = dbContext;
             _auditTrigger = auditTrigger;
+            _preAudit = preAudit;
         }
 
         public async Task<Response<bool>> Handle(UpdateBuildingCommand request, CancellationToken ct)
@@ -61,6 +63,9 @@ namespace SmartAudit.Api.Features.Facilities.UpdateBuilding
             building.SetOverrides(request.BuiltUpArea, request.Floors, request.ConstructionYear, now);
 
             await _dbContext.SaveChangesAsync(ct);
+
+            // Opravená plocha nebo rok výstavby mění tepelnou obálku i hustotu osob — pre-audit se přepočítá hned
+            await _preAudit.ApplyAsync([facility.Id], ct);
 
             _auditTrigger.RequestFacility(facility.Id);
 

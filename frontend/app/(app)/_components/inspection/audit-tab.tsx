@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import type { FacilityDetail } from "@/types/api";
 import { AiAuditSection } from "./ai-audit-section";
 import { PanelCard } from "./panel-card";
+import { PreAuditCard } from "./pre-audit-card";
 
 const dateTime = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "short", timeStyle: "short" });
 
@@ -39,6 +40,7 @@ export function AuditTab({ facility }: { facility: FacilityDetail }) {
                   <div className="min-w-0">
                     <p className="text-[13px] font-bold">{finding.title}</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-slate-600">{finding.detail}</p>
+                    {finding.source && <p className="mt-1 text-[10.5px] leading-snug text-slate-400 italic">Zdroj: {finding.source}</p>}
                   </div>
                   <span className="ml-auto font-mono text-[10px] whitespace-nowrap text-slate-400">{finding.tag}</span>
                 </li>
@@ -47,6 +49,8 @@ export function AuditTab({ facility }: { facility: FacilityDetail }) {
           </ul>
         )}
       </PanelCard>
+
+      {facility.preAudit && <PreAuditCard preAudit={facility.preAudit} />}
 
       <AiAuditSection facilityId={facility.id} />
 

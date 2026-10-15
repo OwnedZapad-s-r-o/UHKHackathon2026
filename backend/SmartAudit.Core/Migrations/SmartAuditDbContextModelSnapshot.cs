@@ -137,6 +137,26 @@ namespace SmartAudit.Core.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTimeOffset?>("LastSyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("LiveAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LiveError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("LiveRecordCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LiveResponseMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LiveVersion")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("PortalUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -663,6 +683,94 @@ namespace SmartAudit.Core.Migrations
                     b.ToTable("FacilityMetrics");
                 });
 
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityPreAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AnnualHeatCostCzk")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
+                    b.Property<double>("AnnualHeatDemandKwh")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset>("ComputedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("DegreeDays")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("DominantDriver")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("FacilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FindingsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<double>("HeatLossWattsPerKelvin")
+                        .HasColumnType("double precision");
+
+                    b.Property<decimal>("HeatPriceCzkPerKwh")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<bool>("HeatPriceFromContract")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("IqrfGateways")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("IqrfHardwareCostCzk")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<int>("IqrfSensors")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ParametersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Profile")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("RegulationPotentialCzk")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
+                    b.Property<double>("RegulationSavingPercent")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("SpecificHeatLoss")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacilityId")
+                        .IsUnique();
+
+                    b.HasIndex("Score");
+
+                    b.ToTable("FacilityPreAudits");
+                });
+
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.MunicipalityContact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -803,6 +911,9 @@ namespace SmartAudit.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<double?>("Elevation")
+                        .HasColumnType("double precision");
 
                     b.Property<Geometry>("Geometry")
                         .HasColumnType("geometry(Geometry, 4326)");
@@ -1230,6 +1341,17 @@ namespace SmartAudit.Core.Migrations
                     b.Navigation("Facility");
                 });
 
+            modelBuilder.Entity("SmartAudit.Core.Data.Tables.FacilityPreAudit", b =>
+                {
+                    b.HasOne("SmartAudit.Core.Data.Tables.Facility", "Facility")
+                        .WithOne("PreAudit")
+                        .HasForeignKey("SmartAudit.Core.Data.Tables.FacilityPreAudit", "FacilityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Facility");
+                });
+
             modelBuilder.Entity("SmartAudit.Core.Data.Tables.OpenDataFeature", b =>
                 {
                     b.HasOne("SmartAudit.Core.Data.Tables.DataSource", "DataSource")
@@ -1337,6 +1459,8 @@ namespace SmartAudit.Core.Migrations
                     b.Navigation("Building");
 
                     b.Navigation("Metrics");
+
+                    b.Navigation("PreAudit");
 
                     b.Navigation("Sensors");
 

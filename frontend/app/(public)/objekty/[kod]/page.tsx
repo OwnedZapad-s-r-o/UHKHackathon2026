@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Landmark, QrCode, Wind } from "lucide-react";
 import { LiveBadge } from "@/components/live-badge";
+import { MODEL_EXPLANATION } from "@/components/data-mode-badge";
 import { AIR_META, airLevel } from "@/lib/air-quality";
 import { formatNumber } from "@/lib/facility-meta";
 import { getPublicCo2, getPublicFacilityByCode, getPublicFacilityDetail, getPublicSection } from "@/lib/public-api";
 import { cn } from "@/lib/utils";
 import type { Telemetry, TelemetryPoint } from "@/types/api";
+import { PublicGuide } from "../../_components/public-guide";
 import { Co2Chart } from "./_components/co2-chart";
 
 export async function generateMetadata({ params }: PageProps<"/objekty/[kod]">): Promise<Metadata> {
@@ -15,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/objekty/[kod]">):
   const facility = await getPublicFacilityByCode(kod);
 
   return {
-    title: facility ? `${facility.name} · Jak se tu dýchá` : "Objekt nenalezen · SmartAudit KHK",
+    title: facility ? `${facility.name} · Jak se tu dýchá` : "Objekt nenalezen · SmartAudit",
     description: facility ? `Kvalita vzduchu, teplota a kdy větrat — ${facility.name}, ${facility.municipalityName}.` : undefined,
   };
 }
@@ -64,7 +66,7 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
         <p className="flex items-center gap-2 text-[13px] font-bold opacity-80">
           <Wind className="size-4" aria-hidden />
           Jak se tu dýchá
-          {facility.hasLiveSensors ? <LiveBadge /> : <span className="font-normal">· modelová data, čidla se instalují</span>}
+          {facility.hasLiveSensors ? <LiveBadge /> : <span className="font-normal" title={MODEL_EXPLANATION}>· fyzikální model z otevřených dat, čidla se instalují</span>}
         </p>
         <h2 id="air-now" className="mt-2 text-[32px] leading-tight font-bold tracking-tight sm:text-[40px]">
           {level ? AIR_META[level].label : "Zatím bez měření"}
@@ -150,12 +152,15 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
 
       <p className="mt-6 text-[12px] leading-relaxed text-slate-500">
         Zdroje: otevřená data Královéhradeckého kraje (Data KHK), ČÚZK, Open-Meteo. Měření{" "}
-        {facility.hasLiveSensors ? "ze skutečných čidel IQRF doplňuje model" : "je zatím modelové (simulace podle budovy a počasí)"}. Data jsou k dispozici i jako{" "}
+        {facility.hasLiveSensors ? "ze skutečných čidel IQRF doplňuje model" : "počítá zatím fyzikální model z otevřených dat (plocha a stáří budovy z ČÚZK, kapacita z Data KHK, počasí z Open-Meteo)"}. Data jsou k dispozici i jako{" "}
         <a href="/api/open/docs/" className="underline hover:text-hk-red">
           otevřené API
         </a>
         .
       </p>
+
+      {/* Průvodce k této budově — „jak se tu dýchá“, „kdy větrat“ */}
+      <PublicGuide page="karta" facility={{ id: facility.id, name: facility.name }} />
     </main>
   );
 }
