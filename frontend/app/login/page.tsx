@@ -42,6 +42,14 @@ export default async function LoginPage() {
         </div>
 
         <LoginForm />
+
+        {/* Otevřené API funguje i bez přihlášení */}
+        <p className="text-center text-xs text-muted-foreground">
+          Data jako otevřené API:{" "}
+          <a href="/api/open/docs/" className="font-medium text-foreground underline underline-offset-2 hover:text-hk-red">
+            dokumentace a stažení
+          </a>
+        </p>
       </div>
     </main>
   );

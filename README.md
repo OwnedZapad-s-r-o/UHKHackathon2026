@@ -13,7 +13,8 @@ docker compose up --build
 | Služba | Adresa |
 |---|---|
 | Web (Next.js) | http://localhost:3000 |
-| API (ASP.NET) | http://localhost:8080, dokumentace http://localhost:8080/scalar |
+| API (ASP.NET) | http://localhost:8080 |
+| Otevřené API — dokumentace | http://localhost:3000/api/open/docs/ (OpenAPI: `/api/open/v1/openapi.json`) |
 | Databáze (PostGIS) | localhost:5432, `smartaudit` / `smartaudit` |
 
 Při prvním startu API samo stáhne otevřená data, sestaví portfolio objektů, dotáhne karty
@@ -36,6 +37,15 @@ Vlastní hesla a JWT tajemství nastavíte v souboru `.env`, vzor je v `.env.exa
 - **PDF reporty** — audit jednoho objektu (s grafy) a přehled portfolia; tlačítka v panelu a na obrazovkách
   Portfolio, Anomálie a Reporty.
 - **AI analýza** — Azure OpenAI navrhne opatření s návratností a dopis správci; výsledek je i v PDF.
+- **Otevřené API** — `/api/open/v1`: objekty jako JSON, GeoJSON a CSV, detail, půdorys budovy z ČÚZK
+  a měření. Bez přihlášení a bez klíče, jen GET, CORS pro libovolný web, licence CC BY 4.0, bez částek v Kč.
+  Popis je na obrazovce **Otevřené API** v aplikaci a v interaktivní dokumentaci (Scalar).
+
+### Cache
+
+Půdorys budovy se mění jen s katastrem, proto se drží 2 dny: API ho cachuje na serveru (output cache)
+a posílá `Cache-Control: public, max-age=172800`, Next.js si ho uloží do data cache. Mapa tak při dalším
+kliknutí na stejný objekt nový dotaz nevyšle. Ostatní odpovědi otevřeného API se cachují 5 minut.
 
 ### Zapnutí AI analýzy (Azure OpenAI)
 

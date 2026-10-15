@@ -28,14 +28,15 @@ const STATUS_COLOR: Record<AuditStatus, string> = {
 // - obrys je z ČÚZK rozšířený o ~0,4 m (server) — barevné stěny leží vně šedých, nic se nepřekrývá,
 // - výška se vezme ze skutečné budovy v dlaždicích (+0,4 m nad střechu); když tam není, odhad podle podlaží.
 // Obarvit přímo budovu z dlaždic nejde: ID prvků v dlaždicích CARTO nejsou napříč dlaždicemi unikátní.
-export function SelectedBuilding3D({ footprint }: { footprint: Footprint | null }) {
+// Stav přichází ze seznamu objektů, ne s půdorysem — půdorys je cachovaný 2 dny, stav se mění průběžně.
+export function SelectedBuilding3D({ footprint, status }: { footprint: Footprint | null; status: AuditStatus }) {
   const { map, isLoaded } = useMap();
 
   useEffect(() => {
     if (!map || !isLoaded) return;
 
     const rings = outerRings(footprint?.geometry ?? null);
-    const color = STATUS_COLOR[footprint?.properties.status ?? "Nominal"];
+    const color = STATUS_COLOR[status];
     let resolved = false;
 
     ensureLayer(map);
@@ -64,7 +65,7 @@ export function SelectedBuilding3D({ footprint }: { footprint: Footprint | null 
       map.off("idle", refineHeight);
       if (map.getStyle()) render(map, null, 0, color);
     };
-  }, [map, isLoaded, footprint]);
+  }, [map, isLoaded, footprint, status]);
 
   return null;
 }

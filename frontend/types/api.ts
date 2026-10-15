@@ -184,7 +184,16 @@ export type BuildingSection = {
 export type Footprint = {
   type: "Feature";
   geometry: { type: string; coordinates: unknown } | null;
-  properties: { facilityId: string; status: AuditStatus; heightMeters: number; floors: number; heightEstimated: boolean };
+  properties: {
+    facilityId: string;
+    heightMeters: number;
+    floors: number;
+    heightEstimated: boolean;
+    builtUpArea: number | null;
+    constructionYear: number | null;
+    ruianCode: string | null;
+    source: string;
+  };
 };
 
 export type AiRecommendation = {
