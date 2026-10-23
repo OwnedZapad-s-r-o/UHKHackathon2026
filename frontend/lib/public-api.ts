@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { BuildingSection, DataSourcesResponse, FacilityDetail, OpenFacility, Telemetry } from "@/types/api";
+import type { BuildingSection, DataSourcesResponse, FacilityDetail, OpenFacility, SensorMetric, Telemetry } from "@/types/api";
 
 const API_URL = process.env.API_INTERNAL_URL ?? "http://localhost:5033";
 
@@ -37,10 +37,15 @@ export function getPublicSection(id: string) {
 
 // CO₂ za posledních 24 h po hodinách — graf na veřejné kartě
 export function getPublicCo2(id: string) {
+  return getPublicTelemetry(id, "Co2");
+}
+
+// Veličina za posledních 24 h po hodinách (teplota a vlhkost u referenčního objektu se skutečnými čidly)
+export function getPublicTelemetry(id: string, metric: SensorMetric) {
   // Začátek zaokrouhlený na celou hodinu — stejná adresa po celou hodinu, cache se trefí
   const hour = Math.floor(Date.now() / 3600_000) * 3600_000;
   const from = new Date(hour - 24 * 3600_000).toISOString();
-  return publicGet<Telemetry>(`/api/open/v1/facilities/${id}/telemetry?metric=Co2&bucket=Hour&from=${encodeURIComponent(from)}`);
+  return publicGet<Telemetry>(`/api/open/v1/facilities/${id}/telemetry?metric=${metric}&bucket=Hour&from=${encodeURIComponent(from)}`);
 }
 
 export function getPublicDatasets() {

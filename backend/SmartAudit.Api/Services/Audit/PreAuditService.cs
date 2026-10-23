@@ -244,7 +244,9 @@ namespace SmartAudit.Api.Services.Audit
             var addedArea = context.AddedAreas.GetValueOrDefault(facility.Id);
             var builtUpArea = building?.EffectiveArea(addedArea) ?? (addedArea > 0 ? addedArea : null);
             var floors = building?.EffectiveFloors ?? BuildingEstimator.EstimateFloors(builtUpArea, facility.Category);
-            var floorArea = BuildingEstimator.FloorArea(builtUpArea, floors, facility.Category);
+            var floorArea = facility.Building is { RegisteredFloorArea: { } registered, AreaOverride: null, FloorsOverride: null }
+                ? registered
+                : BuildingEstimator.FloorArea(builtUpArea, floors, facility.Category);
 
             var organizationId = facility.OrganizationId;
             var contracts = organizationId is { } orgId ? context.Contracts.GetValueOrDefault(orgId) ?? [] : [];

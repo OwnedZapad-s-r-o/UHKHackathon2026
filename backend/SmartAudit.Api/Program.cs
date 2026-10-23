@@ -104,6 +104,7 @@ builder.Services.AddScoped<ISensorProvisioningService, SensorProvisioningService
 builder.Services.AddScoped<ISensorDataSource, SimulatedSensorDataSource>();
 builder.Services.AddScoped<IFacilityAuditService, FacilityAuditService>();
 builder.Services.AddScoped<IPreAuditService, PreAuditService>();
+builder.Services.AddScoped<SmartAudit.Api.Services.Reference.IMicroriscReferenceService, SmartAudit.Api.Services.Reference.MicroriscReferenceService>();
 builder.Services.AddSingleton<OpenDataLinks>();
 builder.Services.AddSingleton<OpenDataSyncState>();
 // Živá kontrola zdrojů: 5 s na zdroj hlídá CancellationToken ve službě, klient má rezervu

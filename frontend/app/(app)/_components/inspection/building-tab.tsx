@@ -6,7 +6,7 @@ import { FEATURES } from "@/lib/features";
 import { STATUS_META, formatNumber } from "@/lib/facility-meta";
 import { type RawSearchParams, withParams } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
-import type { BuildingSection, FacilityDetail } from "@/types/api";
+import type { BuildingSection, CadastralCard, FacilityDetail } from "@/types/api";
 import { BuildingDataForm } from "./building-data-form";
 import { BuildingPartsList } from "./building-parts-list";
 import { PanelCard } from "./panel-card";
@@ -18,6 +18,8 @@ const USE_LABEL: Record<string, string> = {
   healthCare: "zdravotnictví",
   collectiveResidence: "hromadné bydlení",
   office: "administrativa",
+  industrial: "výroba a sklady",
+  ancillary: "doplňková stavba",
 };
 
 export async function BuildingTab({ facility, searchParams }: { facility: FacilityDetail; searchParams: RawSearchParams }) {
@@ -68,6 +70,8 @@ export async function BuildingTab({ facility, searchParams }: { facility: Facili
           </p>
         )}
       </PanelCard>
+
+      {building?.cadastralCard && <CadastralCardPanel card={building.cadastralCard} />}
 
       {canEdit && (
         <PanelCard title="Úpravy budovy" meta={building?.editedAt || parts.length > 0 ? "upravil správce" : undefined}>
@@ -206,4 +210,38 @@ function co2Level(co2: number | null, limit: number) {
   if (co2 > limit) return "Critical" as const;
   if (co2 > 1000) return "Warning" as const;
   return null;
+}
+
+// Výpis z katastru nemovitostí (LV) a technické údaje stavebního objektu z RÚIAN
+function CadastralCardPanel({ card }: { card: CadastralCard }) {
+  const rows: { label: string; value: string | null }[] = [
+    { label: "Vlastník", value: card.owner },
+    { label: "List vlastnictví", value: card.ownershipSheet && `LV ${card.ownershipSheet}` },
+    { label: "Katastrální území", value: card.cadastralTerritory },
+    { label: "Část obce", value: card.municipalityPart },
+    { label: "Parcely", value: card.parcelNumbers },
+    { label: "Výměra parcely", value: card.parcelArea !== null ? formatNumber(card.parcelArea, "m²") : null },
+    { label: "Způsob využití stavby", value: card.structureUse },
+    { label: "Podlahová plocha (RÚIAN)", value: card.floorArea !== null ? formatNumber(card.floorArea, "m²") : null },
+    { label: "Obestavěný prostor", value: card.enclosedVolume !== null ? formatNumber(card.enclosedVolume, "m³") : null },
+    { label: "Způsob vytápění", value: card.heatingType },
+  ];
+
+  return (
+    <PanelCard title="Katastrální karta" meta={card.ownershipSheet ? `LV ${card.ownershipSheet} · ČÚZK` : "ČÚZK"}>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {rows
+          .filter((row) => row.value)
+          .map((row) => (
+            <Item key={row.label} label={row.label} value={row.value!} />
+          ))}
+      </dl>
+      {card.cadastreUrl && (
+        <a href={card.cadastreUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-[12px] font-bold text-hk-red hover:underline">
+          Stavební objekt v RÚIAN (VDP ČÚZK)
+          <ExternalLink className="size-3" aria-hidden />
+        </a>
+      )}
+    </PanelCard>
+  );
 }

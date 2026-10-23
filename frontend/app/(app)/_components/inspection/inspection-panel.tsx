@@ -118,7 +118,7 @@ function FacilityHeader({ facility }: { facility: FacilityDetail }) {
       </div>
 
       <dl className="mt-4.5 grid grid-cols-2 gap-x-4 gap-y-3.5 border-t border-slate-100 pt-4">
-        <Field label="Zřizující odbor" value={facility.department} />
+        <Field label={facility.category === "Reference" ? "Vlastník" : "Zřizující odbor"} value={facility.department} />
         <Field label={capacity.label} value={capacity.value} />
         <Field
           label={`Dotační rámec ORP ${grants?.orpName ?? ""}`.trim()}
@@ -153,6 +153,8 @@ function Field({ label, value }: { label: string; value: string }) {
 
 // Kapacita podle toho, co o objektu otevřená data říkají — žáci, lůžka, nebo nic
 function capacityOf(facility: FacilityDetail) {
+  if (facility.category === "Reference") return { label: "Měřené prostory", value: `${facility.zoneCount} · ${facility.sensorCount} čidel IQRF` };
+
   const withStudents = facility.occupancy.find((o) => o.students !== null);
   if (withStudents) return { label: `Žáků (${withStudents.schoolYear})`, value: formatNumber(withStudents.students) };
 

@@ -4,7 +4,8 @@ import type { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson"
 
 export type AuditStatus = "Nominal" | "Warning" | "Critical";
 
-export type FacilityCategory = "School" | "Social" | "Health" | "Culture";
+// Reference = referenční objekt mimo portfolio kraje se skutečnými měřeními IQRF (MICRORISC, Jičín)
+export type FacilityCategory = "School" | "Social" | "Health" | "Culture" | "Reference";
 
 export type HeritageStatus = "None" | "Zone" | "Reserve" | "NationalMonument";
 
@@ -234,6 +235,8 @@ export type FacilityDetail = {
     yearOverride: number | null;
     editedEnergyCategory: string | null;
     editedAt: string | null;
+    // Výpis z katastru (LV) a technické údaje stavebního objektu z RÚIAN — jen u ověřených budov
+    cadastralCard: CadastralCard | null;
   } | null;
   occupancy: {
     schoolYear: string;
@@ -285,6 +288,20 @@ export type FacilityDetail = {
   // Sady otevřených dat propojené s objektem a přímé odkazy na záznam objektu ve zdrojích
   linkedDatasets: DatasetLink[];
   objectLinks: { label: string; url: string; provider: string }[];
+};
+
+export type CadastralCard = {
+  cadastralTerritory: string | null;
+  ownershipSheet: string | null;
+  parcelNumbers: string | null;
+  parcelArea: number | null;
+  municipalityPart: string | null;
+  owner: string | null;
+  structureUse: string | null;
+  floorArea: number | null;
+  enclosedVolume: number | null;
+  heatingType: string | null;
+  cadastreUrl: string | null;
 };
 
 export type BuildingPart = { id: string; areaSquareMeters: number; source: string; addedAt: string };

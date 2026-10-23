@@ -13,5 +13,6 @@ namespace SmartAudit.Core.Domain.Enums
         Ward,
         Exhibition,
         Hall,
+        Storage,
     }
 }

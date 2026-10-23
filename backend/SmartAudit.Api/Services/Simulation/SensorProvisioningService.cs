@@ -26,6 +26,8 @@ namespace SmartAudit.Api.Services.Simulation
             var facilities = await _dbContext.Facilities
                 .Include(f => f.Building)
                 .Where(f => !f.Sensors.Any(s => s.Source == SensorSource.Simulated))
+                // Referenční objekt má jen skutečná čidla — simulace pro něj nevzniká
+                .Where(f => !f.SourceKey.StartsWith(Facility.ReferenceSourcePrefix))
                 .ToListAsync(ct);
 
             foreach (var facility in facilities)

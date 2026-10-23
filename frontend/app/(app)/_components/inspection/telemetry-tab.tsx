@@ -10,17 +10,22 @@ import { RoomsNow } from "./rooms-now";
 import { TemperatureChart } from "./temperature-chart";
 
 export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
-  const [temperature, energy, heatmap, section] = await Promise.all([
+  const [temperature, humidity, energy, heatmap, section] = await Promise.all([
     getTelemetry(facility.id, "Temperature", { hours: 48 }),
+    getTelemetry(facility.id, "Humidity", { hours: 48 }),
     getTelemetry(facility.id, "Power", { bucket: "Day", hours: 24 * 7 }),
     getHeatmap(facility.id, "Power"),
     getSection(facility.id),
   ]);
 
   const averageTemperature = averageAcrossZones(temperature);
+  const averageHumidity = averageAcrossZones(humidity);
   const dailyEnergy = energy.series[0]?.points ?? [];
   const assessment = facility.assessment;
   const liveZones = temperature.series.filter((s) => s.live).map((s) => s.name);
+  // Referenční objekt MICRORISC: všechny prostory měří čidla IQRF (teplota + vlhkost), příkon se neměří
+  const reference = facility.category === "Reference";
+  const zoneHumidity = section.zones.map((z) => z.humidity).filter((h): h is number => h !== null);
 
   return (
     <>
@@ -34,17 +39,32 @@ export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
             <span className="absolute -top-0.5 -right-0.5 size-2.5 animate-ping rounded-full bg-emerald-400" aria-hidden />
           </span>
           <span className="min-w-0 text-[12.5px]">
-            <span className="block font-bold">Skutečná čidla IQRF</span>
-            <span className="block truncate">{liveZones.join(", ")} — ostatní zóny zatím fyzikální model z otevřených dat</span>
+            <span className="block font-bold">{reference ? "Reálný dataset MICRORISC IQRF" : "Skutečná čidla IQRF"}</span>
+            <span className="block truncate">
+              {liveZones.join(", ")} —{" "}
+              {reference ? "skutečná měření teploty a vlhkosti, nová hodnota každé 4 minuty" : "ostatní zóny zatím fyzikální model z otevřených dat"}
+            </span>
           </span>
         </Link>
       )}
 
-      <div className="mt-3.5 grid grid-cols-3 gap-2.5">
-        <StatTile label="Teplota" value={formatNumber(assessment?.temperature)} note="°C · průměr zón" />
-        <StatTile label="CO₂" value={formatNumber(assessment?.co2)} note="ppm · nejhorší zóna" tone={(assessment?.co2 ?? 0) > 1500 ? "warning" : "default"} />
-        <StatTile label="Příkon" value={formatNumber(assessment?.power)} note="kWh/h" />
-      </div>
+      {reference ? (
+        <div className="mt-3.5 grid grid-cols-3 gap-2.5">
+          <StatTile label="Teplota" value={formatNumber(assessment?.temperature)} note="°C · průměr prostor" />
+          <StatTile
+            label="Rel. vlhkost"
+            value={formatNumber(zoneHumidity.length > 0 ? zoneHumidity.reduce((a, b) => a + b, 0) / zoneHumidity.length : null)}
+            note="% · průměr prostor"
+          />
+          <StatTile label="Čidla IQRF" value={`${liveZones.length}/${section.zones.length}`} note="prostorů měří živě" />
+        </div>
+      ) : (
+        <div className="mt-3.5 grid grid-cols-3 gap-2.5">
+          <StatTile label="Teplota" value={formatNumber(assessment?.temperature)} note="°C · průměr zón" />
+          <StatTile label="CO₂" value={formatNumber(assessment?.co2)} note="ppm · nejhorší zóna" tone={(assessment?.co2 ?? 0) > 1500 ? "warning" : "default"} />
+          <StatTile label="Příkon" value={formatNumber(assessment?.power)} note="kWh/h" />
+        </div>
+      )}
 
       <RoomsNow section={section} />
 
@@ -52,13 +72,23 @@ export async function TelemetryTab({ facility }: { facility: FacilityDetail }) {
         <TemperatureChart points={averageTemperature} setback={18} />
       </PanelCard>
 
-      <PanelCard title="Spotřeba energie" meta="kWh / den">
-        <EnergyBars points={dailyEnergy} />
-      </PanelCard>
+      {averageHumidity.length > 1 && (
+        <PanelCard title="Relativní vlhkost za 48 h" meta={`${humidity.series.length} zón · hodinový průměr`}>
+          <TemperatureChart points={averageHumidity} setback={null} unit="%" label="Průměrná relativní vlhkost" tickStep={5} />
+        </PanelCard>
+      )}
 
-      <PanelCard title="Provozní heatmapa" meta="příkon · hodina × den">
-        <HeatmapGrid heatmap={heatmap} />
-      </PanelCard>
+      {!reference && (
+        <>
+          <PanelCard title="Spotřeba energie" meta="kWh / den">
+            <EnergyBars points={dailyEnergy} />
+          </PanelCard>
+
+          <PanelCard title="Provozní heatmapa" meta="příkon · hodina × den">
+            <HeatmapGrid heatmap={heatmap} />
+          </PanelCard>
+        </>
+      )}
     </>
   );
 }

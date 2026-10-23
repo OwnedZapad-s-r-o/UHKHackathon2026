@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, HandHeart, Hospital, Landmark, School, Wind, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Check, Cpu, HandHeart, Hospital, Landmark, School, Wind, type LucideIcon } from "lucide-react";
 import type { AuditStatus, FacilityCategory } from "@/types/api";
 
 // Stavové barvy z prototypu (= Tailwind 500 / 800 / 50 / 200) — vždy spolu s ikonou a popiskem
@@ -28,6 +28,7 @@ export const CATEGORY_META: Record<FacilityCategory, { label: string; icon: Luci
   Social: { label: "Sociální služby", icon: HandHeart },
   Health: { label: "Zdravotnictví", icon: Hospital },
   Culture: { label: "Kultura", icon: Landmark },
+  Reference: { label: "Referenční objekt IQRF", icon: Cpu },
 };
 
 // Okresy kraje — kódy odpovídají sadě Hranice okresů

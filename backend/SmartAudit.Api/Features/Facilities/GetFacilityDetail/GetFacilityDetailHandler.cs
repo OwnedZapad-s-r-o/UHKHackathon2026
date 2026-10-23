@@ -95,7 +95,22 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
         int? FloorsOverride,
         int? YearOverride,
         string? EditedEnergyCategory,
-        DateTimeOffset? EditedAt);
+        DateTimeOffset? EditedAt,
+        CadastralCardDto? CadastralCard = null);
+
+    // Katastrální karta (výpis z LV a technické údaje stavebního objektu z RÚIAN) — jen tam, kde je ověřená
+    public record CadastralCardDto(
+        string? CadastralTerritory,
+        string? OwnershipSheet,
+        string? ParcelNumbers,
+        double? ParcelArea,
+        string? MunicipalityPart,
+        string? Owner,
+        string? StructureUse,
+        double? FloorArea,
+        double? EnclosedVolume,
+        string? HeatingType,
+        string? CadastreUrl);
 
     public record OccupancyDto(string SchoolYear, int? Students, int? Graduates, int? Admitted, int? BedCapacity, int? Residents, double? OccupancyPercent, int? Applicants, int? OfferedPlaces, double? DemandRatio);
 
@@ -154,6 +169,7 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
             FacilityCategory.School => ["skoly", "pravni-subjekty-skol", "zaci-ss-kraj", "zaci-ss-historie", "studenti-vos-kraj", "ubytovani-dm", "prijimacky-ss"],
             FacilityCategory.Social => ["socialni-sluzby"],
             FacilityCategory.Health => ["nemocnice", "nasledna-pece", "lecebne-ustavy"],
+            FacilityCategory.Reference => ["microrisc-telemetrie"],
             _ => ["organizace-khk"],
         };
 
@@ -246,7 +262,20 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 facility.Building.FloorsOverride,
                 facility.Building.YearOverride,
                 facility.Building.YearOverride == null ? null : BuildingEstimator.CategoryLabel(facility.Building.EffectiveEnergyCategory),
-                facility.Building.EditedAt);
+                facility.Building.EditedAt,
+                facility.Building.OwnershipSheet == null && facility.Building.ParcelNumbers == null ? null : new CadastralCardDto(
+                    facility.Building.CadastralTerritory,
+                    facility.Building.OwnershipSheet,
+                    facility.Building.ParcelNumbers,
+                    facility.Building.ParcelArea,
+                    facility.Building.MunicipalityPart,
+                    facility.Building.Owner,
+                    facility.Building.StructureUse,
+                    facility.Building.RegisteredFloorArea,
+                    facility.Building.EnclosedVolume,
+                    facility.Building.HeatingType,
+                    // Stavební objekt v RÚIAN (VDP ČÚZK) — ověřený odkaz se stejným kódem jako karta budovy
+                    facility.Building.RuianCode == null ? null : $"https://vdp.cuzk.gov.cz/vdp/ruian/stavebniobjekty/{facility.Building.RuianCode}"));
 
             var occupancy = facility.Metrics
                 .OrderByDescending(m => m.SchoolYear)
@@ -351,7 +380,9 @@ namespace SmartAudit.Api.Features.Facilities.GetFacilityDetail
                 facility.Location.X,
                 facility.Web ?? facility.Organization?.Web,
                 organization,
-                DepartmentLabel(facility.Organization?.Department, facility.Category),
+                facility.Category == FacilityCategory.Reference
+                    ? $"{facility.Organization?.Name ?? "soukromý vlastník"} (soukromý objekt mimo portfolio kraje)"
+                    : DepartmentLabel(facility.Organization?.Department, facility.Category),
                 building,
                 occupancy,
                 territory,

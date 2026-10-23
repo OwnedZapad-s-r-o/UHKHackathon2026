@@ -12,6 +12,7 @@ namespace SmartAudit.Core.Domain.Helpers
                 FacilityCategory.School => "SKO",
                 FacilityCategory.Social => "SOC",
                 FacilityCategory.Health => "ZDR",
+                FacilityCategory.Reference => "PRI",
                 _ => "KUL",
             };
         }

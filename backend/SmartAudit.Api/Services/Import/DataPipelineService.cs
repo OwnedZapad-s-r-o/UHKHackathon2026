@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using SmartAudit.Api.Services.Audit;
 using SmartAudit.Api.Services.Contracts;
+using SmartAudit.Api.Services.Reference;
 using SmartAudit.Core.Data;
 using SmartAudit.Core.Domain.Enums;
 using SmartAudit.Core.Domain.Helpers;
@@ -58,8 +59,15 @@ namespace SmartAudit.Api.Services.Import
                     await importService.ImportMissingAsync(ct);
                 }
 
+                // Referenční objekt MICRORISC (Jičín) se skutečnými měřeními IQRF — mimo otevřená data kraje
+                _state.SetPhase("Referenční objekt MICRORISC");
+                var reference = provider.GetRequiredService<IMicroriscReferenceService>();
+                await reference.EnsureFacilityAsync(ct);
+
                 _state.SetPhase("Karty budov z ČÚZK");
                 await provider.GetRequiredService<IBuildingEnrichmentService>().EnrichAsync(_openDataSettings.RefreshOnStartup, ct);
+                await reference.ApplyCadastreAsync(ct);
+                await reference.SyncTelemetryAsync(DateTimeOffset.UtcNow, ct);
 
                 _state.SetPhase("Počasí a ovzduší z Open-Meteo");
                 await provider.GetRequiredService<IWeatherService>().RefreshAsync(_simulationSettings.BackfillDays + 1, ct);

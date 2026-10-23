@@ -6,9 +6,10 @@ import { LiveBadge } from "@/components/live-badge";
 import { MODEL_EXPLANATION } from "@/components/data-mode-badge";
 import { AIR_META, airLevel } from "@/lib/air-quality";
 import { formatNumber } from "@/lib/facility-meta";
-import { getPublicCo2, getPublicFacilityByCode, getPublicFacilityDetail, getPublicSection } from "@/lib/public-api";
+import { getPublicCo2, getPublicFacilityByCode, getPublicFacilityDetail, getPublicSection, getPublicTelemetry } from "@/lib/public-api";
 import { cn } from "@/lib/utils";
-import type { Telemetry, TelemetryPoint } from "@/types/api";
+import type { CadastralCard, Telemetry, TelemetryPoint } from "@/types/api";
+import { TemperatureChart } from "../../../(app)/_components/inspection/temperature-chart";
 import { PublicGuide } from "../../_components/public-guide";
 import { Co2Chart } from "./_components/co2-chart";
 
@@ -28,9 +29,19 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
   const facility = await getPublicFacilityByCode(kod);
   if (!facility) notFound();
 
-  const [detail, section, co2] = await Promise.all([getPublicFacilityDetail(facility.id), getPublicSection(facility.id), getPublicCo2(facility.id)]);
+  // Referenční objekt MICRORISC měří teplotu a relativní vlhkost (ne CO₂) — karta ukáže jeho skutečná měření
+  const reference = facility.category === "Reference";
+  const [detail, section, co2, temperature, humidity] = await Promise.all([
+    getPublicFacilityDetail(facility.id),
+    getPublicSection(facility.id),
+    getPublicCo2(facility.id),
+    reference ? getPublicTelemetry(facility.id, "Temperature") : null,
+    reference ? getPublicTelemetry(facility.id, "Humidity") : null,
+  ]);
 
   const level = airLevel(facility.co2);
+  const zoneHumidity = section.zones.map((z) => z.humidity).filter((h): h is number => h !== null);
+  const averageHumidity = zoneHumidity.length > 0 ? zoneHumidity.reduce((a, b) => a + b, 0) / zoneHumidity.length : null;
   const findings = detail.assessment?.findings ?? [];
   const hoursOverLimit = detail.assessment?.co2HoursOverLimit ?? 0;
 
@@ -65,17 +76,33 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
       >
         <p className="flex items-center gap-2 text-[13px] font-bold opacity-80">
           <Wind className="size-4" aria-hidden />
-          Jak se tu dýchá
+          {reference ? "Klima ve skladových prostorách" : "Jak se tu dýchá"}
           {facility.hasLiveSensors ? <LiveBadge /> : <span className="font-normal" title={MODEL_EXPLANATION}>· fyzikální model z otevřených dat, čidla se instalují</span>}
         </p>
         <h2 id="air-now" className="mt-2 text-[32px] leading-tight font-bold tracking-tight sm:text-[40px]">
-          {level ? AIR_META[level].label : "Zatím bez měření"}
+          {reference ? "Skutečné měření IQRF" : level ? AIR_META[level].label : "Zatím bez měření"}
         </h2>
-        <p className="mt-2 max-w-2xl text-[15px] leading-relaxed">{level ? AIR_META[level].advice : "Hodnoty se objeví po prvním měření."}</p>
+        <p className="mt-2 max-w-2xl text-[15px] leading-relaxed">
+          {reference
+            ? "Teplota a relativní vlhkost ze tří skladových prostor MICRORISC — reálný dataset z čidel IQRF, nová hodnota každé 4 minuty."
+            : level
+              ? AIR_META[level].advice
+              : "Hodnoty se objeví po prvním měření."}
+        </p>
         <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
-          <Figure label="CO₂ v nejhorší místnosti" value={formatNumber(facility.co2, "ppm")} />
-          <Figure label="Průměrná teplota" value={formatNumber(facility.temperature, "°C")} />
-          <Figure label="Hodin nad 1 500 ppm za týden" value={formatNumber(hoursOverLimit, "h")} />
+          {reference ? (
+            <>
+              <Figure label="Průměrná teplota" value={formatNumber(facility.temperature, "°C")} />
+              <Figure label="Relativní vlhkost" value={formatNumber(averageHumidity, "%")} />
+              <Figure label="Měřené prostory" value={formatNumber(section.zones.filter((z) => z.live).length)} />
+            </>
+          ) : (
+            <>
+              <Figure label="CO₂ v nejhorší místnosti" value={formatNumber(facility.co2, "ppm")} />
+              <Figure label="Průměrná teplota" value={formatNumber(facility.temperature, "°C")} />
+              <Figure label="Hodin nad 1 500 ppm za týden" value={formatNumber(hoursOverLimit, "h")} />
+            </>
+          )}
         </dl>
       </section>
 
@@ -111,15 +138,28 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
           </ul>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 p-5" aria-labelledby="co2-day">
-          <h2 id="co2-day" className="text-lg font-bold tracking-tight">
-            CO₂ za posledních 24 hodin
-          </h2>
-          <p className="mt-0.5 text-[12.5px] text-slate-500">Nejhorší místnost v každé hodině. Nad čárkovanou čarou 1 500 ppm je vzduch vydýchaný.</p>
-          <div className="mt-3">
-            <Co2Chart points={worstPerHour(co2)} />
-          </div>
-        </section>
+        {reference ? (
+          <section className="rounded-2xl border border-slate-200 p-5" aria-labelledby="climate-day">
+            <h2 id="climate-day" className="text-lg font-bold tracking-tight">
+              Teplota a vlhkost za 24 hodin
+            </h2>
+            <p className="mt-0.5 text-[12.5px] text-slate-500">Průměr skladových prostor v každé hodině — skutečná měření čidel IQRF.</p>
+            <div className="mt-3 space-y-4">
+              <TemperatureChart points={averagePerHour(temperature)} setback={null} label="Průměrná teplota" tickStep={1} hours={24} />
+              <TemperatureChart points={averagePerHour(humidity)} setback={null} unit="%" label="Průměrná relativní vlhkost" tickStep={5} hours={24} />
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-slate-200 p-5" aria-labelledby="co2-day">
+            <h2 id="co2-day" className="text-lg font-bold tracking-tight">
+              CO₂ za posledních 24 hodin
+            </h2>
+            <p className="mt-0.5 text-[12.5px] text-slate-500">Nejhorší místnost v každé hodině. Nad čárkovanou čarou 1 500 ppm je vzduch vydýchaný.</p>
+            <div className="mt-3">
+              <Co2Chart points={worstPerHour(co2)} />
+            </div>
+          </section>
+        )}
       </div>
 
       <section className="mt-4 rounded-2xl border border-slate-200 p-5" aria-labelledby="findings">
@@ -141,7 +181,7 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
       </section>
 
       <section className="mt-4 grid gap-4 rounded-2xl border border-slate-200 p-5 sm:grid-cols-3" aria-label="O budově">
-        <Fact label="Zřizovatel" value={detail.department || "Královéhradecký kraj"} />
+        <Fact label={reference ? "Vlastník" : "Zřizovatel"} value={detail.department || "Královéhradecký kraj"} />
         <Fact label="Rok výstavby (ČÚZK)" value={detail.building?.constructionYear?.toString() ?? "neuveden"} />
         <Fact
           label="Památková ochrana"
@@ -150,7 +190,18 @@ export default async function PublicFacilityPage({ params }: PageProps<"/objekty
         />
       </section>
 
+      {detail.building?.cadastralCard && <CadastralFacts card={detail.building.cadastralCard} />}
+
       <p className="mt-6 text-[12px] leading-relaxed text-slate-500">
+        {reference && (
+          <>
+            Měření: poskytnutá telemetrická data{" "}
+            <a href="https://www.microrisc.cz/cs" target="_blank" rel="noreferrer" className="underline hover:text-hk-red">
+              MICRORISC s.r.o.
+            </a>{" "}
+            (6× CSV, teplota a relativní vlhkost ze skladových prostor).{" "}
+          </>
+        )}
         Zdroje: otevřená data Královéhradeckého kraje (Data KHK), ČÚZK, Open-Meteo. Měření{" "}
         {facility.hasLiveSensors ? "ze skutečných čidel IQRF doplňuje model" : "počítá zatím fyzikální model z otevřených dat (plocha a stáří budovy z ČÚZK, kapacita z Data KHK, počasí z Open-Meteo)"}. Data jsou k dispozici i jako{" "}
         <a href="/api/open/docs/" className="underline hover:text-hk-red">
@@ -184,6 +235,46 @@ function Fact({ label, value, icon = false }: { label: string; value: string; ic
       </p>
     </div>
   );
+}
+
+// Katastrální údaje (LV, parcely, k.ú.) — u budov s ověřeným výpisem z katastru
+function CadastralFacts({ card }: { card: CadastralCard }) {
+  const facts = [
+    { label: "Vlastník", value: card.owner },
+    { label: "List vlastnictví", value: card.ownershipSheet && `LV ${card.ownershipSheet}` },
+    { label: "Katastrální území", value: card.cadastralTerritory },
+    { label: "Parcely", value: card.parcelNumbers },
+    { label: "Výměra parcely", value: card.parcelArea !== null ? formatNumber(card.parcelArea, "m²") : null },
+    { label: "Způsob využití", value: card.structureUse },
+  ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value));
+
+  return (
+    <section className="mt-4 grid gap-4 rounded-2xl border border-slate-200 p-5 sm:grid-cols-3" aria-label="Katastr nemovitostí">
+      {facts.map((fact) => (
+        <Fact key={fact.label} label={fact.label} value={fact.value} />
+      ))}
+      {card.cadastreUrl && (
+        <a href={card.cadastreUrl} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-hk-red hover:underline sm:col-span-3">
+          Stavební objekt v RÚIAN (ČÚZK) ↗
+        </a>
+      )}
+    </section>
+  );
+}
+
+// Průměr místností v každé hodině (teplota, vlhkost)
+function averagePerHour(telemetry: Telemetry | null): TelemetryPoint[] {
+  const byHour = new Map<string, number[]>();
+
+  for (const series of telemetry?.series ?? []) {
+    for (const point of series.points) {
+      byHour.set(point.timestamp, [...(byHour.get(point.timestamp) ?? []), point.value]);
+    }
+  }
+
+  return [...byHour.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([timestamp, values]) => ({ timestamp, value: values.reduce((a, b) => a + b, 0) / values.length }));
 }
 
 // Z řad po místnostech jedna řada: nejvyšší CO₂ v každé hodině (nejhorší místnost)

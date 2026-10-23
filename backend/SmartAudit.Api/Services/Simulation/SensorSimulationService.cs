@@ -1,4 +1,5 @@
 using SmartAudit.Api.Services.Audit;
+using SmartAudit.Api.Services.Reference;
 using SmartAudit.Core.Domain.Settings;
 
 namespace SmartAudit.Api.Services.Simulation
@@ -55,6 +56,9 @@ namespace SmartAudit.Api.Services.Simulation
                     }
 
                     var audit = provider.GetRequiredService<IFacilityAuditService>();
+
+                    // Skutečná měření MICRORISC pokračují v čase (nová hodnota každé 4 minuty) — budova jde do fronty auditu
+                    await provider.GetRequiredService<IMicroriscReferenceService>().SyncTelemetryAsync(now, ct);
 
                     // Simulace má smysl jen na hranici kroku — mezi tím by jen znovu četla databázi a nic nezapsala.
                     // Výjimka: nová budova od správce dostane čidla a týden historie hned, ne až za čtvrt hodiny.

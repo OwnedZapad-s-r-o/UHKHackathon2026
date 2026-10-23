@@ -153,6 +153,8 @@ $seedTarget = Join-Path $OutputPath "seed"
 if (Test-Path $seedTarget) { Remove-Item $seedTarget -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $seedTarget | Out-Null
 Copy-Item (Join-Path $Root "seed\opendata") $seedTarget -Recurse -Force
+# Skutečná měření referenčního objektu MICRORISC (6× CSV)
+if (Test-Path (Join-Path $Root "seed\microrisc")) { Copy-Item (Join-Path $Root "seed\microrisc") $seedTarget -Recurse -Force }
 
 # Skripty pro Linux musí mít LF konce řádků
 $shPath = Join-Path $OutputPath "load-and-run.sh"
