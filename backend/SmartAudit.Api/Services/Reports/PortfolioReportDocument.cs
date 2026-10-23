@@ -20,6 +20,7 @@ namespace SmartAudit.Api.Services.Reports
             [FacilityCategory.Social] = "Sociální služby",
             [FacilityCategory.Health] = "Zdravotnictví",
             [FacilityCategory.Culture] = "Kultura",
+            [FacilityCategory.Reference] = "Referenční objekty IQRF",
         };
 
         private readonly PortfolioReportData _data;

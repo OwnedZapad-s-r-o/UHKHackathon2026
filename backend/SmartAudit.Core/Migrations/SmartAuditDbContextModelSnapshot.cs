@@ -466,6 +466,10 @@ namespace SmartAudit.Core.Migrations
                     b.Property<double?>("BuiltUpArea")
                         .HasColumnType("double precision");
 
+                    b.Property<string>("CadastralTerritory")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Condition")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -479,6 +483,9 @@ namespace SmartAudit.Core.Migrations
 
                     b.Property<DateTimeOffset?>("EditedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("EnclosedVolume")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("EnergyCategory")
                         .IsRequired()
@@ -503,13 +510,43 @@ namespace SmartAudit.Core.Migrations
                     b.Property<bool>("Found")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("HeatingType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MunicipalityPart")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Owner")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OwnershipSheet")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<double?>("ParcelArea")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ParcelNumbers")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("ParcelRef")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<double?>("RegisteredFloorArea")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("RuianCode")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("StructureUse")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int?>("YearOverride")
                         .HasColumnType("integer");

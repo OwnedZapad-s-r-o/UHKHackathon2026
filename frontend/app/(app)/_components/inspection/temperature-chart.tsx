@@ -11,22 +11,28 @@ const timeFormat = new Intl.DateTimeFormat("cs-CZ", { weekday: "short", hour: "2
 
 type TemperatureChartProps = {
   points: TelemetryPoint[];
-  // Doporučená teplota útlumu — referenční čára
-  setback: number;
+  // Doporučená teplota útlumu — referenční čára (null = bez čáry, např. u vlhkosti)
+  setback: number | null;
+  unit?: string;
+  // Co křivka ukazuje — pro čtečky obrazovky
+  label?: string;
+  tickStep?: number;
+  hours?: number;
 };
 
 // Jedna série → bez legendy; čára 2 px, hairline mřížka, hover křížek s hodnotou (dataviz skill)
-export function TemperatureChart({ points, setback }: TemperatureChartProps) {
+export function TemperatureChart({ points, setback, unit = "°C", label = "Průměrná teplota", tickStep = 2, hours = 48 }: TemperatureChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   if (points.length < 2) {
-    return <p className="text-sm text-slate-500">Za posledních 48 hodin nejsou data.</p>;
+    return <p className="text-sm text-slate-500">Za posledních {hours} hodin nejsou data.</p>;
   }
 
   const values = points.map((p) => p.value);
-  const min = Math.floor(Math.min(setback, ...values) / 2) * 2 - 1;
-  const max = Math.ceil(Math.max(...values) / 2) * 2 + 1;
-  const ticks = rangeStep(Math.ceil(min / 2) * 2, max, 2);
+  const reference = setback === null ? [] : [setback];
+  const min = Math.floor(Math.min(...reference, ...values) / tickStep) * tickStep - tickStep / 2;
+  const max = Math.ceil(Math.max(...values) / tickStep) * tickStep + tickStep / 2;
+  const ticks = rangeStep(Math.ceil(min / tickStep) * tickStep, max, tickStep);
 
   const plotWidth = WIDTH - PADDING.left - PADDING.right;
   const plotHeight = HEIGHT - PADDING.top - PADDING.bottom;
@@ -49,7 +55,7 @@ export function TemperatureChart({ points, setback }: TemperatureChartProps) {
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="block h-auto w-full touch-none overflow-visible"
         role="img"
-        aria-label={`Průměrná teplota za 48 hodin, od ${formatValue(values[0])} do ${formatValue(values[values.length - 1])} °C`}
+        aria-label={`${label} za ${hours} hodin, od ${formatValue(values[0])} do ${formatValue(values[values.length - 1])} ${unit}`}
         onPointerMove={handlePointer}
         onPointerLeave={() => setHoverIndex(null)}
       >
@@ -62,10 +68,14 @@ export function TemperatureChart({ points, setback }: TemperatureChartProps) {
           </g>
         ))}
 
-        <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y(setback)} y2={y(setback)} className="stroke-emerald-500" strokeWidth={1.5} />
-        <text x={PADDING.left + 4} y={y(setback) - 5} className="fill-emerald-800 text-[10px]">
-          Doporučený útlum ({setback} °C)
-        </text>
+        {setback !== null && (
+          <>
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y(setback)} y2={y(setback)} className="stroke-emerald-500" strokeWidth={1.5} />
+            <text x={PADDING.left + 4} y={y(setback) - 5} className="fill-emerald-800 text-[10px]">
+              Doporučený útlum ({setback} {unit})
+            </text>
+          </>
+        )}
 
         <path d={line} fill="none" className="stroke-hk-blue" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
 
@@ -83,15 +93,16 @@ export function TemperatureChart({ points, setback }: TemperatureChartProps) {
           style={{ left: `${(x(hoverIndex) / WIDTH) * 100}%`, transform: hoverIndex > points.length / 2 ? "translateX(-105%)" : "translateX(5%)" }}
         >
           <span className="text-slate-500">{timeFormat.format(new Date(hovered.timestamp))}</span>
-          <span className="ml-2 font-mono font-bold text-hk-navy">{formatValue(hovered.value)} °C</span>
+          <span className="ml-2 font-mono font-bold text-hk-navy">
+            {formatValue(hovered.value)} {unit}
+          </span>
         </div>
       )}
 
       <div className="mt-1.5 flex justify-between pl-7.5 font-mono text-[10px] text-slate-400">
-        <span>−48 h</span>
-        <span>−36 h</span>
-        <span>−24 h</span>
-        <span>−12 h</span>
+        {[1, 0.75, 0.5, 0.25].map((fraction) => (
+          <span key={fraction}>−{hours * fraction} h</span>
+        ))}
         <span>nyní</span>
       </div>
     </div>

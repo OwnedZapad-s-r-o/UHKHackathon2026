@@ -370,7 +370,7 @@ namespace SmartAudit.Api.Services.Import
             var keys = candidates.Select(c => c.SourceKey).ToHashSet();
 
             // Objekty, které ze zdrojových dat zmizely, se smažou i se senzory — kromě budov, které přidali správci
-            foreach (var removed in existing.Values.Where(f => !keys.Contains(f.SourceKey) && !f.SourceKey.StartsWith(Facility.ManagerSourcePrefix)))
+            foreach (var removed in existing.Values.Where(f => !keys.Contains(f.SourceKey) && !f.SourceKey.StartsWith(Facility.ManagerSourcePrefix) && !f.SourceKey.StartsWith(Facility.ReferenceSourcePrefix)))
                 _dbContext.Facilities.Remove(removed);
 
             var facilities = new List<Facility>();

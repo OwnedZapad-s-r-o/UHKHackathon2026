@@ -20,6 +20,19 @@ namespace SmartAudit.Core.Data.Tables
         public string? RuianCode { get; private set; }
 
 
+        // Katastrální karta z výpisu z katastru nemovitostí (LV) a RÚIAN — vyplňuje se tam, kde ji máme ověřenou
+        public string? CadastralTerritory { get; private set; }
+        public string? OwnershipSheet { get; private set; }
+        public string? ParcelNumbers { get; private set; }
+        public double? ParcelArea { get; private set; }
+        public string? MunicipalityPart { get; private set; }
+        public string? Owner { get; private set; }
+        public string? StructureUse { get; private set; }
+        public double? RegisteredFloorArea { get; private set; }
+        public double? EnclosedVolume { get; private set; }
+        public string? HeatingType { get; private set; }
+
+
         // Odvozené odhady
         public EnergyCategory EnergyCategory { get; private set; }
         public int EstimatedFloors { get; private set; } = 2;
@@ -91,6 +104,24 @@ namespace SmartAudit.Core.Data.Tables
             FloorsOverride = floors;
             YearOverride = year;
             EditedAt = area == null && floors == null && year == null ? null : now;
+        }
+
+        public void SetCadastralCard(string? cadastralTerritory, string? ownershipSheet, string? parcelNumbers, double? parcelArea, string? municipalityPart,
+            string? owner, string? structureUse, double? registeredFloorArea, double? enclosedVolume, string? heatingType)
+        {
+            if (parcelArea is <= 0 || registeredFloorArea is <= 0 || enclosedVolume is <= 0)
+                throw new ArgumentException("Výměry v katastrální kartě musí být kladné.", nameof(parcelArea));
+
+            CadastralTerritory = cadastralTerritory;
+            OwnershipSheet = ownershipSheet;
+            ParcelNumbers = parcelNumbers;
+            ParcelArea = parcelArea;
+            MunicipalityPart = municipalityPart;
+            Owner = owner;
+            StructureUse = structureUse;
+            RegisteredFloorArea = registeredFloorArea;
+            EnclosedVolume = enclosedVolume;
+            HeatingType = heatingType;
         }
 
         public void SetEstimates(EnergyCategory energyCategory, int estimatedFloors)

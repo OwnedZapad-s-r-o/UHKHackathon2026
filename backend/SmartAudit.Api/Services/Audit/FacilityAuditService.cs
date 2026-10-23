@@ -216,7 +216,9 @@ namespace SmartAudit.Api.Services.Audit
             // Opravy od správce (plocha, podlaží, rok výstavby) mají přednost před ČÚZK
             var builtUpArea = facility.Building?.EffectiveArea(addedArea) ?? (addedArea > 0 ? addedArea : null);
             var floors = facility.Building?.EffectiveFloors ?? BuildingEstimator.EstimateFloors(builtUpArea, facility.Category);
-            var floorArea = BuildingEstimator.FloorArea(builtUpArea, floors, facility.Category);
+            var floorArea = facility.Building is { RegisteredFloorArea: { } registered, AreaOverride: null, FloorsOverride: null }
+                ? registered
+                : BuildingEstimator.FloorArea(builtUpArea, floors, facility.Category);
             var heatLoss = floorArea * BuildingEstimator.SpecificHeatLoss(facility.Building?.EffectiveEnergyCategory ?? EnergyCategory.Unknown);
 
             var loss = HeatingLossEstimator.Estimate(facility.Category, values, heatLoss, evaluation.FreeDayOverheating, evaluation.NightSetbackMissing);

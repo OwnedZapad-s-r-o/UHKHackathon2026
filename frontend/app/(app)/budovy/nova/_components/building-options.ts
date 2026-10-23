@@ -14,6 +14,7 @@ export const KIND_OPTIONS: Record<FacilityCategory, string[]> = {
   Social: ["Domov pro seniory", "Domov se zvláštním režimem", "Domov pro osoby se zdravotním postižením", "Denní stacionář", "Chráněné bydlení"],
   Health: ["Nemocnice", "Léčebna dlouhodobě nemocných", "Poliklinika", "Zdravotnická záchranná služba"],
   Culture: ["Muzeum", "Galerie", "Knihovna", "Divadlo", "Hvězdárna", "Depozitář"],
+  Reference: [],
 };
 
 export const HERITAGE_LABEL: Record<Exclude<HeritageStatus, "None">, string> = {

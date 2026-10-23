@@ -9,6 +9,9 @@ namespace SmartAudit.Core.Data.Tables
         // Zdrojový klíč budovy, kterou do mapy přidal správce — v otevřených datech není, import ji nesmí smazat
         public const string ManagerSourcePrefix = "spravce:";
 
+        // Referenční objekt se skutečnými měřeními (mimo otevřená data kraje) — import ho nesmaže a simulace ho nekreslí
+        public const string ReferenceSourcePrefix = "referencni:";
+
         public Guid Id { get; private set; } = Guid.CreateVersion7();
 
         // Identifikace
